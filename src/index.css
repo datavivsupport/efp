@@ -1,1 +1,133 @@
 @import "tailwindcss";
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.btn-hover:hover {
+  transform: translateY(-1px);
+  transition: transform 0.3s ease;
+}
+
+.main-container {
+  background-color: #eff8ff;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .main-container {
+    padding: 12px;
+  }
+}
+
+.custom-pdf-viewer .rpv-core__icon {
+  width: 22px;
+  height: 22px;
+}
+
+/*for ligth red tabale*/
+.light-red {
+  background-color: #fff1f0 !important; 
+}
+.light-red:hover {
+  background-color: #fff1f0 !important;
+}
+.light-red td {
+  background-color: #fff1f0 !important; 
+}
+.light-red:hover td {
+  background-color: #fff1f0 !important;
+}
+
+/*for light yellow table*/
+.light-yellow{
+  background-color: #fffbe6 !important;
+}
+.light-yellow:hover {
+  background-color: #fffbe6 !important;
+}
+.light-yellow td {
+  background-color: #fffbe6 !important;
+}
+.light-yellow:hover td {
+  background-color: #fffbe6 !important;
+}
+
+/*for light green table*/
+.light-green {
+  background-color: #d9f7be !important; 
+}
+.light-green:hover {
+  background-color: #e6ffed !important;
+}
+.light-green td {
+  background-color: #d9f7be !important;
+}
+.light-green:hover td {
+  background-color: #e6ffed !important;
+}
+
+.ocr-modal .ant-modal-content{
+    padding:10px  10px!important
+}
+.ocr-modal .ant-modal-content {
+  zoom: 0.75; /* scales down everything to 75% */
+  transform-origin: top center;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(to right, #003A75, #19D0C6) !important;
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* hover state */
+.ant-btn-primary:hover {
+  background: linear-gradient(to right, #00458A, #1FDBD1) !important;
+  color: #ffffff;
+}
+
+/* active state */
+.ant-btn-primary:active {
+  background: linear-gradient(to right, #002a57, #15B8AC);
+  color: #ffffff;
+}
+
+.ant-btn-primary:disabled,
+.ant-btn-primary[disabled] {
+  background: #cbd5e1 !important; 
+  color: #94a3b8 !important;
+  border: 1px solid linear-gradient(to right, #00458A, #1FDBD1) !important;
+  box-shadow: none;
+}
+
+
+.navTab {
+  background: linear-gradient(to right, #003A75, #19D0C6) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  border: 1px solid #2563eb;
+}
+
+.active:hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.masked-input input {
+  -webkit-text-security: disc; /* Chrome */
+  text-security: disc;         /* Other browsers */
+}

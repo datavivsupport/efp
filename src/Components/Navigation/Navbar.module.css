@@ -1,0 +1,97 @@
+/* Logo container */
+.title {
+  font-size: 20px;
+  height: 70px;
+  width: 200px;
+  font-weight: 700;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Tabs container */
+.navTabs {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  scrollbar-width: none; /* Firefox */
+}
+
+.navTabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Individual tab button */
+.navTab {
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #6b7280; /* Gray text */
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Hover effect for tabs */
+.navTab:hover {
+  background: #eff8ff; /* Light blue */
+}
+
+/* Active tab style */
+.navTab.active {
+  background: linear-gradient(to right, #003a75, #19d0c6);
+  color: #fff;
+}
+
+/* Container for flexible items in tabs or drawer */
+.container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Drawer buttons */
+.drawerButton {
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.3s;
+}
+
+.drawerButton:hover {
+  background: #eff8ff;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .navTabs {
+    display: none; /* Hide tabs on small screens */
+  }
+
+  .navTab {
+    font-size: 16px;
+  }
+
+  .title {
+    width: 150px;
+    height: 50px;
+  }
+}

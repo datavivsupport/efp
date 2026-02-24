@@ -1,0 +1,131 @@
+.cardsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 1rem;
+  justify-content: flex-start;
+}
+
+/* Card styling */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 20px; /* responsive width with min 220px */
+  max-width: 300px; /* optional max width for large screens */
+  min-width: 180px;
+  box-sizing: border-box;
+  border-top: 3px solid transparent;
+}
+.card.orange {
+  border-top-color: #f97316; /* orange-500 */
+}
+
+.card.green {
+  border-top-color: #22c55e; /* green-500 */
+}
+
+.card.red {
+  border-top-color: #ef4444; /* red-500 */
+}
+
+.card.blue {
+  border-top-color: #3b82f6; /* blue-500 */
+}
+
+.textContainer {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280; /* gray-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.number {
+  font-weight: 700;
+  font-size: 20px;
+  color: #111827; /* gray-900 */
+  margin: 0;
+}
+
+.iconCircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  background-color: #f3f4f6; /* gray-100 */
+  color: inherit; /* color set by card color */
+}
+
+/* Coloring icons according to card type */
+.card.orange .iconCircle {
+  background-color: #fed7aa; /* orange-200 */
+  color: #ea580c; /* orange-600 */
+}
+
+.card.green .iconCircle {
+  background-color: #bbf7d0; /* green-200 */
+  color: #15803d; /* green-700 */
+}
+
+.card.red .iconCircle {
+  background-color: #fecaca; /* red-200 */
+  color: #b91c1c; /* red-700 */
+}
+
+.card.blue .iconCircle {
+  background-color: #bfdbfe; /* blue-200 */
+  color: #1e40af; /* blue-800 */
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .cardsContainer {
+    justify-content: center;
+  }
+  .card {
+    min-width: 45%;
+    max-width: 45%;
+  }
+}
+
+@media (max-width: 480px) {
+  .cardsContainer {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card {
+    min-width: 100%;
+    max-width: 100%;
+    padding: 12px 16px;
+  }
+  .iconCircle {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+  }
+  .number {
+    font-size: 18px;
+  }
+  .label {
+    font-size: 10px;
+  }
+}

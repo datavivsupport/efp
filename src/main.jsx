@@ -5,8 +5,7 @@ import App from './App.jsx'
 import { createBrowserRouter, redirect } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import Login from './pages/login/login.jsx';
-import { ToastProvider } from "./pages/UIChanges/toast"
-import { Toaster } from "./pages/UIChanges/toaster"
+import ErrorFallback from './Components/ErrorFallback/ErrorFallback.jsx';
 
 const isAuthenticated = () => {
   return !!localStorage.getItem("token");
@@ -27,13 +26,14 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "*",
+    element: <ErrorFallback />
   }
 ]);
 createRoot(document.getElementById('root')).render(
-<ToastProvider>
   <StrictMode>
-    <RouterProvider router={router} />,
-    <Toaster />
-  </StrictMode>,
- </ToastProvider>
+      <RouterProvider router={router} />
+  </StrictMode>
 )
