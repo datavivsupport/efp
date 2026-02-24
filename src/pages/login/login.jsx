@@ -220,7 +220,7 @@ import { Icon } from "@iconify/react";
 import sharafLogo from "../../assets/sharaf-logo.png";
 import { useNavigate } from "react-router";
 import ForgotPasswordModal from "../ForgotPassword/ForgotPasswordModal";
-import styles from "./Login.module.css";
+import styles from "./login.module.css";
 
 const Login = () => {
   const [form] = Form.useForm();
