@@ -105,6 +105,7 @@ html, body {
   font-size: 20px;
   font-weight: 700;
   background: linear-gradient(to right, #003A75, #19D0C6);
+  background-clip: text; 
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 3px;
