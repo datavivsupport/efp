@@ -217,10 +217,10 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Divider } from "antd";
 import { Icon } from "@iconify/react";
-import styles from "./Login.module.css";
 import sharafLogo from "../../assets/sharaf-logo.png";
 import { useNavigate } from "react-router";
 import ForgotPasswordModal from "../ForgotPassword/ForgotPasswordModal";
+import styles from "./Login.module.css";
 
 const Login = () => {
   const [form] = Form.useForm();
