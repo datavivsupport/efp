@@ -18,6 +18,8 @@ import dayjs from "dayjs";
 import Styles from "./salesinput.module.css";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router";
+import CategorySelect from "./Category";
+import EquipmentTypeSelect from "./EquipmentType";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -532,37 +534,7 @@ const SalesInput = () => {
                           label="Equipment Type"
                           rules={[{ required: true, message: "Required" }]}
                         >
-                          <Select
-                            allowClear
-                            placeholder="Select Equipment Type"
-                          >
-                            <Select.Option value="40 HC RF">
-                              40 HC RF
-                            </Select.Option>
-                            <Select.Option value="40 HQ">40 HQ</Select.Option>
-                            <Select.Option value="SOC">SOC</Select.Option>
-                            <Select.Option value="Tank (generic – Tank)">
-                              Tank (generic – Tank)
-                            </Select.Option>
-                            <Select.Option value="Truck">Truck</Select.Option>
-                            <Select.Option value="ISO Tanks">
-                              ISO Tanks
-                            </Select.Option>
-                            <Select.Option value="20GP">20GP</Select.Option>
-                            <Select.Option value="40GP">40GP</Select.Option>
-                            <Select.Option value="Reefer 20">
-                              Reefer 20
-                            </Select.Option>
-                            <Select.Option value="Reefer 40">
-                              Reefer 40
-                            </Select.Option>
-                            <Select.Option value="LCL">LCL</Select.Option>
-                            <Select.Option value="B/Bulk">B/Bulk</Select.Option>
-                            <Select.Option value="Air Shipment">
-                              Air Shipment
-                            </Select.Option>
-                            <Select.Option value="Roro">Roro</Select.Option>
-                          </Select>
+                          <EquipmentTypeSelect />
                         </Form.Item>
                       </Col>
 
@@ -584,30 +556,7 @@ const SalesInput = () => {
                           name={[name, "category"]}
                           label="Category"
                         >
-                          <Select allowClear placeholder="Select Category">
-                            <Select.Option value="SOC">SOC</Select.Option>
-                            <Select.Option value="Laden">Laden</Select.Option>
-                            <Select.Option value="Road">Road</Select.Option>
-                            <Select.Option value="HeavyDuty(HD)">
-                              Heavy Duty (HD)
-                            </Select.Option>
-                            <Select.Option value="GP">GP</Select.Option>
-                            <Select.Option value="Reefer">Reefer</Select.Option>
-                            <Select.Option value="DG">DG</Select.Option>
-                            <Select.Option value="SPL">SPL</Select.Option>
-                            <Select.Option value="Empty">Empty</Select.Option>
-                            <Select.Option value="CBM">CBM</Select.Option>
-                            <Select.Option value="Weight">Weight</Select.Option>
-                            <Select.Option value="FullTruckLoad">
-                              Full Truck Load
-                            </Select.Option>
-                            <Select.Option value="Flatrack">
-                              Flat rack
-                            </Select.Option>
-                            <Select.Option value="OpenTop">
-                              Open Top
-                            </Select.Option>
-                          </Select>
+                          <CategorySelect />
                         </Form.Item>
                       </Col>
 
@@ -688,11 +637,7 @@ const SalesInput = () => {
             >
               <Space align="center">
                 <div className={Styles.mainhead}>
-                  <Icon
-                    icon="fluent:location-12-filled"
-                    width="18"
-                    height="18"
-                  />
+                  <Icon icon="mingcute:ship-fill" width="18" height="18" />
                 </div>
                 <Typography.Title level={5} style={{ margin: 0 }}>
                   SHIPMENT DETAILS
@@ -905,36 +850,7 @@ const SalesInput = () => {
                             label="Equipment Type"
                             rules={[{ required: true, message: "Required" }]}
                           >
-                            <Select
-                              allowClear
-                              placeholder="Select Equipment Type"
-                            >
-                              <Select.Option value="40 HC RF">
-                                40 HC RF
-                              </Select.Option>
-                              <Select.Option value="40 HQ">40 HQ</Select.Option>
-                              <Select.Option value="SOC">SOC</Select.Option>
-                              <Select.Option value="Truck">Truck</Select.Option>
-                              <Select.Option value="ISO Tanks">
-                                ISO Tanks
-                              </Select.Option>
-                              <Select.Option value="20GP">20GP</Select.Option>
-                              <Select.Option value="40GP">40GP</Select.Option>
-                              <Select.Option value="Reefer 20">
-                                Reefer 20
-                              </Select.Option>
-                              <Select.Option value="Reefer 40">
-                                Reefer 40
-                              </Select.Option>
-                              <Select.Option value="LCL">LCL</Select.Option>
-                              <Select.Option value="B/Bulk">
-                                B/Bulk
-                              </Select.Option>
-                              <Select.Option value="Air Shipment">
-                                Air Shipment
-                              </Select.Option>
-                              <Select.Option value="Roro">Roro</Select.Option>
-                            </Select>
+                            <EquipmentTypeSelect />
                           </Form.Item>
                         </Col>
 
@@ -948,7 +864,6 @@ const SalesInput = () => {
                             <Input placeholder="Qty" />
                           </Form.Item>
                         </Col>
-
                         <Col xs={24} md={4}>
                           <Form.Item
                             className={Styles.formLabel}
@@ -956,34 +871,7 @@ const SalesInput = () => {
                             name={[name, "category"]}
                             label="Category"
                           >
-                            <Select allowClear placeholder="Select Category">
-                              <Select.Option value="SOC">SOC</Select.Option>
-                              <Select.Option value="Laden">Laden</Select.Option>
-                              <Select.Option value="Road">Road</Select.Option>
-                              <Select.Option value="HeavyDuty(HD)">
-                                Heavy Duty (HD)
-                              </Select.Option>
-                              <Select.Option value="GP">GP</Select.Option>
-                              <Select.Option value="Reefer">
-                                Reefer
-                              </Select.Option>
-                              <Select.Option value="DG">DG</Select.Option>
-                              <Select.Option value="SPL">SPL</Select.Option>
-                              <Select.Option value="Empty">Empty</Select.Option>
-                              <Select.Option value="CBM">CBM</Select.Option>
-                              <Select.Option value="Weight">
-                                Weight
-                              </Select.Option>
-                              <Select.Option value="FullTruckLoad">
-                                Full Truck Load
-                              </Select.Option>
-                              <Select.Option value="Flatrack">
-                                Flat rack
-                              </Select.Option>
-                              <Select.Option value="OpenTop">
-                                Open Top
-                              </Select.Option>
-                            </Select>
+                            <CategorySelect />
                           </Form.Item>
                         </Col>
 
