@@ -1,13 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Badge, Button, Drawer, Modal, Space, Tooltip, message } from "antd";
+import {
+  Badge,
+  Button,
+  Drawer,
+  Modal,
+  Popover,
+  Space,
+  Tooltip,
+  message,
+} from "antd";
 import { useNavigate, useLocation } from "react-router";
 import { Chart, registerables } from "chart.js";
 import { ChevronDown, User, Menu } from "lucide-react";
 import sharafLogo from "../../assets/sharaf-logo.png";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
+import { useSelector } from "react-redux";
 
 const Navigation = () => {
+  const user = useSelector((state) => state.auth.user);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,6 +60,27 @@ const Navigation = () => {
     navigate("/login");
   };
 
+  const popoverContent = (
+    <div style={{ minWidth: 220 }}>
+      <div style={{ fontWeight: 600, fontSize: 15 }}>
+        {user?.first_name || ""} {user?.last_name || ""}
+      </div>
+      <div style={{ fontSize: 12, color: "#888" }}>{user?.email || ""}</div>
+    </div>
+  );
+
+  const logoutmodal = () => {
+    Modal.confirm({
+      title: "Log Out",
+      content: `Are you sure you want to log out?`,
+      okText: "Yes",
+      cancelText: "Cancel",
+      onOk: () => {
+        handleLogout();
+      },
+    });
+  };
+
   return (
     <nav className="bg-white border-b border-gray-200">
       <div className="px-2 py-2 flex items-center justify-between">
@@ -79,12 +111,9 @@ const Navigation = () => {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center">
           {/* Notification */}
-          <Button
-            type="text"
-            className="p-2 rounded-md hidden md:block hover:bg-gray-100"
-          >
+          <div className="mr-4">
             <Badge
               count={7}
               size="medium"
@@ -94,35 +123,41 @@ const Navigation = () => {
                 fontSize: "10px",
               }}
             >
-              <Icon
-                icon="clarity:notification-line"
-                style={{ color: "#04a099" }}
-                width="22"
-                height="22"
-              />
+              <button className={styles.buttonnew}>
+                <Icon icon="mdi:bell-outline" width="22" height="22" />
+              </button>
             </Badge>
-          </Button>
+          </div>
 
-          {/* User popover */}
-          <div className="relative hidden md:block" ref={popoverRef}>
-            <button
-              className="flex items-center space-x-2 hover:bg-gray-100 px-3 py-2 rounded-md"
-              onClick={handleOpenPopover}
+          {/* User + Logout */}
+          <div
+            className="hidden md:flex items-center space-x-3"
+            ref={popoverRef}
+          >
+            {/* Logout Button */}
+            <Tooltip title="Log Out">
+              <button
+                onClick={() => logoutmodal()}
+                className={styles.buttonnew}
+              >
+                <Icon height="20" width="20" icon="mdi:logout" />
+              </button>
+            </Tooltip>
+            {/* Profile Info */}
+            <Popover
+              content={popoverContent}
+              trigger="hover"
+              placement="bottomRight"
             >
-              <User className="w-5 h-5 text-gray-600" />
-              <span className="text-sm text-gray-700">Sales</span>
-              <ChevronDown className="w-4 h-4 text-gray-600" />
-            </button>
-            {popoverOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
-                >
-                  Logout
-                </button>
+              <div className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full cursor-pointer hover:bg-gray-200 transition">
+                <span className="flex items-center space-x-2 bg-gray-400 px-1 py-1 rounded-full">
+                  <User
+                    style={{ color: "#fff" }}
+                    className="w-5 h-5 text-gray-600"
+                  />
+                </span>
               </div>
-            )}
+            </Popover>
           </div>
 
           {/* Mobile Menu */}
@@ -143,6 +178,30 @@ const Navigation = () => {
         open={drawerVisible}
       >
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <button
+            className={styles.navTab}
+            onClick={popoverContent}
+            style={{
+              display: "flex",
+              width: "100%",
+              textAlign: "left",
+              backgroundColor: "#ffffff97",
+              justifyContent: "flex-start",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <span className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full">
+              <User
+                style={{ color: "#00aea6" }}
+                className="w-5 h-5 text-gray-600"
+              />
+            </span>{" "}
+            <span style={{ fontSize: "14px" }}>
+              {user.first_name} {user.last_name}
+            </span>
+          </button>
+
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -161,8 +220,8 @@ const Navigation = () => {
 
           <button
             className={styles.navTab}
-            onClick={handleLogout}
             style={{ width: "100%", textAlign: "left" }}
+            onClick={() => logoutmodal()}
           >
             Logout
           </button>
