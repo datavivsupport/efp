@@ -235,13 +235,10 @@ const Login = () => {
 
     setTimeout(() => {
       console.log("Login successful:", email);
-
       // Save fake token
       localStorage.setItem("token", "fake-jwt");
-
       setLoading(false);
-
-      navigate( "/",
+      navigate( "/dashboard",
         {
           replace: true ,
           state: {
@@ -249,7 +246,7 @@ const Login = () => {
           },
         },
       );
-      message.success(`Login successful!\n\nEmail: ${email}`, 4000);
+      // message.success(`Login successful!\n\nEmail: ${email}`, 4000);
     }, 500);
   };
 

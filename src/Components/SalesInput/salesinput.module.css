@@ -1,0 +1,72 @@
+/* ================= MAIN CARDS ================= */
+.card {
+  border-radius: 14px;
+  margin-top: 15px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* ================= CARD HEADER ================= */
+.card :global(.ant-card-head) {
+  background: linear-gradient(to right, rgb(248, 250, 252), rgb(239, 246, 255)) !important;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 16px !important;
+}
+
+.card :global(.ant-card-body) {
+  padding: 16px 20px !important;
+  font-size: 12px !important;
+}
+
+.formLabel :global(.ant-form-item-label > label) {
+  font-size: 13px;
+}
+
+/* ================= HEADER ICON ================= */
+.mainhead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #003a75, #19d0c6);
+  color: #fff;
+}
+
+/* ================= FORM SPACING ================= */
+/* Only affect forms inside this component */
+.card :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+/* ================= TYPOGRAPHY ================= */
+.card :global(.ant-typography) {
+  margin-bottom: 0 !important;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .card :global(.ant-card-head-title) {
+    font-size: 16px;
+  }
+
+  .mainhead {
+    width: 28px;
+    height: 28px;
+  }
+
+  .card :global(.ant-form-item) {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .card :global(.ant-card-body) {
+    padding: 14px !important;
+  }
+}

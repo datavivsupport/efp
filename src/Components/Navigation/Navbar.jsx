@@ -1,22 +1,26 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Badge, Button, Drawer, Space, message } from "antd";
+import { Badge, Button, Drawer, Modal, Space, Tooltip, message } from "antd";
+import { useNavigate, useLocation } from "react-router";
 import { Chart, registerables } from "chart.js";
 import { ChevronDown, User, Menu } from "lucide-react";
 import sharafLogo from "../../assets/sharaf-logo.png";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
 
-const Navigation = ({ currentPage, setCurrentPage }) => {
+const Navigation = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const popoverRef = useRef(null);
   Chart.register(...registerables);
 
   const tabs = [
-    { key: "dashboard", label: "Dashboard" },
-    { key: "sales-input", label: "Sales Input" },
-    { key: "approval", label: "Approval" },
-    { key: "export-report", label: "Report" },
+    { key: "/dashboard", label: "Dashboard" },
+    { key: "/sales-input", label: "Sales Input" },
+    { key: "/approval", label: "Approval" },
+    { key: "/export-report", label: "Report" },
   ];
 
   useEffect(() => {
@@ -41,8 +45,8 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
     setPopoverOpen(false);
     setDrawerVisible(false);
     localStorage.removeItem("token");
-    window.location.reload();
     message.success("Logout successfully.");
+    navigate("/login");
   };
 
   return (
@@ -64,9 +68,9 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
               <button
                 key={tab.key}
                 className={`${styles.navTab} ${
-                  currentPage === tab.key ? styles.active : ""
+                  location.pathname === tab.key ? styles.active : ""
                 }`}
-                onClick={() => setCurrentPage(tab.key)}
+                onClick={() => navigate(tab.key)}
               >
                 {tab.label}
               </button>
@@ -74,8 +78,9 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
           </div>
         </div>
 
-        {/* Right side icons */}
+        {/* Right side */}
         <div className="flex items-center space-x-4">
+          {/* Notification */}
           <Button
             type="text"
             className="p-2 rounded-md hidden md:block hover:bg-gray-100"
@@ -86,10 +91,15 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
               style={{
                 background: "linear-gradient(to right, #003a75, #19d0c6)",
                 color: "#fff",
-                fontSize: "10px"
+                fontSize: "10px",
               }}
             >
-              <Icon icon="clarity:notification-line" style={{ color: "#04a099" }} width="22" height="22" />
+              <Icon
+                icon="clarity:notification-line"
+                style={{ color: "#04a099" }}
+                width="22"
+                height="22"
+              />
             </Badge>
           </Button>
 
@@ -115,12 +125,12 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
             )}
           </div>
 
-          {/* Hamburger for mobile */}
+          {/* Mobile Menu */}
           <button
             className="p-2 hover:bg-gray-100 rounded-md md:hidden"
             onClick={() => setDrawerVisible(true)}
           >
-            <Menu style={{ color: "#04a099"}} className="w-6 h-6 600" />
+            <Menu style={{ color: "#04a099" }} className="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -137,10 +147,10 @@ const Navigation = ({ currentPage, setCurrentPage }) => {
             <button
               key={tab.key}
               className={`${styles.navTab} ${
-                currentPage === tab.key ? styles.active : ""
+                location.pathname === tab.key ? styles.active : ""
               }`}
               onClick={() => {
-                setCurrentPage(tab.key);
+                navigate(tab.key);
                 setDrawerVisible(false);
               }}
               style={{ width: "100%", textAlign: "left" }}

@@ -1,28 +1,42 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router";
+import { useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router";
 import StatusCards from "../StatsCard/StatsCard";
 import { Button, message } from "antd";
 import { Chart } from "chart.js";
 import CommonTable from "../Commontable/Commontable";
 import "../Commontable/InvoiceTable.scss";
 import { Icon } from "@iconify/react";
-import { FileX } from "lucide-react";
+// import { FileX } from "lucide-react";
 
 const ApprovalDashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // useEffect(() => {
+  //   // Only show message if it exists
+  //   if (location.state?.message) {
+  //     message.success(location.state.message);
+  //     // Replace the state while preserving pathname
+  //     window.history.replaceState(
+  //       { ...location.state, message: null },
+  //       "",
+  //       location.pathname,
+  //     );
+  //   }
+  // }, [location]);
+
+  const hasShownMessage = useRef(false);
 
   useEffect(() => {
-    // Only show message if it exists
-    if (location.state?.message) {
+    if (!hasShownMessage.current && location.state?.message) {
+      hasShownMessage.current = true;
+
       message.success(location.state.message);
-      // Replace the state while preserving pathname
-      window.history.replaceState(
-        { ...location.state, message: null },
-        "",
-        location.pathname,
-      );
+
+      // Clear state after showing message
+      navigate(location.pathname, { replace: true });
     }
-  }, [location]);
+  }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
     let trendChart, statusChart, carrierChart;
@@ -203,15 +217,7 @@ const ApprovalDashboard = () => {
   return (
     <div className="main-container">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        {/* <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            Comprehensive overview of export forwarding operations
-          </p>
-        </div> */}
-
-        {/* Stats Grid */}
+      <main className="mx-auto px-4 py-4">
         <StatusCards />
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
