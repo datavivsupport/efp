@@ -18,7 +18,7 @@ html, body, #root {
 
 @media (max-width: 768px) {
   .main-container {
-    padding: 12px;
+    padding: 0px;
   }
 }
 
@@ -87,6 +87,7 @@ html, body, #root {
 
 /* hover state */
 .ant-btn-primary:hover {
+  border: none !important;
   background: linear-gradient(to right, #00458A, #1FDBD1) !important;
   color: #ffffff;
 }
