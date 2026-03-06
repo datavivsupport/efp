@@ -255,14 +255,14 @@ const SalesInput = () => {
           exportCreatedDate: dayjs(),
         }}
       >
-        <Button
+        {/* <Button
           onClick={() => navigate("/dashboard")}
           type="primary"
           style={{ fontSize: "13px" }}
           icon={<Icon icon="ion:arrow-back-outline" />}
         >
           Back
-        </Button>
+        </Button> */}
         {/* EXPORT DETAILS */}
         <Card
           className={Styles.card}
@@ -409,13 +409,24 @@ const SalesInput = () => {
                   <Input placeholder="Person in Charge" />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
+                            <Col xs={24} md={6}>
                 <Form.Item
                   className={Styles.formLabel}
-                  label="Contact Details"
-                  name="phoneno"
+                  label="Job Type"
+                  name="jobType"
                 >
-                  <Input placeholder="Phone Number" />
+                  <Select
+                    placeholder="Select Job Type"
+                    onChange={generateExportNumber}
+                    allowClear
+                  >
+                    <Select.Option value="forwarding">Forwarding</Select.Option>
+                    <Select.Option value="liner">Liner</Select.Option>
+                    <Select.Option value="cross-trade">
+                      Cross Trade
+                    </Select.Option>
+                    <Select.Option value="others">Others</Select.Option>
+                  </Select>
                 </Form.Item>
               </Col>
             </Row>
@@ -451,25 +462,13 @@ const SalesInput = () => {
                   <Input placeholder="E-mail" />
                 </Form.Item>
               </Col>
-
               <Col xs={24} md={6}>
                 <Form.Item
                   className={Styles.formLabel}
-                  label="Job Type"
-                  name="jobType"
+                  label="Contact Details"
+                  name="phoneno"
                 >
-                  <Select
-                    placeholder="Select Job Type"
-                    onChange={generateExportNumber}
-                    allowClear
-                  >
-                    <Select.Option value="forwarding">Forwarding</Select.Option>
-                    <Select.Option value="liner">Liner</Select.Option>
-                    <Select.Option value="cross-trade">
-                      Cross Trade
-                    </Select.Option>
-                    <Select.Option value="others">Others</Select.Option>
-                  </Select>
+                  <Input placeholder="Phone Number" />
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
