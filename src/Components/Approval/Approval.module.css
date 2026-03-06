@@ -1,0 +1,148 @@
+/* ================= MAIN CARDS ================= */
+.card {
+  border-radius: 14px;
+  margin-top: 15px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* ================= CARD HEADER ================= */
+.card :global(.ant-card-head) {
+  background: linear-gradient(
+    to right,
+    rgb(248, 250, 252),
+    rgb(239, 246, 255)
+  ) !important;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 16px !important;
+}
+
+.card :global(.ant-card-body) {
+  padding: 16px 20px !important;
+  font-size: 12px !important;
+}
+
+.formLabel :global(.ant-form-item-label > label) {
+  font-size: 13px;
+}
+
+/* ================= HEADER ICON ================= */
+.mainhead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #003a75, #19d0c6);
+  color: #fff;
+}
+
+/* ================= FORM SPACING ================= */
+.card :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+/* ================= TYPOGRAPHY ================= */
+.card :global(.ant-typography) {
+  margin-bottom: 0 !important;
+}
+
+/* ================= TABLE ================= */
+.card :global(.ant-table-thead > tr > th) {
+  background: #f8fafc !important;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.card :global(.ant-table-tbody > tr > td) {
+  font-size: 12px;
+  vertical-align: top;
+  padding: 8px 12px !important;
+}
+
+/* ================= OTHER CHARGES CHIP BOX ================= */
+.chipBox {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 6px 10px;
+  min-height: 40px;
+  transition: border-color 0.2s;
+}
+
+.chipBox:focus-within {
+  border-color: #19d0c6;
+  box-shadow: 0 0 0 2px rgba(25, 208, 198, 0.15);
+}
+
+/* ================= REMARK CARD ================= */
+.remarkItem {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 10px 14px;
+  position: relative;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+/* ================= UPLOAD DROP ZONE ================= */
+.dropZone {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  height: 75px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 13px;
+  transition: border-color 0.2s, background 0.2s;
+  margin-top: 4px;
+}
+
+.dropZone:hover {
+  border-color: #19d0c6;
+  background: #f0fdfa;
+}
+
+/* ================= SECTION LABEL ================= */
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .card :global(.ant-card-head-title) {
+    font-size: 16px;
+  }
+
+  .mainhead {
+    width: 28px;
+    height: 28px;
+  }
+
+  .card :global(.ant-form-item) {
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .card :global(.ant-card-body) {
+    padding: 14px !important;
+  }
+}

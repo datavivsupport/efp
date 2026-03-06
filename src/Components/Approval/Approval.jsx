@@ -1,1268 +1,1273 @@
 import { useState } from "react";
-import { FileText, Trash2, Package, Ship, X, MoveUpRight, UploadCloud, Paperclip, } from 'lucide-react';
-const Approval = () => {
-  const [bankSlip, setBankSlip] = useState(null);
-  const [formData, setFormData] = useState({
-    exportNo: '',
-    exportCreatedDate: '',
-    destination: '',
-    commodity: '',
-    portOfLoad: '',
-    portOfDischarge: '',
-    placeOfReceipt: '',
-    placeOfDelivery: '',
-    modeOfShipment: '',
-    typeOfShipment: '',
-    dgr: '',
-    incoterm: '',
-    salesQuotationNo: '',
-    customerRefNo: '',
-    jobNo: '',
-    bookingVessel: '',
-    bookingVoyage: '',
-    vesselETA: '',
-    bookingRefNo: '',
-    cutOffDate: '',
-    cutOffTime: '',
-    bookingRemarks: '',
-    cnfRemarks: '',
-    accountsRemarks: '',
-    executiveName: '',
-    totalCharges: '',
-    otherCharges: [],
-  });
+import {
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  TimePicker,
+  Button,
+  Table,
+  Upload,
+  Tag,
+  Space,
+  Row,
+  Col,
+  Typography,
+  Card,
+  Badge,
+  Checkbox,
+  message,
+  Modal,
+} from "antd";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  UploadOutlined,
+  PaperClipOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
+import { Icon } from "@iconify/react";
+import Styles from "./approval.module.css";
+import EquipmentTypeSelect from "../SalesInput/EquipmentType";
+import CategorySelect from "../SalesInput/Category";
+import { uploadFile } from "../Viewer/UploadUtil";
+import MultiFileViewer from "../Viewer/MultiFileViewer";
 
-  const [containerRows, setContainerRows] = useState([
-    {
-      id: 1,
-      equipmentType: '',
-      volume: '',
-      category: '',
-      quote: '',
-      cost: '',
+const { TextArea } = Input;
+const { Option } = Select;
+
+// How many chips to show before "See more"
+const VISIBLE_LIMIT = 2;
+
+const STATUS_COLOR = {
+  Approved: "success",
+  Pending: "warning",
+  Rejected: "error",
+  "In Progress": "processing",
+};
+
+/* ── Collapsible Card Header ── */
+const CardHeader = ({ icon, title, open, onToggle }) => (
+  <div
+    onClick={onToggle}
+    style={{
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
+    }}
+  >
+    <Space align="center">
+      <div className={Styles.mainhead}>
+        <Icon icon={icon} width="18" height="18" />
+      </div>
+      <Typography.Title level={5} style={{ margin: 0 }}>
+        {title}
+      </Typography.Title>
+    </Space>
+    <span style={{ fontSize: 22, color: "#626161" }}>
+      <Icon icon={open ? "grommet-icons:form-up" : "grommet-icons:form-down"} />
+    </span>
+  </div>
+);
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FileChipList — shared chip renderer for every upload field
+   Shows up to VISIBLE_LIMIT chips + "+N more" button.
+   onPreview(localIdx) — caller decides which file array to show in modal.
+───────────────────────────────────────────────────────────────────────────── */
+const FileChipList = ({ files, color = "blue", onRemove, onPreview }) => {
+  const visible = files.slice(0, VISIBLE_LIMIT);
+  const hidden = files.slice(VISIBLE_LIMIT);
+
+  return (
+    <Space wrap style={{ marginTop: 6, marginBottom: 4, flexWrap: "wrap" }}>
+      {visible.map((file, i) => (
+        <Tag
+          key={i}
+          closable
+          color={color}
+          icon={<PaperClipOutlined />}
+          onClose={() => onRemove(i)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 2,
+            maxWidth: 220,
+          }}
+        >
+          <span
+            style={{
+              maxWidth: 110,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {file.name}
+          </span>
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: "0 2px", height: "auto", fontSize: 11 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview(i);
+            }}
+          >
+            Preview
+          </Button>
+        </Tag>
+      ))}
+
+      {hidden.length > 0 && (
+        <Button
+          size="small"
+          type="dashed"
+          icon={<EyeOutlined />}
+          onClick={() => onPreview(VISIBLE_LIMIT)}
+          style={{ fontSize: 11, borderRadius: 20 }}
+        >
+          +{hidden.length} more
+        </Button>
+      )}
+    </Space>
+  );
+};
+
+/* DocUploadField — self-contained upload + chip-list for a single doc slot.
+   Each instance has its own isolated file array; nothing is shared.
+
+   Props:
+     label      — button label suffix
+     files      — { name, url }[]
+     setFiles   — state setter
+     color      — Tag color string
+     onPreview  — (filesArray, localIdx) => void */
+
+const DocUploadField = ({
+  label,
+  files,
+  setFiles,
+  color = "purple",
+  onPreview,
+}) => {
+  const handleBeforeUpload = async (file) => {
+    try {
+      const url = await uploadFile([{ originFileObj: file }]);
+      setFiles((prev) => [...prev, { name: file.name, url }]);
+      message.success(`${file.name} uploaded`);
+    } catch {
+      message.error("Upload failed");
     }
-  ]);
-  const [placementRows, setPlacementRows] = useState([
-    {
-      id: 1,
-      equipmentType: '',
-      volume: '',
-      category: '',
-      date: '',
-      time: '',
-      remarks: '',
-    }
-  ]);
-  const [otherChargeInput, setOtherChargeInput] = useState('');
-  const [remarksAttach, setRemarksAttach] = useState([]);
+    return false;
+  };
+
+  return (
+    <div>
+      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }}>
+          {files.length === 0 ? `Upload ${label}` : "Add More"}
+        </Button>
+      </Upload>
+
+      {files.length > 0 && (
+        <FileChipList
+          files={files}
+          color={color}
+          onRemove={(i) => setFiles((p) => p.filter((_, j) => j !== i))}
+          onPreview={(i) => onPreview(files, i)}
+        />
+      )}
+    </div>
+  );
+};
+
+/* MAIN COMPONENT */
+const Approval = () => {
+  const [form] = Form.useForm();
+
+  /* ── Collapse state ── */
+  const [open, setOpen] = useState({
+    export: true,
+    container: true,
+    otherDetails: true,
+    placement: true,
+    booking: true,
+    bankAccounts: true,
+    documents: true,
+    attachments: true,
+    approvalStatus: true,
+  });
+  const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+
+  /* ── Shared preview modal ──
+     openPreview(filesArray, localIdx) — receives the exact array to show.
+     Each field passes its own isolated array so the sidebar never mixes lists.
+  ── */
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const openPreview = (filesArray, localIdx) => {
+    const urls = filesArray.map((f) => f.url).filter(Boolean);
+    if (!urls.length) return;
+    setPreviewUrls(urls);
+    setPreviewIndex(Math.max(0, Math.min(localIdx, urls.length - 1)));
+    setPreviewVisible(true);
+  };
+
+  /* ── File states — every field is 100% independent ── */
+  // Bank slip section
+  const [bankSlips, setBankSlips] = useState([]);
+
+  // Booking section — 4 separate lists
+  const [releaseOrderFiles, setReleaseOrderFiles] = useState([]);
+  const [bocFiles, setBocFiles] = useState([]);
+  const [haulageCostFiles, setHaulageCostFiles] = useState([]);
+  const [loadListFiles, setLoadListFiles] = useState([]);
+
+  // Documents section — 3 separate lists
+  const [lpoFiles, setLpoFiles] = useState([]);
+  const [invoiceFiles, setInvoiceFiles] = useState([]);
+  const [facFiles, setFacFiles] = useState([]);
+
+  // Attachments & Comments section
+  const [attachments, setAttachments] = useState([]);
+
+  /* ── Other state ── */
+  const [otherCharges, setOtherCharges] = useState([]);
+  const [chargeInput, setChargeInput] = useState("");
+  const [remarks, setRemarks] = useState([]);
   const [newRemark, setNewRemark] = useState("");
-  const [attachmentsR, setAttachmentsR] = useState([]);
+
+  /* ── Static approval rows ── */
   const approvalRows = [
     {
       id: 1,
-      stage: 'Pending SalesHOD and CSV Updation Team Approval',
-      pendingWith: 'CSVUpdation',
-      updatedBy: 'Gouthaman T (CSV)',
-      status: 'Approved ',
-      updatedDate: '2025-11-03'
-    }
-  ]
+      stage: "Pending SalesHOD and CSV Updation Team Approval",
+      pendingWith: "CSVUpdation",
+      updatedBy: "Gouthaman T (CSV)",
+      status: "Approved",
+      updatedDate: "2025-11-03",
+    },
+  ];
+
+  /* ── Handlers ── */
+  const addOtherCharge = () => {
+    const v = chargeInput.trim();
+    if (!v) return;
+    if (!otherCharges.find((c) => c.toLowerCase() === v.toLowerCase()))
+      setOtherCharges((p) => [...p, v]);
+    setChargeInput("");
+  };
 
   const addRemark = () => {
     if (!newRemark.trim()) return;
-    setRemarksAttach([...remarksAttach, newRemark]);
+    setRemarks((p) => [...p, newRemark]);
     setNewRemark("");
   };
-  const removeRemark = (index) => {
-    setRemarksAttach(remarksAttach.filter((_, i) => i !== index));
-  }
-  const addAttachments = (files) => {
-    setAttachmentsR([...attachmentsR, ...Array.from(files)]);
-  };
 
-  const removeAttachment = (index) => {
-    setAttachmentsR(attachmentsR.filter((_, i) => i !== index));
-  };
-
-  /* ---------------- Handlers ---------------- */
-  const addOtherCharge = () => {
-    const value = otherChargeInput.trim();
-    if (!value) return;
-
-    setFormData(prev => {
-      const exists = prev.otherCharges.some(
-        charge => charge.toLowerCase() === value.toLowerCase()
-      );
-
-      if (exists) return prev;
-
-      return {
-        ...prev,
-        otherCharges: [...prev.otherCharges, value]
-      };
-    });
-
-    setOtherChargeInput('');
-  };
-
-  const removeOtherCharge = index => {
-    setFormData(prev => ({
-      ...prev,
-      otherCharges: prev.otherCharges.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleInputChange = (field, value) => {
-    if (field === 'otherCharges') {
-      setFormData(prev => ({ ...prev, [field]: [...prev[field], value] }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+  const handleUploadBankSlip = async (file) => {
+    try {
+      const url = await uploadFile([{ originFileObj: file }]);
+      setBankSlips((prev) => [...prev, { name: file.name, url }]);
+      message.success(`${file.name} uploaded`);
+    } catch {
+      message.error("Upload failed");
     }
+    return false;
   };
 
-  const updateContainerRow = (id, field, value) => {
-    setContainerRows(prev =>
-      prev.map(row => (row.id === id ? { ...row, [field]: value } : row))
-    );
-  };
-
-  const addContainerRow = () => {
-    setContainerRows(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        equipmentType: '',
-        volume: '',
-        category: '',
-        quote: '',
-        cost: ''
-      }
-    ]);
-  };
-
-  const removePlacementRow = id => {
-    if (placementRows.length > 1) {
-      setPlacementRows(prev => prev.filter(row => row.id !== id));
+  const handleUploadAttachment = async (file) => {
+    try {
+      const url = await uploadFile([{ originFileObj: file }]);
+      setAttachments((prev) => [...prev, { name: file.name, url }]);
+      message.success(`${file.name} uploaded`);
+    } catch {
+      message.error("Upload failed");
     }
-  };
-  const updatePlacementRow = (id, field, value) => {
-    setPlacementRows(prev =>
-      prev.map(row => (row.id === id ? { ...row, [field]: value } : row))
-    );
+    return false;
   };
 
-  const addPlacementRow = () => {
-    setPlacementRows(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        equipmentType: '',
-        volume: '',
-        category: '',
-        date:'',
-        time:'',
-        remarks:''
-      }
-    ]);
-  };
-
-  const removeContainerRow = id => {
-    if (containerRows.length > 1) {
-      setContainerRows(prev => prev.filter(row => row.id !== id));
-    }
-  };
-
-  const handleSave = () => {
+  const onFinish = (values) => {
     const payload = {
-      ...formData,
-      containerRows,
-      bankSlip,
-      attachmentsR,
-      updatedAt: new Date().toISOString()
+      exportdetails: {
+        exportNumber: values?.exportNumber || "",
+        exportCreatedDate: values?.exportCreatedDate || "",
+        exportCreatedBy: values?.exportCreatedBy || "",
+        carrierName: values?.carrierName || "",
+        customerName: values?.customerName || "",
+        contactDetails: values?.contactDetails || "",
+      },
+      containerDetails: {
+        containerRows: values?.containerRows || [],
+        otherCharges,
+      },
+      otherDetails: {
+        portofloading: values?.pol || "",
+        portofdischarge: values?.pod || "",
+        finalpod: values?.fpod || "",
+        termsOfShipment: values?.termsOfShipment || "",
+        haulierCode: values?.haulierCode || "",
+        hbl: values?.hbl || false,
+        fac: values?.fac || false,
+        documentation: values?.documentation || false,
+        transportation: values?.transportation || false,
+        executiveName: values?.executiveName || "",
+        specialRemarks: values?.specialRemarks || "",
+      },
+      placementDetails: values?.placementRows || [],
+      bookingDetails: {
+        afsysJobNo: values?.afsysJobNo || "",
+        bookingVessel: values?.bookingVessel || "",
+        bookingVoyage: values?.bookingVoyage || "",
+        vesselETA: values?.vesselETA || "",
+        bookingRefNo: values?.bookingRefNo || "",
+        siCutOffDate: values?.siCutOffDate || "",
+        siCutOffTime: values?.siCutOffTime || "",
+        bookingRemarks: values?.bookingRemarks || "",
+        cnfRemarks: values?.cnfRemarks || "",
+        releaseOrderFiles,
+        bocFiles,
+        haulageCostFiles,
+        loadListFiles,
+      },
+      documents: { lpoFiles, invoiceFiles, facFiles },
+      bankslipandaccount: {
+        bankSlips,
+        accountRemarks: values?.accountRemarks || "",
+      },
+      attachmentsandcomments: { attachments, remarks },
     };
-
-    console.log('Approval Save Payload:', payload);
-    alert('Form saved successfully');
+    message.success("Form saved successfully");
   };
 
-  const handleCancel = () => {
-    if (window.confirm('Discard all changes?')) {
-      window.location.reload();
-    }
+  const handleReset = () => {
+    form.resetFields();
+    setOtherCharges([]);
+    setRemarks([]);
+    setAttachments([]);
+    setBankSlips([]);
+    setReleaseOrderFiles([]);
+    setBocFiles([]);
+    setHaulageCostFiles([]);
+    setLoadListFiles([]);
+    setLpoFiles([]);
+    setInvoiceFiles([]);
+    setFacFiles([]);
+    message.info("Form reset");
   };
 
-  /* ---------------- UI ---------------- */
+  /* ── Table columns ── */
+  const approvalColumns = [
+    { title: "Stage", dataIndex: "stage", key: "stage" },
+    { title: "Pending With", dataIndex: "pendingWith", key: "pendingWith" },
+    { title: "Updated By", dataIndex: "updatedBy", key: "updatedBy" },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => (
+        <Badge status={STATUS_COLOR[s.trim()] || "default"} text={s} />
+      ),
+    },
+    { title: "Updated Date", dataIndex: "updatedDate", key: "updatedDate" },
+  ];
 
+  /* RENDER */
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Page Header */}
-      {/* <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Create New Booking</h2>
-        <p className="text-gray-600">Export Forwarding Process - Complete all required fields</p>
-      </div> */}
-
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        {/* Form Header */}
-        <div className="bg-teal-600 px-8 py-5">
-          <div className="flex items-center space-x-3 justify-between">
-            <div className='flex items-center space-x-3'>
-              <Ship className="w-6 h-6 text-white" />
-              <div>
-                <h3 className="text-xl font-bold text-white">EXPORT DETAILS (BOOKING NOTE – F30-03-01/JAN, 2018)</h3>
-                <p className="text-teal-100 text-sm mt-1">Fields marked with * are required</p>
-              </div>
-            </div>
-            {/* <div><select className="bg-white align-end text-gray-900 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500">
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select></div> */}
+    <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
+      <Form
+        layout="vertical"
+        form={form}
+        onFinish={onFinish}
+        onFinishFailed={() =>
+          message.error("Please fill in all required fields")
+        }
+      >
+        {/* ════════ EXPORT DETAILS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="basil:document-solid"
+              title="EXPORT DETAILS"
+              open={open.export}
+              onToggle={() => toggle("export")}
+            />
+          }
+        >
+          <div style={{ display: open.export ? "block" : "none" }}>
+            <Row gutter={16}>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Export Number"
+                  name="exportNumber"
+                >
+                  <Input placeholder="Please Select Job Type" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Export Created Date"
+                  name="exportCreatedDate"
+                >
+                  <DatePicker
+                    placeholder="YYYY-MM-DD"
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Export Created By"
+                  name="exportCreatedBy"
+                >
+                  <Input placeholder="Created By" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Carrier Name"
+                  name="carrierName"
+                >
+                  <Input placeholder="Carrier Name" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Customer Name"
+                  name="customerName"
+                  rules={[{ required: true, message: "Required" }]}
+                >
+                  <Input placeholder="Customer Name" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Contact PIC"
+                  name="contactPIC"
+                >
+                  <Input placeholder="Contact PIC" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Contact Details"
+                  name="contactDetails"
+                >
+                  <Input placeholder="Phone / Email" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Commodity"
+                  name="commodity"
+                >
+                  <Input placeholder="Commodity" />
+                </Form.Item>
+              </Col>
+            </Row>
           </div>
-        </div>
+        </Card>
 
-        {/* Form Content */}
-        <div className="p-8 space-y-8">
+        {/* ════════ CONTAINER DETAILS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="octicon:container-24"
+              title="CONTAINER DETAILS"
+              open={open.container}
+              onToggle={() => toggle("container")}
+            />
+          }
+        >
+          <div style={{ display: open.container ? "block" : "none" }}>
+            <Form.List name="containerRows" initialValue={[{}]}>
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...rest }) => (
+                    <Row gutter={16} key={key} align="middle">
+                      <Col xs={24} md={5}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "equipmentType"]}
+                          label="Equipment Type"
+                          rules={[{ required: true, message: "Required" }]}
+                        >
+                          <EquipmentTypeSelect />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "volume"]}
+                          label="Volume"
+                        >
+                          <Input placeholder="Qty" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={5}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "category"]}
+                          label="Category"
+                        >
+                          <CategorySelect />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "quote"]}
+                          label="Quote"
+                        >
+                          <Input placeholder="Quote" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "cost"]}
+                          label="Cost"
+                        >
+                          <Input placeholder="Cost" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={1}>
+                        <Button
+                          danger
+                          style={{ marginTop: "1rem" }}
+                          disabled={fields.length <= 1}
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(name)}
+                        />
+                      </Col>
+                      <Col xs={24} md={1}>
+                        <Button
+                          type="primary"
+                          style={{ marginTop: "1rem" }}
+                          icon={<PlusOutlined />}
+                          onClick={() => add()}
+                        />
+                      </Col>
+                    </Row>
+                  ))}
+                </>
+              )}
+            </Form.List>
 
-          {/* Shipment Details */}
-          <section className="mb-8">
-            <div className="flex items-center space-x-2 mb-4 pb-2 border-b-2 border-gray-200">
+            <Row gutter={16} style={{ marginTop: 8 }}>
+              <Col xs={24}>
+                <Form.Item className={Styles.formLabel} label="Other Charges">
+                  <div className={Styles.chipBox}>
+                    <Space
+                      wrap
+                      style={{ marginBottom: otherCharges.length ? 6 : 0 }}
+                    >
+                      {otherCharges.map((c, i) => (
+                        <Tag
+                          key={i}
+                          closable
+                          color="cyan"
+                          onClose={() =>
+                            setOtherCharges((p) => p.filter((_, j) => j !== i))
+                          }
+                        >
+                          {c}
+                        </Tag>
+                      ))}
+                    </Space>
+                    <Input
+                      bordered={false}
+                      placeholder="Type a charge and press Enter…"
+                      value={chargeInput}
+                      onChange={(e) => setChargeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          addOtherCharge();
+                        }
+                      }}
+                      style={{ padding: 0 }}
+                    />
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+        </Card>
 
-              <h4 className="text-lg font-bold text-gray-800">EXPORT DETAILS</h4>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
+        {/* ════════ OTHER DETAILS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mingcute:ship-fill"
+              title="OTHER DETAILS"
+              open={open.otherDetails}
+              onToggle={() => toggle("otherDetails")}
+            />
+          }
+        >
+          <div style={{ display: open.otherDetails ? "block" : "none" }}>
+            <Row gutter={16}>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="POL"
+                  name="pol"
+                  rules={[{ required: true, message: "Required" }]}
+                >
+                  <Input placeholder="Port of Loading" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="POD"
+                  name="pod"
+                  rules={[{ required: true, message: "Required" }]}
+                >
+                  <Input placeholder="Port of Discharge" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="FPOD"
+                  name="fpod"
+                >
+                  <Input placeholder="Final Port of Discharge" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Terms of Shipment"
+                  name="termsOfShipment"
+                >
+                  <Select placeholder="Select Terms" allowClear>
+                    <Option value="prepaid">Prepaid</Option>
+                    <Option value="collect">Collect</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Haulier Code"
+                  name="haulierCode"
+                >
+                  <Input placeholder="Enter Code" />
+                </Form.Item>
+              </Col>
+              <Col xs={12} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Name of Executive"
+                  name="executiveName"
+                >
+                  <Input placeholder="Sales Executive" />
+                </Form.Item>
+              </Col>
+              <Col xs={12} md={12}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Special Instruction if Any"
+                  name="specialRemarks"
+                >
+                  <TextArea
+                    placeholder="Enter any special instructions…"
+                    // autoSize={{ minRows: 2 }}
+                  />
+                </Form.Item>
+              </Col>
               {[
-                ['Export Number', 'exportNo', 'Please Select the Job Type'],
-                ['Export Created Date', 'exportCreatedDate', 'Created Date'],
-                ['Export Created By', 'destination', 'Created By'],
-                ['Carrier Name', 'commodity', 'Carrier Name'],
-                ['Customer Name', 'portOfLoad', 'Customer Name'],
-                ['Contact PIC', 'portOfDischarge', 'Contact PIC'],
-                ['Contact Details', 'placeOfReceipt', 'Contact Details'],
-                ['Commodity', 'placeOfDelivery', 'Commodity'],
-              ].map(([label, field, placeholder]) => (
-                <div key={field}>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-                  {field === 'exportCreatedDate' ? <input type="date" placeholder={placeholder} value={formData[field]} onChange={e => handleInputChange(field, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /> : <input
-                    value={formData[field]}
-                    placeholder={placeholder}
-                    onChange={e => handleInputChange(field, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />}
-                </div>
+                ["hbl", "HBL"],
+                ["fac", "FAC"],
+                ["documentation", "Documentation"],
+                ["transportation", "Transportation"],
+              ].map(([n, l]) => (
+                <Col xs={12} md={6} key={n}>
+                  <Form.Item name={n} valuePropName="checked" noStyle>
+                    <Checkbox>{l}</Checkbox>
+                  </Form.Item>
+                </Col>
               ))}
-            </div>
-          </section>
+            </Row>
+          </div>
+        </Card>
 
-          {/* Container Details */}
-          <section className="mb-8">
-            <div className="flex justify-between mb-3">
-              <div className="flex items-center space-x-2 mb-4 pb-2 grid grid-cols-5 border-b-2 border-gray-200">
-                <div>
-
-                  <h4 className="text-lg font-bold text-gray-800">CONTAINER DETAILS</h4></div>
-              </div>
-              <button
-                type="button"
-                onClick={addContainerRow}
-                className="px-4 py-2 mb-4 pb-2 bg-teal-600 text-white rounded"
-              >
-                + Add Container
-              </button>
-            </div>
-            <div className="border border-gray-200 rounded-lg overflow-auto mb-2">
-              <table className="w-full min-w-[1000px] overflow-auto">
-                <thead className="bg-gray-100 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Equipment Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Volume</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Category</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Quote</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Cost</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {containerRows.map(row => (
-                    <tr key={row.id}>
-                      {[
-                        ['equipmentType', 'Enter Equipment Type'],
-                        ['volume', 'Qty'],
-                        ['category', 'Enter Category'],
-                        ['quote', 'Enter Quote'],
-                        ['cost', 'Enter Cost'],
-                      ].map(([field, placeholder]) => (
-                      <td key={field} className='px-4 py-3'>
-                        {field === 'equipmentType' && (
-                          <select
-                            value={row[field]}
-                            onChange={e => updateContainerRow(row.id, field, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          >
-                            <option value="">None</option>
-                            <option>40 HC RF</option>
-                            <option>40 HQ</option>
-                            <option>SOC</option>
-                            <option>Tank (generic – “Tank”)</option>
-                            <option>Truck</option>
-                            <option>ISO Tanks</option>
-
-                            <option>20GP</option>
-                            <option>40GP</option>
-                            <option>45HC</option>
-                            <option>Reefer 20</option>
-                            <option>Reefer 40</option>
-                            <option>LCL</option>
-                            <option>B/Bulk</option>
-                            <option>Air Shipment</option>
-                            <option>Roro</option>
-                          </select>
-                        )}
-                        {field === 'volume' && (<td>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[1-9][0-9]*"
-                            placeholder={placeholder}
-                            value={row.volume}
-                            onChange={(e) => {
-                              const value = e.target.value;
-
-                              if (value === '' || /^[1-9]\d*$/.test(value)) {
-                                updateContainerRow(row.id, 'volume', e.target.value)
-                              }
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                        {field === 'category' && (<td >
-                          <select
-                            value={row.category}
-                            onChange={(e) => updateContainerRow(row.id, field, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          >
-                            <option value="">None</option>
-                            <option>SOC</option>
-                            <option>Laden</option>
-                            <option>Road</option>
-                            <option>Heavy Duty (HD)</option>
-                            <option>GP</option>
-                            <option>Reefer</option>
-                            <option>DG</option>
-                            <option>SPL</option>
-                            <option>Empty</option>
-                            <option>CBM</option>
-                            <option>Weight</option>
-                            <option>Full Truck Load</option>
-                            <option>Flat rack</option>
-                            <option>Open Top</option>
-                          </select>
-                        </td>)}
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="date"
-                            value={row.date}
-                            onChange={(e) => updateRow(row.id, 'date', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td> */}
-
-                        {field === 'quote' && (<td >
-                          <textarea
-                            type="text"
-                            placeholder={placeholder}
-                            value={row.quote}
-                            onChange={(e) => {
-                              updateContainerRow(row.id, 'quote', e.target.value)
-
-                              e.target.style.height = '2.4rem'
-                              e.target.style.height = `${e.target.scrollHeight}px`
-                            }}
-                            className="w-full h-[2.4rem] flex self-center px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                       {(field === 'cost' && <td >
-                          <textarea
-                            type="text"
-                            placeholder={placeholder}
-                            value={row.cost}
-                            onChange={(e) => {
-                              updateContainerRow(row.id, 'cost', e.target.value)
-                              e.target.style.height = '2.5rem'
-                              e.target.style.height = `${e.target.scrollHeight}px`
-                            }}
-                            className="w-full h-[2.5rem] flex self-center px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            value={margin}
-                            readOnly
-                            className={`w-full px-3 py-2 rounded-lg text-sm bg-gray-100 border ${margin < 0 ? 'border-red-400 text-red-600' : 'border-gray-300'
-                              }`}
-                          />
-                        </td> */}
-                      </td>
-                      ))}
-                      <td className="text-center">
-                        <button
-
-                          onClick={() => removeContainerRow(row.id)}
-                          disabled={containerRows.length === 1}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+        {/* ════════ PLACEMENT DETAILS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="hugeicons:delivery-truck-02"
+              title="PLACEMENT DETAILS"
+              open={open.placement}
+              onToggle={() => toggle("placement")}
+            />
+          }
+        >
+          <div style={{ display: open.placement ? "block" : "none" }}>
+            <Form.List name="placementRows" initialValue={[{}]}>
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...rest }) => (
+                    <Row gutter={16} key={key} align="middle">
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "equipmentType"]}
+                          label="Equipment Type"
+                          rules={[{ required: true, message: "Required" }]}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <div className="flex items-center space-x-2 mb-4 pb-2 border-b-2 border-gray-200">
-                <h4 className="text-lg font-bold text-gray-800">OTHER CHARGES</h4>
-              </div>
-
-              <div className="w-full min-h-[3rem] px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-teal-500">
-
-                {/* Chips */}
-                <div className="flex flex-wrap gap-2">
-                  {formData.otherCharges.map((charge, index) => (
-                    <span
-                      key={index}
-                      className="flex items-center text-align-center bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm"
-                    >
-                      {charge}
-                      <button
-                        onClick={() => removeOtherCharge(index)}
-                        className="ml-2 text-teal-600 hover:text-red-500 cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                {/* Input */}
-                <input
-                  type="text"
-                  placeholder="Type a charge and press Enter..."
-                  value={otherChargeInput}
-                  onChange={e => setOtherChargeInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      addOtherCharge();
-                    }
-                  }}
-                  className="w-full outline-none text-sm"
-                />
-              </div>
-            </div>
-
-          </section>
-          <section className="mb-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4 pb-2 border-b-2 border-gray-200">
-
-                <h4 className="text-lg font-bold text-gray-800">OTHER DETAILS</h4>
-              </div>
-              <div className="grid grid-cols-3 gap-6 mb-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    POL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Port of Loading"
-                    value={formData.pol}
-                    onChange={(e) => handleInputChange('pol', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    POD
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Port of Discharge"
-                    value={formData.pod}
-                    onChange={(e) => handleInputChange('pod', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    FPOD
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Final POD"
-                    value={formData.fpod}
-                    onChange={(e) => handleInputChange('fpod', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Terms of Shipment
-                  </label>
-                  <select
-                    value={formData.termsOfShipment}
-                    onChange={(e) => handleInputChange('termsOfShipment', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    <option value="">Select Terms</option>
-                    <option>Prepaid</option>
-                    <option>Collect</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Haulier Code
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter code"
-                    value={formData.haulierCode}
-                    onChange={(e) => handleInputChange('haulierCode', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <label className="flex h-[100%] justify-between items-center space-x-2 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-
-                  <span className="text-sm font-medium text-gray-700">HBL</span>
-
-                  <input
-                    type="checkbox"
-                    checked={formData.hbl}
-                    onChange={(e) => handleInputChange('hbl', e.target.checked)}
-                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                  />
-                </label>
-                <label className="flex h-[100%] justify-between items-center space-x-2 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-
-                  <span className="text-sm font-medium text-gray-700">FAC</span>
-
-                  <input
-                    type="checkbox"
-                    checked={formData.fac}
-                    onChange={(e) => handleInputChange('fac', e.target.checked)}
-                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                  />
-                </label>
-                <label className="flex h-[100%] justify-between items-center space-x-2 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-
-                  <span className="text-sm font-medium text-gray-700">Documentation</span>
-
-                  <input
-                    type="checkbox"
-                    checked={formData.documentation}
-                    onChange={(e) => handleInputChange('documentation', e.target.checked)}
-                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                  />
-                </label>
-                <label className="flex h-[100%] justify-between items-center space-x-2 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-
-                  <span className="text-sm font-medium text-gray-700">Transportation</span>
-
-                  <input
-                    type="checkbox"
-                    checked={formData.transportation}
-                    onChange={(e) => handleInputChange('transportation', e.target.checked)}
-                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                  />
-                </label>
-                <div className='col-span-3'>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Special Instruction if Any
-                  </label>
-                  <textarea
-                    type="text"
-                    placeholder="Enter Remarks"
-                    value={formData.remarks}
-                    onChange={(e) => handleInputChange('remarks', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div className='col-span-3'>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Name of Executive
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter Name"
-                    value={formData.executiveName}
-                    onChange={(e) => handleInputChange('executiveName', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          <section className="mb-8">
-            <div className="flex justify-between mb-3">
-              <div className="flex items-center space-x-2 mb-4 pb-2 grid grid-cols-5 border-b-2 border-gray-200">
-                <div>
-
-                  <h4 className="text-lg font-bold text-gray-800">PLACEMENT DETAILS</h4></div>
-              </div>
-              <button
-                type="button"
-                onClick={addPlacementRow}
-                className="px-4 py-2 mb-4 pb-2 bg-teal-600 text-white rounded"
-              >
-                + Add Container
-              </button>
-            </div>
-            <div className="border border-gray-200 rounded-lg overflow-auto mb-2">
-              <table className="w-full min-w-[1000px] overflow-auto">
-                <thead className="bg-gray-100 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Equipment Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Volume</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Category</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Time</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Remarks</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {placementRows.map(row => (
-                    <tr key={row.id}>
-                      {[
-                        ['equipmentType', 'Enter Equipment Type'],
-                        ['volume', 'Enter Volume'],
-                        ['category', 'Enter Category'],
-                        ['date', 'Enter Date'],
-                        ['time', 'Enter Time'],
-                        ['remarks', 'Enter Remarks'],
-                      ].map(([field, placeholder]) => (
-                      <td key={field} className='px-4 py-3'>
-                        {field === 'equipmentType' && (
-                          <select
-                            value={row[field]}
-                            onChange={e => updatePlacementRow(row.id, field, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          >
-                            <option value="">None</option>
-                            <option>40 HC RF</option>
-                            <option>40 HQ</option>
-                            <option>SOC</option>
-                            <option>Tank (generic – “Tank”)</option>
-                            <option>Truck</option>
-                            <option>ISO Tanks</option>
-
-                            <option>20GP</option>
-                            <option>40GP</option>
-                            <option>45HC</option>
-                            <option>Reefer 20</option>
-                            <option>Reefer 40</option>
-                            <option>LCL</option>
-                            <option>B/Bulk</option>
-                            <option>Air Shipment</option>
-                            <option>Roro</option>
-                          </select>
-                        )}
-                        {field === 'volume' && (<td>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[1-9][0-9]*"
-                            placeholder="Qty"
-                            value={row.volume}
-                            onChange={(e) => {
-                              const value = e.target.value;
-
-                              if (value === '' || /^[1-9]\d*$/.test(value)) {
-                                updatePlacementRow(row.id, 'volume', e.target.value)
-                              }
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                        {field === 'category' && (<td >
-                          <select
-                            value={row.category}
-                            onChange={(e) => updatePlacementRow(row.id, field, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          >
-                            <option value="">None</option>
-                            <option>SOC</option>
-                            <option>Laden</option>
-                            <option>Road</option>
-                            <option>Heavy Duty (HD)</option>
-                            <option>GP</option>
-                            <option>Reefer</option>
-                            <option>DG</option>
-                            <option>SPL</option>
-                            <option>Empty</option>
-                            <option>CBM</option>
-                            <option>Weight</option>
-                            <option>Full Truck Load</option>
-                            <option>Flat rack</option>
-                            <option>Open Top</option>
-                          </select>
-                        </td>)}
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="date"
-                            value={row.date}
-                            onChange={(e) => updateRow(row.id, 'date', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td> */}
-
-                        {field === 'date' && (<td >
-                          <input
-                            type="date"
-                            placeholder={placeholder}
-                            value={row.date}
-                            onChange={(e) => {
-                              updatePlacementRow(row.id, 'date', e.target.value)
-
-                              e.target.style.height = '2.4rem'
-                              e.target.style.height = `${e.target.scrollHeight}px`
-                            }}
-                            className="w-full h-[2.4rem] flex self-center px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-                        {field === 'time' && (<td >
-                          <input
-                            type="time"
-                            placeholder={placeholder}
-                            value={row.time}
-                            onChange={(e) => {
-                              updatePlacementRow(row.id, 'time', e.target.value)
-
-                              e.target.style.height = '2.4rem'
-                              e.target.style.height = `${e.target.scrollHeight}px`
-                            }}
-                            className="w-full h-[2.4rem] flex self-center px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                       {(field === 'remarks' && <td >
-                          <textarea
-                            type="text"
-                            placeholder={placeholder}
-                            value={row.remarks}
-                            onChange={(e) => {
-                              updatePlacementRow(row.id, 'remarks', e.target.value)
-                              e.target.style.height = '2.5rem'
-                              e.target.style.height = `${e.target.scrollHeight}px`
-                            }}
-                            className="w-full h-[2.5rem] flex self-center px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td>)}
-
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            value={margin}
-                            readOnly
-                            className={`w-full px-3 py-2 rounded-lg text-sm bg-gray-100 border ${margin < 0 ? 'border-red-400 text-red-600' : 'border-gray-300'
-                              }`}
-                          />
-                        </td> */}
-                      </td>
-                      ))}
-                      <td className="text-center">
-                        <button
-
-                          onClick={() => removePlacementRow(row.id)}
-                          disabled={placementRows.length === 1}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-30 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                          <EquipmentTypeSelect />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={3}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "volume"]}
+                          label="Volume"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                          <Input placeholder="Qty" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "category"]}
+                          label="Category"
+                        >
+                          <CategorySelect />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "date"]}
+                          label="Date"
+                        >
+                          <DatePicker style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={3}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "time"]}
+                          label="Time"
+                        >
+                          <TimePicker
+                            style={{ width: "100%" }}
+                            format="HH:mm"
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={4}>
+                        <Form.Item
+                          className={Styles.formLabel}
+                          {...rest}
+                          name={[name, "remarks"]}
+                          label="Remarks"
+                        >
+                          <Input placeholder="Remarks" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={1}>
+                        <Button
+                          danger
+                          style={{ marginTop: "1rem" }}
+                          disabled={fields.length <= 1}
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(name)}
+                        />
+                      </Col>
+                      <Col xs={24} md={1}>
+                        <Button
+                          type="primary"
+                          style={{ marginTop: "1rem" }}
+                          icon={<PlusOutlined />}
+                          onClick={() => add()}
+                        />
+                      </Col>
+                    </Row>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <section className="mb-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4 pb-2 border-b-2 border-gray-200">
-                <h4 className="text-lg font-bold text-gray-800">BOOKING DETAILS</h4>
-              </div>
-              <div className="grid grid-cols-3 gap-6 mb-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    AFSYS Job No.
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Afsys Job No."
-                    value={formData.afsysJobNo}
-                    onChange={(e) => handleInputChange('afsysJobNo', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Booking Vessel
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Booking Vessel"
-                    value={formData.bookingVessel}
-                    onChange={(e) => handleInputChange('bookingVoyage', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Booking Voyage
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Booking Voyage"
-                    value={formData.bookingVoyage}
-                    onChange={(e) => handleInputChange('bookingVoyage', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Vessel ETA Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.vesselETA}
-                    onChange={(e) => handleInputChange('vesselETA', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Booking Reference No.
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Booking Reference No."
-                    value={formData.bookingRefNo}
-                    onChange={(e) => handleInputChange('bookingRefNo', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Load List/SI Cut Off Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.siCutOffDate}
-                    onChange={(e) => handleInputChange('siCutOffDate', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Load List/SI Cut Off Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.siCutOffTime}
-                    onChange={(e) => handleInputChange('siCutOffTime', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Release Order From Carrier
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-start items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    BOC Attachment
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-starts items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Booking Remarks
-                  </label>
-
-
-                  <textarea
-                    type="text"
-                    placeholder="Enter Remarks"
-                    value={formData.bookingRemarks}
-                    onChange={(e) => handleInputChange('remarks', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Haulage Cost Sheet
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-starts items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Load List
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-starts items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    CNF Remarks
-                  </label>
-
-
-                  <textarea
-                    type="text"
-                    placeholder="Enter Remarks"
-                    value={formData.cnfRemarks}
-                    onChange={(e) => handleInputChange('remarks', e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-
-                </div>
-              </div>
-
-            </div>
-          </section>
-          <section className="mb-8 grid grid-cols-3 gap-6">
-            <div className="w-full max-w-md cols-span-1 gap-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bank Slip
-              </label>
-
-              {/* Upload Button */}
-              {!bankSlip && (
-                <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-full cursor-pointer hover:bg-gray-200 transition">
-                  <UploadCloud className="w-4 h-4" />
-                  Upload bank slip
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setBankSlip(e.target.files[0])}
-                  />
-                </label>
+                </>
               )}
+            </Form.List>
+          </div>
+        </Card>
 
-              {/* File Chip */}
-              {bankSlip && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 mt-1 text-sm bg-green-50 text-green-700 border border-green-200 rounded-full">
-                  <FileText className="w-4 h-4" />
-                  <span className="max-w-[180px] truncate">
-                    {bankSlip.name}
-                  </span>
+        {/* ════════ BOOKING DETAILS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mdi:anchor"
+              title="BOOKING DETAILS"
+              open={open.booking}
+              onToggle={() => toggle("booking")}
+            />
+          }
+        >
+          <div style={{ display: open.booking ? "block" : "none" }}>
+            <Row gutter={16}>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="AFSYS Job No."
+                  name="afsysJobNo"
+                >
+                  <Input placeholder="Afsys Job No." />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Booking Vessel"
+                  name="bookingVessel"
+                >
+                  <Input placeholder="Booking Vessel" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Booking Voyage"
+                  name="bookingVoyage"
+                >
+                  <Input placeholder="Booking Voyage" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Vessel ETA Date"
+                  name="vesselETA"
+                >
+                  <DatePicker
+                    placeholder="YYYY-MM-DD"
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Booking Reference No."
+                  name="bookingRefNo"
+                >
+                  <Input placeholder="Booking Reference No." />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Load List/SI Cut Off Date"
+                  name="siCutOffDate"
+                >
+                  <DatePicker
+                    placeholder="YYYY-MM-DD"
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Load List/SI Cut Off Time"
+                  name="siCutOffTime"
+                >
+                  <TimePicker style={{ width: "100%" }} format="HH:mm" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Booking Remarks"
+                  name="bookingRemarks"
+                >
+                  <TextArea
+                    autoSize={{ minRows: 1 }}
+                    placeholder="Enter Remarks"
+                  />
+                </Form.Item>
+              </Col>
 
-                  <button
-                    type="button"
-                    onClick={() => setBankSlip(null)}
-                    className="hover:text-green-900 transition"
+              {/* Release Order From Carrier — own isolated list */}
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Release Order From Carrier"
+                >
+                  <DocUploadField
+                    label="Release Order"
+                    files={releaseOrderFiles}
+                    setFiles={setReleaseOrderFiles}
+                    color="geekblue"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+
+              {/* BOC Attachment — own isolated list */}
+              <Col xs={24} md={6}>
+                <Form.Item className={Styles.formLabel} label="BOC Attachment">
+                  <DocUploadField
+                    label="BOC"
+                    files={bocFiles}
+                    setFiles={setBocFiles}
+                    color="volcano"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+
+              {/* Haulage Cost Sheet — own isolated list */}
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Haulage Cost Sheet"
+                >
+                  <DocUploadField
+                    label="Haulage Cost Sheet"
+                    files={haulageCostFiles}
+                    setFiles={setHaulageCostFiles}
+                    color="orange"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+
+              {/* Load List — own isolated list */}
+              <Col xs={24} md={6}>
+                <Form.Item className={Styles.formLabel} label="Load List">
+                  <DocUploadField
+                    label="Load List"
+                    files={loadListFiles}
+                    setFiles={setLoadListFiles}
+                    color="gold"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={24}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="CNF Remarks"
+                  name="cnfRemarks"
+                >
+                  <TextArea placeholder="Enter Remarks" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+        </Card>
+
+        {/* ════════ BANK SLIP & ACCOUNT REMARKS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mdi:bank-outline"
+              title="BANK SLIP & ACCOUNT REMARKS"
+              open={open.bankAccounts}
+              onToggle={() => toggle("bankAccounts")}
+            />
+          }
+        >
+          <div style={{ display: open.bankAccounts ? "block" : "none" }}>
+            <Row gutter={16}>
+              <Col xs={24} md={8}>
+                <Form.Item className={Styles.formLabel} label="Bank Slip(s)">
+                  <Upload
+                    multiple
+                    showUploadList={false}
+                    beforeUpload={handleUploadBankSlip}
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className='cols-span-1'>
-              <label className="font-medium">Account Remarks</label>
-              <textarea
-                value={formData.accountRemarks}
-                // onChange={e => (e.target.value)} 
-                className="w-full min-h-[120px] border rounded p-3"
-              />
-            </div>
-          </section>
-          <section className="mb-8 grid grid-cols-1 gap-6">
-            <div>
-              <div className="flex items-center space-x-2 grid-cols-2 mb-4 pb-2 border-b-2 border-gray-200">
-
-                <h4 className="text-lg font-bold text-gray-800">DOCUMENTS</h4>
-              </div>
-              <div className="grid grid-cols-3 gap-6 mb-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    LPO
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-start items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    INVOICE
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-start items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    FAC
-                  </label>
-                  <a
-                    href="#"
-                    className="w-full flex justify-start items-center text-blue-500 rounded-lg text-sm focus:outline-none "
-                  > Click here to view <MoveUpRight className="w-4 h-4" /></a>
-                </div>
-              </div>
-            </div>
-          </section>
-          <section className="mb-8">
-            {/* Header */}
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-gray-200">
-              <h4 className="text-lg font-bold text-gray-800">
-                ATTACHMENT AND COMMENTS
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* LEFT – REMARKS */}
-              <div>
-                <label className="block font-medium mb-2">REMARKS</label>
-
-                {/* Existing remarks */}
-                <div className="space-y-3 mb-6">
-                  {remarksAttach.map((remark, i) => (
-                    <div
-                      key={i}
-                      className="relative bg-sky-50 border border-sky-200 rounded-md p-4 text-sm text-gray-700"
+                    <Button
+                      icon={<UploadOutlined />}
+                      style={{ marginBottom: bankSlips.length ? 6 : 0 }}
                     >
-                      {/* Remove button */}
-                      <button
-                        type="button"
-                        onClick={() => removeRemark(i)}
-                        className="absolute top-2 right-2 text-gray-400 hover:text-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      Upload Bank Slip
+                    </Button>
+                  </Upload>
+                  {bankSlips.length > 0 && (
+                    <FileChipList
+                      files={bankSlips}
+                      color="green"
+                      onRemove={(i) =>
+                        setBankSlips((p) => p.filter((_, j) => j !== i))
+                      }
+                      onPreview={(i) => openPreview(bankSlips, i)}
+                    />
+                  )}
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={16}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Account Remarks"
+                  name="accountRemarks"
+                >
+                  <TextArea
+                    autoSize={{ minRows: 3 }}
+                    placeholder="Enter account remarks…"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+        </Card>
 
-                      {/* Remark text */}
-                      <p className="pr-6 leading-relaxed">
-                        {remark}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+        {/* ════════ DOCUMENTS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mdi:file-document-multiple-outline"
+              title="DOCUMENTS"
+              open={open.documents}
+              onToggle={() => toggle("documents")}
+            />
+          }
+        >
+          <div style={{ display: open.documents ? "block" : "none" }}>
+            <Row gutter={16}>
+              {/* LPO — own isolated list */}
+              <Col xs={24} md={8}>
+                <Form.Item className={Styles.formLabel} label="LPO">
+                  <DocUploadField
+                    label="LPO"
+                    files={lpoFiles}
+                    setFiles={setLpoFiles}
+                    color="cyan"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
 
-                {/* Add remark */}
-                <label className="block font-medium mb-1">ADD REMARKS</label>
-                <textarea
+              {/* INVOICE — own isolated list */}
+              <Col xs={24} md={8}>
+                <Form.Item className={Styles.formLabel} label="INVOICE">
+                  <DocUploadField
+                    label="Invoice"
+                    files={invoiceFiles}
+                    setFiles={setInvoiceFiles}
+                    color="purple"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+
+              {/* FAC — own isolated list */}
+              <Col xs={24} md={8}>
+                <Form.Item className={Styles.formLabel} label="FAC">
+                  <DocUploadField
+                    label="FAC"
+                    files={facFiles}
+                    setFiles={setFacFiles}
+                    color="magenta"
+                    onPreview={openPreview}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </div>
+        </Card>
+
+        {/* ════════ ATTACHMENTS & COMMENTS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mdi:comment-text-multiple-outline"
+              title="ATTACHMENTS AND COMMENTS"
+              open={open.attachments}
+              onToggle={() => toggle("attachments")}
+            />
+          }
+        >
+          <div style={{ display: open.attachments ? "block" : "none" }}>
+            <Row gutter={32}>
+              {/* Remarks */}
+              <Col xs={24} md={12}>
+                <span className={Styles.sectionLabel}>REMARKS</span>
+                {remarks.map((r, i) => (
+                  <div key={i} className={Styles.remarkItem}>
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      style={{ position: "absolute", top: 6, right: 6 }}
+                      onClick={() =>
+                        setRemarks((p) => p.filter((_, j) => j !== i))
+                      }
+                    />
+                    <p style={{ paddingRight: 24, margin: 0 }}>{r}</p>
+                  </div>
+                ))}
+                <span className={Styles.sectionLabel} style={{ marginTop: 12 }}>
+                  ADD REMARKS
+                </span>
+                <TextArea
                   value={newRemark}
                   onChange={(e) => setNewRemark(e.target.value)}
-                  placeholder="Enter your remarks here..."
-                  className="w-full min-h-[110px] border border-gray-300 rounded-md p-3 mb-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="Enter your remarks here…"
+                  autoSize={{ minRows: 3 }}
+                  style={{ marginBottom: 10 }}
                 />
-
-                <button
-                  type="button"
+                <Button
+                  type="primary"
                   onClick={addRemark}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium bg-teal-600 text-white rounded-md hover:bg-teal-700 transition"
+                  icon={<PlusOutlined />}
                 >
                   Add Remark
-                </button>
-              </div>
+                </Button>
+              </Col>
 
-
-              {/* RIGHT – ATTACHMENTS */}
-              <div>
-                <label className="block font-medium mb-2">ATTACHMENTS</label>
-
-                {/* Attachment chips */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {attachmentsR.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm border border-sky-400 text-sky-700 rounded-full bg-sky-50"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span className="max-w-[180px] truncate">
-                        {file.name}
-                      </span>
-                      <button onClick={() => removeAttachment(index)}>
-                        <X className="w-4 h-4 hover:text-red-600" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Upload box */}
-                <label className="block font-medium mb-2">ADD ATTACHMENTS</label>
-                <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded cursor-pointer hover:bg-gray-50">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Paperclip className="w-5 h-5" />
-                    Choose Files
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => addAttachments(e.target.files)}
+              {/* Attachments */}
+              <Col xs={24} md={12}>
+                <span className={Styles.sectionLabel}>ATTACHMENTS</span>
+                {attachments.length > 0 && (
+                  <FileChipList
+                    files={attachments}
+                    color="blue"
+                    onRemove={(i) =>
+                      setAttachments((p) => p.filter((_, j) => j !== i))
+                    }
+                    onPreview={(i) => openPreview(attachments, i)}
                   />
-                </label>
-              </div>
-            </div>
-          </section>
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-200">
-              <div className="flex items-center space-x-2">
-                <Package className="w-5 h-5 text-teal-600" />
-                <h4 className="text-lg font-bold text-gray-800">CONTAINER DETAILS</h4>
-              </div>
-            </div>
-            <div className="border border-gray-200 rounded-lg overflow-auto">
-              <table className="w-full min-w-[1000px] overflow-auto">
-                <thead className="bg-gray-100 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase text-nowrap">
-                      Stage</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Pending With</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">	Updated By</th>
-                    {/* <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Date</th> */}
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Updated Date</th>
-                    {/* <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Margin</th> */}
-                    {/* <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase w-20">Action</th> */}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {approvalRows.map((row) => {
-                    // const quote = Number(row.quote);
-                    // const cost = Number(row.cost);
-                    // const volume = Number(row.volume);
-                    // const margin = !isNaN(quote) && !isNaN(cost) ? volume * (quote - cost) : '';
-
-                    return (
-                      <tr key={row.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          {row.stage}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {row.pendingWith}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {row.updatedBy}
-                        </td>
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="date"
-                            value={row.date}
-                            onChange={(e) => updateRow(row.id, 'date', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          />
-                        </td> */}
-
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full border
-      ${row.status.trim() === "Approved"
-                                ? "bg-emerald-100 text-emerald-700 border-emerald-300"
-                                : row.status === "Pending"
-                                  ? "bg-amber-100 text-amber-700 border-amber-300"
-                                  : row.status === "Rejected"
-                                    ? "bg-red-100 text-red-700 border-red-300"
-                                    : row.status === "In Progress"
-                                      ? "bg-blue-100 text-blue-700 border-blue-300"
-                                      : "bg-gray-100 text-gray-700 border-gray-300"
-                              }
-    `}
-                          >
-                            {row.status}
-                          </span>
-                        </td>
-
-
-                        <td className="px-4 py-3">
-                          {row.updatedDate}
-                        </td>
-
-                        {/* <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            value={margin}
-                            readOnly
-                            className={`w-full px-3 py-2 rounded-lg text-sm bg-gray-100 border ${margin < 0 ? 'border-red-400 text-red-600' : 'border-gray-300'
-                              }`}
-                          />
-                        </td> */}
-
-                        {/* <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleDelete(row.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash className="w-5 h-5" />
-                          </button>
-                        </td> */}
-                      </tr>
-                    );
-                  })}
-                  {/* <tr className="bg-gray-100 font-bold">
-                    <td colSpan={4} className="px-4 py-3 text-left text-sm text-gray-700">
-                      Total
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-800">
-                      {totals.quote.toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-800">
-                      {totals.cost.toFixed(2)}
-                    </td>
-                    <td className={`px-4 py-3 text-sm ${totals.margin < 0 ? 'text-red-600' : 'text-green-700'}`}>
-                      {totals.margin.toFixed(2)}
-                    </td>
-                    <td />
-                  </tr> */}
-                </tbody>
-              </table>
-            </div>
+                )}
+                <span
+                  className={Styles.sectionLabel}
+                  style={{ display: "block", marginTop: 10 }}
+                >
+                  ADD ATTACHMENTS
+                </span>
+                <Upload
+                  multiple
+                  showUploadList={false}
+                  beforeUpload={handleUploadAttachment}
+                >
+                  <div className={Styles.dropZone}>
+                    <Space>
+                      <span style={{ margin: "40px" }}>
+                        <PaperClipOutlined /> Choose Files
+                      </span>
+                    </Space>
+                  </div>
+                </Upload>
+              </Col>
+            </Row>
           </div>
+        </Card>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-4">
-            <button
-              onClick={handleCancel}
-              className="px-6 py-2 bg-gray-300 rounded"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-green-600 text-white rounded"
-            >
-              Save Approval
-            </button>
+        {/* ════════ APPROVAL STATUS ════════ */}
+        <Card
+          className={Styles.card}
+          bordered
+          title={
+            <CardHeader
+              icon="mdi:check-decagram-outline"
+              title="APPROVAL STATUS"
+              open={open.approvalStatus}
+              onToggle={() => toggle("approvalStatus")}
+            />
+          }
+        >
+          <div style={{ display: open.approvalStatus ? "block" : "none" }}>
+            <Table
+              dataSource={approvalRows}
+              columns={approvalColumns}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: "max-content" }}
+              size="small"
+            />
           </div>
-        </div>
-      </div>
+        </Card>
+
+        {/* ════════ ACTION BUTTONS ════════ */}
+        <Space
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            width: "100%",
+            marginTop: "1.5rem",
+            marginBottom: "1rem",
+          }}
+        >
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<Icon icon="mdi:tick-circle" />}
+          >
+            Save Approval
+          </Button>
+          <Button
+            type="primary"
+            icon={<Icon icon="tabler:refresh" />}
+            onClick={handleReset}
+          >
+            Reset
+          </Button>
+        </Space>
+      </Form>
+
+      {/* ════════ PREVIEW MODAL ════════
+          Each field passes its own isolated array to openPreview,
+          so the sidebar shows only that field's files — never mixed.
+      ════════════════════════════════ */}
+      <Modal
+        open={previewVisible}
+        footer={null}
+        title={"Attachments"}
+        onCancel={() => setPreviewVisible(false)}
+        width="90%"
+        style={{ top: 20 }}
+        styles={{ body: { height: "87vh", padding: 0 } }}
+        destroyOnClose
+      >
+        {previewVisible && previewUrls.length > 0 && (
+          <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
+        )}
+      </Modal>
     </div>
   );
-}; 
+};
+
 export default Approval;
