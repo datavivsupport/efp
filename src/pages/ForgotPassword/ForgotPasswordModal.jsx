@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Modal, Form, Input, Button, Typography, message } from "antd";
 import { Icon } from "@iconify/react";
 import styles from "./ForgotPasswordModal.module.css";
+import apiClient from "../../api/apiclient";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -19,8 +20,8 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
   const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
 
   const [otpValue, setOtpValue] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   // Focus OTP input
   useEffect(() => {
@@ -42,6 +43,12 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
     }
   }, [timer]);
 
+  useEffect(() => {
+    if (otpValue.length === 4 && !verifying) {
+      handleVerifyOtp(otpValue);
+    }
+  }, [otpValue]);
+
   // Reset everything when modal closes
   useEffect(() => {
     if (!visible) {
@@ -50,70 +57,89 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
       setOtpModalVisible(false);
       setResetPasswordVisible(false);
       setOtpValue("");
-      setGeneratedOtp("");
       setVerifiedEmail("");
     }
   }, [visible]);
 
   // Send OTP (Fake)
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     const email = formEmail.getFieldValue("email");
-
-    if (!email) {
-      message.error("Please enter your email");
-      return;
-    }
-
-    setLoading(true);
-
-    setTimeout(() => {
-      const fakeOtp = "1234"; // Fake OTP
-      setGeneratedOtp(fakeOtp);
-      setVerifiedEmail(email);
-
-      console.log("Generated OTP:", fakeOtp);
-
+    if (!email) return;
+    try {
+      setTimer(60);
+      setLoading(true);
+      await apiClient.get(`/accounts/sendOtp?email=${email}`);
       message.success(`OTP sent to ${email}`);
       setOtpModalVisible(true);
-      setTimer(60);
+      setOtpValue("");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data;
+        errorHandle(data);
+      } else {
+        // console.error("Unknown error:", err);
+      }
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   // Verify OTP
-  const handleVerifyOtp = () => {
-    if (otpValue.length !== 4) {
-      message.error("Enter 4-digit OTP");
-      return;
-    }
+  const handleVerifyOtp = async () => {
+    if (otpValue.length !== 4) return;
+    setVerifying(true);
 
-    if (otpValue === generatedOtp) {
-      message.success("OTP Verified Successfully");
+    try {
+      setLoading(true);
+      const email = formEmail.getFieldValue("email");
+      const res = await apiClient.get(
+        `/accounts/verify-otp?email=${email}&otp=${otpValue}`
+      );
+
+      message.success(res.data.msg);
+      setVerifiedEmail(email);
       setOtpModalVisible(false);
       setResetPasswordVisible(true);
       formOtp.resetFields();
-    } else {
-      message.error("Invalid OTP");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data;
+        errorHandle(data);
+      }
+    } finally {
+      setVerifying(false);
+      setLoading(false);
     }
   };
 
   // Reset Password
-  const handleResetPassword = (values) => {
+  const handleResetPassword = async (values) => {
     const { password, confirmPassword } = values;
-
-    if (password !== confirmPassword) {
+        if (password !== confirmPassword) {
       message.error("Passwords do not match");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
+      const response = await apiClient.post("/accounts/reset-password", {
+        email: verifiedEmail,
+        password: password,
+        otp: otpValue,
+      });
 
-    setTimeout(() => {
-      message.success("Password reset successfully!");
+      message.success(response.data.msg);
       setResetPasswordVisible(false);
-      onClose();
+      formEmail.resetFields();
+      formReset.resetFields();
+      setVerifiedEmail("");
+      setOtpValue("");
+      onClose(); // close parent modal after success
+    } catch {
+      // handled globally
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const handleCancelAll = () => {
@@ -122,7 +148,6 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
     setOtpModalVisible(false);
     setResetPasswordVisible(false);
     setOtpValue("");
-    setGeneratedOtp("");
     setVerifiedEmail("");
     onClose();
   };
@@ -169,7 +194,7 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
               type="primary"
               size="large"
               block
-              onClick={handleSendOtp}
+              onClick={() => handleSendOtp()}
               loading={loading}
             >
               Send OTP
@@ -203,13 +228,13 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
             style={{ width: "100%", margin: "16px 0" }}
           />
 
-          <Button type="primary" block onClick={handleVerifyOtp}>
+          <Button type="primary" block onClick={() => handleVerifyOtp()}>
             Verify OTP
           </Button>
 
           <div style={{ marginTop: 12, textAlign: "center" }}>
             {timer === 0 ? (
-              <Button type="link" onClick={handleSendOtp}>
+              <Button type="link" onClick={() => handleSendOtp()}>
                 Resend OTP
               </Button>
             ) : (

@@ -1,26 +1,26 @@
 import { useNavigate } from 'react-router';
 import Styles from './ErrorFallback.module.css';
 import { Icon } from "@iconify/react";
+import { cancelAllRequests, startLogout } from '../../api/apiclient';
 // import apiClient, { cancelAllRequests, finishLogout, startLogout } from "../api/apiClient";
 
 const ErrorFallback = ({ error, resetErrorBoundary }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    console.log("hello");
-    // try {
-    //   startLogout();
-    //   cancelAllRequests();
-    //   await apiClient.get("/accounts/logout");
-    // } catch {
-    //   // ignore
-    // } finally {
-    //   localStorage.removeItem("draft_modal_shown");
-    //   localStorage.removeItem("allocation_modal_shown");
-    //   localStorage.removeItem("open_tabs");
-    //   navigate("/login");
-    //   finishLogout();
-    // }
+    try {
+      startLogout();
+      cancelAllRequests();
+      await apiClient.get("/accounts/logout");
+    } catch {
+      // ignore
+    } finally {
+      // localStorage.removeItem("draft_modal_shown");
+      // localStorage.removeItem("allocation_modal_shown");
+      localStorage.removeItem("open_tabs");
+      navigate("/login");
+      // finishLogout();
+    }
   };
 
   return (
@@ -40,13 +40,13 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => {
           <p>{error?.message}</p>
 
           <div className={Styles.buttons}>
-            <button
+            {/* <button
               className={Styles.btnbtnprimary}
               onClick={() => resetErrorBoundary()}
             >
               <Icon icon="pepicons-pop:refresh" width="20" height="20" />
               Refresh
-            </button>
+            </button> */}
             <button
               className={Styles.btnbtnprimary}
               onClick={handleLogout}
@@ -57,7 +57,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => {
             <button
               className={Styles.btnbtnsecondary}
               onClick={() => {
-                resetErrorBoundary();
+                // resetErrorBoundary();
                 navigate("/dashboard");
               }}
             >

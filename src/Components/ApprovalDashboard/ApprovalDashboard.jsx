@@ -31,7 +31,7 @@ const ApprovalDashboard = () => {
     if (!hasShownMessage.current && location.state?.message) {
       hasShownMessage.current = true;
 
-      message.success(location.state.message);
+      message.success(location.state.message || "Login successful!");
 
       // Clear state after showing message
       navigate(location.pathname, { replace: true });
