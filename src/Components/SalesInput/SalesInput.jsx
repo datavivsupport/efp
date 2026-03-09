@@ -330,7 +330,7 @@ const SalesInput = () => {
                   label="Export Created By"
                   name="exportCreatedBy"
                 >
-                  <Input placeholder="Enter Export Created By" />
+                  <Input disabled placeholder="Enter Export Created By" />
                 </Form.Item>
               </Col>
             </Row>
