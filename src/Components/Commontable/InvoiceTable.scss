@@ -1,13 +1,14 @@
-.ant-table-wrapper .ant-table-thead > tr > th {
-  background-color: #1b9cac !important;  // change to your color
-  color: #ffff;
+.ant-table-wrapper .ant-table-thead>tr>th {
+  background-color: #2d7a82 !important;
+  color: #ffffff;
   text-align: center !important;
   font-weight: 600;
-  padding: 0.5rem 0rem;
+  padding: 12px 0px !important;
+  border-bottom: none !important;
 }
 
 /* ===== TABLE BODY CELLS ===== */
-.ant-table-wrapper .ant-table-tbody > tr > td {
+.ant-table-wrapper .ant-table-tbody>tr>td {
   padding: 5px 16px !important;
   color: #1f2937 !important;
   font-weight: 500;
@@ -16,7 +17,7 @@
 }
 
 /* ===== HOVER ROW EFFECT ===== */
-.ant-table-wrapper .ant-table-tbody > tr:hover > td {
+.ant-table-wrapper .ant-table-tbody>tr:hover>td {
   background-color: #f9fafb !important;
 }
 

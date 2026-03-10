@@ -63,13 +63,14 @@ const TableBodyCell = ({ id, ...props }) => {
 function CommonTable({
   columns,
   data,
-//   loading,
-  onTableChange = () => {},
+  //   loading,
+  onTableChange = () => { },
   page = 1,
   total = 0,
   pagesize = 10,
   rowClassName,
   yescomp = false,
+  onRow,
 }) {
   const [cols, setCols] = useState([]);
   const [dragIndex, setDragIndex] = useState({ active: -1, over: -1 });
@@ -199,6 +200,7 @@ function CommonTable({
                 columns={cols}
                 dataSource={data}
                 // loading={loading}
+                onRow={onRow}
                 rowClassName={rowClassName}
                 onChange={onTableChange}
                 pagination={{

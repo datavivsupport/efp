@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   Form,
   Input,
@@ -17,9 +18,10 @@ import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import Styles from "./salesinput.module.css";
 import { Icon } from "@iconify/react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import CategorySelect from "./Category";
 import EquipmentTypeSelect from "./EquipmentType";
+import apiClient from "../../api/apiclient";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -53,29 +55,20 @@ const SalesInput = () => {
     documentation: false,
   });
 
-  const [showApprovers, setShowApprovers] = useState(true);
-  const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
+  const [showBasicInformation, setShowBasicInformation] = useState(true);
   const [showAdditionalService, setShowAdditionalService] = useState(true);
   const [showShipmentDetails, setShowShipmentDetails] = useState(true);
-  // const [showOtherCharges, setShowOtherCharges] = useState(true);
   const [showContainerDetails, setShowContainerDetails] = useState(true);
-  const [showBasicInformation, setShowBasicInformation] = useState(true);
   const [showExportDetails, setShowExportDetails] = useState(true);
+  const [showApprovers, setShowApprovers] = useState(true);
+  const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
+  const [searchParams] = useSearchParams();
+  const id = searchParams.get("id");
+  const user = useSelector((state) => state.auth.user);
 
-  const currentYear = new Date().getFullYear().toString().slice(-2);
-
-  const generateExportNumber = (value) => {
-    const map = {
-      liner: `LN/000123/${currentYear}`,
-      forwarding: `FW/000123/${currentYear}`,
-      "cross-trade": `CR/000123/${currentYear}`,
-      others: `OT/000123/${currentYear}`,
-    };
-
-    form.setFieldsValue({
-      exportNumber: value ? map[value] : "",
-    });
-  };
+  const isReadOnly = currentStage && parseInt(currentStage) > 1; // Locked if beyond Stage 1
 
   const addCommodity = () => {
     if (commodityInput.trim() && !commodities.includes(commodityInput.trim())) {
@@ -141,12 +134,97 @@ const SalesInput = () => {
   //   },
   //   { quote: 0, cost: 0, margin: 0 },
   // );
+  useEffect(() => {
+    const fetchDraftData = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const response = await apiClient.get(`/liner/sales-input/${id}/`);
+        if (response.status === 200) {
+          const data = response.data.data;
+          setCurrentStage(data.current_stage || "1");
 
-  const onFinish = (values) => {
+          // Map backend data to form fields
+          form.setFieldsValue({
+            customerName: data.customer_name,
+            contactPIC: data.contact_pic,
+            phoneno: data.phone_no,
+            email: data.email,
+            jobType: data.job_type,
+            agent: data.agent,
+            carriername: data.carrier_name,
+            portofloading: data.port_of_loading,
+            portofdiachage: data.port_of_discharge,
+            finalpod: data.final_pod,
+            termsofshipment: data.terms_of_shipment,
+            hauliercode: data.haulier_code,
+            nameofexecutive: data.name_of_executive,
+            saleshod: data.sales_hod,
+            specialremarks: data.special_instructions,
+            otherchargesremarks: data.approval_details?.other_charges_remarks,
+            exportCreatedDate: data.export_created_date ? dayjs(data.export_created_date) : dayjs(),
+            exportNumber: data.export_number || "N/A",
+            exportCreatedBy: data.created_by_name || "",
+            lpoRequired: data.approval_details?.lpo_required ?? true,
+            releaseOrderRequired: data.approval_details?.release_order_required ?? true,
+          });
+
+          // Set state for dynamic lists
+          setCommodities((data.commodities || []).map(c => c.name));
+
+          const mappedEquipment = (data.container_details || []).map((cd, index) => ({
+            id: cd.id || index + 1,
+            equipmentType: cd.equipment_type,
+            quantity: cd.quantity,
+            category: cd.category,
+            quote: cd.quote,
+            cost: cd.cost
+          }));
+
+          if (mappedEquipment.length > 0) {
+            setEquipmentRows(mappedEquipment);
+            form.setFieldsValue({ equipmentRows: mappedEquipment });
+          }
+
+          const mappedTransportation = (data.transportation_rows || []).map((tr, index) => ({
+            id: tr.id || index + 1,
+            equipmentType: tr.equipment_type,
+            noOfContainers: tr.no_of_containers,
+            category: tr.category,
+            placementTime: tr.placement_time ? dayjs(tr.placement_time) : null,
+            pickupLocation: tr.pickup_location,
+            specialRemarks: tr.special_remarks
+          }));
+
+          if (mappedTransportation.length > 0) {
+            setTransportationRows(mappedTransportation);
+            form.setFieldsValue({ transportationRows: mappedTransportation });
+            setAdditionalService(prev => ({ ...prev, showTransportation: true }));
+          }
+
+          setAdditionalService(prev => ({
+            ...prev,
+            hbl: data.hbl,
+            fac: data.fac,
+            documentation: data.documentation
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching draft data:", error);
+        message.error("Failed to load draft data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDraftData();
+  }, [id, form]);
+
+  const onFinish = async (values, statusValue = "submitted") => {
+    setLoading(true);
     const cleanEquipment = (values.equipmentRows || []).map((row) => ({
-      ...row,
-      equipmentType: row?.equipmentType || "",
-      quantity: row?.quantity || "",
+      equipment_type: row?.equipmentType || "",
+      quantity: Number(row?.quantity) || 0,
       category: row?.category || "",
       quote: row?.quote || "",
       cost: row?.cost || "",
@@ -154,61 +232,77 @@ const SalesInput = () => {
 
     const cleanTransportation = (values.transportationRows || []).map(
       (row) => ({
-        ...row,
-        equipmentType: row?.equipmentType || "",
-        noOfContainers: row?.noOfContainers || "",
+        equipment_type: row?.equipmentType || "",
+        no_of_containers: Number(row?.noOfContainers) || 0,
         category: row?.category || "",
-        placementTime: row?.placementTime
+        placement_time: row?.placementTime
           ? row.placementTime.format("YYYY-MM-DD HH:mm:ss")
-          : "",
-        pickupLocation: row?.pickupLocation || "",
-        specialRemarks: row?.specialRemarks || "",
+          : null,
+        pickup_location: row?.pickupLocation || "",
+        special_remarks: row?.specialRemarks || "",
       }),
     );
-    const formattedData = {
-      // ...values,
-      exportdetails: {
-        exportNumber: values?.exportNumber,
-        exportCreatedDate: values.exportCreatedDate?.format("YYYY-MM-DD"),
-        exportCreatedBy: values?.exportCreatedBy,
+
+    // Auto-include any typed but not-yet-Enter-pressed commodity text
+    const allCommodities = [...(commodities || [])];
+    if (commodityInput && commodityInput.trim() && !allCommodities.includes(commodityInput.trim())) {
+      allCommodities.push(commodityInput.trim());
+    }
+
+    const payload = {
+      customer_name: values?.customerName || "",
+      contact_pic: values?.contactPIC || "",
+      phone_no: values?.phoneno || "",
+      email: values?.email || "",
+      job_type: values?.jobType || "liner",
+      agent: values?.agent || "",
+      carrier_name: values?.carriername || "",
+      port_of_loading: values?.portofloading || "",
+      port_of_discharge: values?.portofdiachage || "",
+      final_pod: values?.finalpod || "",
+      terms_of_shipment: values?.termsofshipment || "",
+      haulier_code: values?.hauliercode || "",
+      hbl: additionalService.hbl || false,
+      fac: additionalService.fac || false,
+      documentation: additionalService.documentation || false,
+      transportation: additionalService.showTransportation || false,
+      name_of_executive: values?.nameofexecutive || "",
+      sales_hod: values?.saleshod || "",
+      special_instructions: values?.specialremarks || "",
+      approval_details: {
+        other_charges_remarks: values?.otherchargesremarks || "",
+        lpo_required: values?.lpoRequired ?? true,
+        release_order_required: values?.releaseOrderRequired ?? true,
       },
-      basicinfo: {
-        customerName: values?.customerName || "",
-        contactPIC: values?.contactPIC || "",
-        phoneno: values?.phoneno || "",
-        email: values?.email || "",
-        jobType: values?.jobType || "",
-        agent: values?.agent || "",
-        carriername: values?.carriername || "",
-        commodities: commodities || [],
-      },
-      shipmentdetails: {
-        portofloading: values?.portofloading || "",
-        portofdiachage: values?.portofdiachage || "",
-        finalpod: values?.finalpod || "",
-        termsofshipment: values?.termsofshipment || "",
-        hauliercode: values?.hauliercode || "",
-        // shipmentremarks: values?.remarks || "",
-        hbl: additionalService.hbl || "false",
-        fac: additionalService.fac || "false",
-        documentation: additionalService.documentation || "false",
-        transportation: additionalService.showTransportation || "false",
-        nameofexecutive: values?.nameofexecutive,
-        saleshod: values?.saleshod,
-        specialinstructions: values?.specialremarks || "",
-      },
-      containerdetails: {
-        containerdetailsdata: cleanEquipment || [],
-        otherchargesremarks: values?.otherchargesremarks || "",
-      },
-      transportationRows: additionalService.showTransportation
+      status: statusValue,
+      commodities: allCommodities.map((c) => ({ name: c })),
+      container_details: cleanEquipment || [],
+      transportation_rows: additionalService.showTransportation
         ? cleanTransportation || []
         : [],
-      // createdAt: new Date().toISOString(),
+      export_created_date: values.exportCreatedDate ? values.exportCreatedDate.format("YYYY-MM-DD") : null,
+      export_number: values.exportNumber !== "N/A" ? values.exportNumber : null,
     };
 
-    console.log("Final Structured Data:", formattedData);
-    message.success("Form Submitted Successfully");
+    try {
+      const payloadWithUser = {
+        ...payload,
+        created_by_name: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : payload.created_by_name
+      };
+
+      const response = id
+        ? await apiClient.put(`/liner/sales-input/${id}/`, payloadWithUser)
+        : await apiClient.post("/liner/sales-input/", payloadWithUser);
+
+      if (response.status === 201 || response.status === 200) {
+        message.success(`Form ${statusValue === 'draft' ? 'Saved' : 'Submitted'} Successfully`);
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFinishFailed = () => {
@@ -253,17 +347,10 @@ const SalesInput = () => {
         onFinishFailed={handleFinishFailed}
         initialValues={{
           exportCreatedDate: dayjs(),
+          exportCreatedBy: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "",
         }}
       >
-        {/* <Button
-          onClick={() => navigate("/dashboard")}
-          type="primary"
-          style={{ fontSize: "13px" }}
-          icon={<Icon icon="ion:arrow-back-outline" />}
-        >
-          Back
-        </Button> */}
-        {/* EXPORT DETAILS */}
+        {/* EXPORT DETAILS / HEADER */}
         <Card
           className={Styles.card}
           bordered
@@ -283,11 +370,10 @@ const SalesInput = () => {
                   <Icon icon="basil:document-solid" width="18" height="18" />
                 </div>
                 <Typography.Title level={5} style={{ margin: 0 }}>
-                  EXPORT DETAILS
+                  JOB HEADER
                 </Typography.Title>
               </Space>
 
-              {/* Optional arrow indicator */}
               <span style={{ fontSize: 22, color: "#626161" }}>
                 {showExportDetails ? (
                   <Icon icon="grommet-icons:form-up" />
@@ -300,20 +386,38 @@ const SalesInput = () => {
         >
           <div style={{ display: showExportDetails ? "block" : "none" }}>
             <Row gutter={16}>
-              <Col xs={24} md={8}>
+              <Col xs={24} md={6}>
+                <Form.Item
+                  className={Styles.formLabel}
+                  label="Job Type"
+                  name="jobType"
+                  rules={[{ required: true, message: "Required" }]}
+                >
+                  <Select
+                    placeholder="Select Job Type"
+                    allowClear
+                  >
+                    <Select.Option value="forwarding">Forwarding</Select.Option>
+                    <Select.Option value="liner">Liner</Select.Option>
+                    <Select.Option value="cross-trade">Cross Trade</Select.Option>
+                    <Select.Option value="others">Others</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
                 <Form.Item
                   className={Styles.formLabel}
                   label="Export Number"
                   name="exportNumber"
                 >
-                  <Input disabled placeholder="Enter Export Number" />
+                  <Input disabled placeholder="N/A" />
                 </Form.Item>
               </Col>
 
-              <Col xs={24} md={8}>
+              <Col xs={24} md={6}>
                 <Form.Item
                   className={Styles.formLabel}
-                  label="Export Created Date"
+                  label="Created Date"
                   name="exportCreatedDate"
                 >
                   <DatePicker
@@ -324,13 +428,17 @@ const SalesInput = () => {
                 </Form.Item>
               </Col>
 
-              <Col xs={24} md={8}>
+              <Col xs={24} md={6}>
                 <Form.Item
                   className={Styles.formLabel}
-                  label="Export Created By"
+                  label="Created By"
                   name="exportCreatedBy"
                 >
+<<<<<<< HEAD
+                  <Input disabled placeholder="User Name" />
+=======
                   <Input disabled placeholder="Enter Export Created By" />
+>>>>>>> 2555590bec0d4aeb9a8130430dc294dd758888ec
                 </Form.Item>
               </Col>
             </Row>
@@ -409,26 +517,6 @@ const SalesInput = () => {
                   <Input placeholder="Person in Charge" />
                 </Form.Item>
               </Col>
-                            <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Job Type"
-                  name="jobType"
-                >
-                  <Select
-                    placeholder="Select Job Type"
-                    onChange={generateExportNumber}
-                    allowClear
-                  >
-                    <Select.Option value="forwarding">Forwarding</Select.Option>
-                    <Select.Option value="liner">Liner</Select.Option>
-                    <Select.Option value="cross-trade">
-                      Cross Trade
-                    </Select.Option>
-                    <Select.Option value="others">Others</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
             </Row>
             <Row gutter={16}>
               <Col xs={24} md={6}>
@@ -482,14 +570,14 @@ const SalesInput = () => {
               </Col>
             </Row>
           </div>
-        </Card>
+        </Card >
 
         {/* CONTAINER DETAILS */}
-        <Card
+        < Card
           className={Styles.card}
           bordered
           title={
-            <div
+            < div
               onClick={() => setShowContainerDetails((prev) => !prev)}
               style={{
                 cursor: "pointer",
@@ -516,7 +604,7 @@ const SalesInput = () => {
                   <Icon icon="grommet-icons:form-down" />
                 )}
               </span>
-            </div>
+            </div >
           }
         >
           <div style={{ display: showContainerDetails ? "block" : "none" }}>
@@ -610,21 +698,21 @@ const SalesInput = () => {
                   className={Styles.formLabel}
                   label="Other Charges"
                   name="otherchargesremarks"
-                  // rules={[{ required: true, message: "Required" }]}
+                // rules={[{ required: true, message: "Required" }]}
                 >
                   <TextArea placeholder="Enter any additional charges or fees" />
                 </Form.Item>
               </Col>
             </Row>
           </div>
-        </Card>
+        </Card >
 
         {/* SHIPMENT DETAILS */}
-        <Card
+        < Card
           className={Styles.card}
           bordered
           title={
-            <div
+            < div
               onClick={() => setShowShipmentDetails((prev) => !prev)}
               style={{
                 cursor: "pointer",
@@ -651,7 +739,7 @@ const SalesInput = () => {
                   <Icon icon="grommet-icons:form-down" />
                 )}
               </span>
-            </div>
+            </div >
           }
         >
           <div style={{ display: showShipmentDetails ? "block" : "none" }}>
@@ -817,154 +905,174 @@ const SalesInput = () => {
               </Col>
             </Row>
           </div>
-          {additionalService.showTransportation && (
-            <Card
-              className={Styles.card}
-              bordered
-              title={
-                <Space align="center">
-                  <div className={Styles.mainhead}>
-                    <Icon
-                      icon="hugeicons:delivery-truck-02"
-                      width="19"
-                      height="19"
-                    />
-                  </div>
-                  <Typography.Title level={5} style={{ margin: 0 }}>
-                    Transportation
-                  </Typography.Title>
-                </Space>
-              }
-            >
-              <Form.List name="transportationRows" initialValue={[{}]}>
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map(({ key, name, ...restField }) => (
-                      <Row gutter={16} key={key} align="middle">
-                        <Col xs={24} md={4}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "equipmentType"]}
-                            label="Equipment Type"
-                            rules={[{ required: true, message: "Required" }]}
-                          >
-                            <EquipmentTypeSelect />
-                          </Form.Item>
-                        </Col>
+          {
+            additionalService.showTransportation && (
+              <Card
+                className={Styles.card}
+                bordered
+                title={
+                  <Space align="center">
+                    <div className={Styles.mainhead}>
+                      <Icon
+                        icon="hugeicons:delivery-truck-02"
+                        width="19"
+                        height="19"
+                      />
+                    </div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Transportation
+                    </Typography.Title>
+                  </Space>
+                }
+              >
+                <Form.List name="transportationRows" initialValue={[{}]}>
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...restField }) => (
+                        <Row gutter={16} key={key} align="middle">
+                          <Col xs={24} md={4}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "equipmentType"]}
+                              label="Equipment Type"
+                              rules={[{ required: true, message: "Required" }]}
+                            >
+                              <EquipmentTypeSelect />
+                            </Form.Item>
+                          </Col>
 
-                        <Col xs={24} md={3}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "noOfContainers"]}
-                            label="No. Of Containers"
-                          >
-                            <Input placeholder="Qty" />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} md={4}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "category"]}
-                            label="Category"
-                          >
-                            <CategorySelect />
-                          </Form.Item>
-                        </Col>
+                          <Col xs={24} md={3}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "noOfContainers"]}
+                              label="No. Of Containers"
+                            >
+                              <Input placeholder="Qty" />
+                            </Form.Item>
+                          </Col>
+                          <Col xs={24} md={4}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "category"]}
+                              label="Category"
+                            >
+                              <CategorySelect />
+                            </Form.Item>
+                          </Col>
 
-                        <Col xs={24} md={4}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "placementTime"]}
-                            label="Placement Date & Time"
-                          >
-                            <DatePicker
-                              placeholder="YYYY-MM-DD"
-                              style={{ width: "100%" }}
+                          <Col xs={24} md={4}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "placementTime"]}
+                              label="Placement Date & Time"
+                            >
+                              <DatePicker
+                                placeholder="YYYY-MM-DD"
+                                style={{ width: "100%" }}
+                              />
+                            </Form.Item>
+                          </Col>
+
+                          <Col xs={24} md={4}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "pickupLocation"]}
+                              label="Pickup/Delivery Location"
+                            >
+                              <Input placeholder="Location" />
+                            </Form.Item>
+                          </Col>
+
+                          <Col xs={24} md={3}>
+                            <Form.Item
+                              className={Styles.formLabel}
+                              {...restField}
+                              name={[name, "specialRemarks"]}
+                              label="Special Remarks"
+                            >
+                              <Input placeholder="CFS Stuffing, WA" />
+                            </Form.Item>
+                          </Col>
+
+                          <Col xs={24} md={1}>
+                            <Button
+                              danger
+                              style={{ marginTop: "1rem" }}
+                              disabled={fields.length <= 1}
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
                             />
-                          </Form.Item>
-                        </Col>
+                          </Col>
+                          <Col xs={24} md={1}>
+                            <Button
+                              type="primary"
+                              style={{ marginTop: "1rem" }}
+                              icon={<PlusOutlined />}
+                              onClick={() => add()}
+                              block
+                            />
+                          </Col>
+                        </Row>
+                      ))}
+                    </>
+                  )}
+                </Form.List>
+              </Card>
+            )
+          }
+        </Card >
 
-                        <Col xs={24} md={4}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "pickupLocation"]}
-                            label="Pickup/Delivery Location"
-                          >
-                            <Input placeholder="Location" />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={24} md={3}>
-                          <Form.Item
-                            className={Styles.formLabel}
-                            {...restField}
-                            name={[name, "specialRemarks"]}
-                            label="Special Remarks"
-                          >
-                            <Input placeholder="CFS Stuffing, WA" />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={24} md={1}>
-                          <Button
-                            danger
-                            style={{ marginTop: "1rem" }}
-                            disabled={fields.length <= 1}
-                            icon={<DeleteOutlined />}
-                            onClick={() => remove(name)}
-                          />
-                        </Col>
-                        <Col xs={24} md={1}>
-                          <Button
-                            type="primary"
-                            style={{ marginTop: "1rem" }}
-                            icon={<PlusOutlined />}
-                            onClick={() => add()}
-                            block
-                          />
-                        </Col>
-                      </Row>
-                    ))}
-                  </>
-                )}
-              </Form.List>
-            </Card>
-          )}
-        </Card>
-
-        <Space
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            width: "100%",
-            marginTop: "1rem",
-          }}
-        >
-          <Button
-            icon={<Icon icon="mdi:tick-circle" />}
-            type="primary"
-            htmlType="submit"
+        {!isReadOnly && (
+          <Space
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              width: "100%",
+              marginTop: "1rem",
+            }}
           >
-            Submit
-          </Button>
-          <Button icon={<Icon icon="ion:save-sharp" />} type="primary">
-            Save
-          </Button>
-          <Button
-            icon={<Icon icon="tabler:refresh" />}
-            type="primary"
-            onClick={handleCancel}
-          >
-            Refresh
-          </Button>
-        </Space>
-      </Form>
-    </div>
+            <Button
+              icon={<Icon icon="mdi:tick-circle" />}
+              type="primary"
+              onClick={() => form.validateFields().then(values => onFinish(values, "submitted"))}
+              loading={loading}
+            >
+              Submit
+            </Button>
+            <Button
+              icon={<Icon icon="mdi:content-save-edit" />}
+              type="default"
+              onClick={() => onFinish(form.getFieldsValue(), "draft")}
+              loading={loading}
+            >
+              Save Draft
+            </Button>
+            <Button
+              icon={<Icon icon="tabler:refresh" />}
+              type="primary"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
+          </Space>
+        )}
+        {
+          isReadOnly && (
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <Typography.Text type="secondary" italic>
+                This job is currently in the approval workflow and is read-only.
+              </Typography.Text>
+            </div>
+          )
+        }
+      </Form >
+    </div >
   );
 };
 
