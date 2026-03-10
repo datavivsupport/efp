@@ -1,7 +1,6 @@
-/* ================= MAIN CARDS ================= */
 .card {
   border-radius: 14px;
-  margin-top: 15px;
+  margin-top: 10px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
@@ -10,19 +9,17 @@
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
 }
 
-/* ================= CARD HEADER ================= */
 .card :global(.ant-card-head) {
-  background: linear-gradient(
-    to right,
-    rgb(248, 250, 252),
-    rgb(239, 246, 255)
-  ) !important;
+  background: linear-gradient(to right,
+      rgb(248, 250, 252),
+      rgb(239, 246, 255)) !important;
   border-bottom: 1px solid #f0f0f0;
-  padding: 8px 16px !important;
+  padding: 4px 16px !important;
+  min-height: 48px !important;
 }
 
 .card :global(.ant-card-body) {
-  padding: 16px 20px !important;
+  padding: 12px 20px !important;
   font-size: 12px !important;
 }
 
@@ -44,7 +41,7 @@
 
 /* ================= FORM SPACING ================= */
 .card :global(.ant-form-item) {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 /* ================= TYPOGRAPHY ================= */

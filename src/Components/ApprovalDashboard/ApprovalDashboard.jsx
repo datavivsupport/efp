@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import StatusCards from "../StatsCard/StatsCard";
-import { Button, message } from "antd";
+import { Button, message, Tag } from "antd";
 import { Chart } from "chart.js";
 import CommonTable from "../Commontable/Commontable";
 import "../Commontable/InvoiceTable.scss";
 import { Icon } from "@iconify/react";
-// import { FileX } from "lucide-react";
+import apiClient from "../../api/apiclient";
+import { useState } from "react";
+import dayjs from "dayjs";
 
 const ApprovalDashboard = () => {
   const location = useLocation();
@@ -26,6 +28,102 @@ const ApprovalDashboard = () => {
   // }, [location]);
 
   const hasShownMessage = useRef(false);
+
+  const [data, setData] = useState([]);
+  const [draftsData, setDraftsData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // Fetch both draft and non-draft separately for clear dashboard separation
+      const [reportsRes, draftsRes] = await Promise.all([
+        apiClient.get("/liner/sales-input/reports/"),
+        apiClient.get("/liner/sales-input/draft/"),
+      ]);
+
+      if (reportsRes.data?.status === "success") {
+        const results = reportsRes.data.data.results || reportsRes.data.data;
+        setData(results.map(item => ({
+          ...item,
+          key: item.id.toString(),
+          commodities_display: item.commodities?.map(c => c.name).join(", ") || "-",
+          contact_details: item.phone_no || "-",
+        })));
+
+        setStats(prev => ({
+          ...prev,
+          approved: results.filter(i => i.status === 'approved').length,
+          pending: results.filter(i => i.status === 'submitted').length,
+          rejected: results.filter(i => i.status === 'rejected').length,
+          total: results.length
+        }));
+      }
+
+      if (draftsRes.data?.status === "success") {
+        const results = draftsRes.data.data.results || draftsRes.data.data;
+        setDraftsData(results.map(item => ({
+          ...item,
+          key: item.id.toString(),
+        })));
+        setStats(prev => ({
+          ...prev,
+          overdue: results.length, // Using overdue slot for drafts count in UI
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleApprove = async (id) => {
+    try {
+      await apiClient.post(`/liner/sales-input/${id}/approve/`);
+      message.success("Sales Input Approved");
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Approval Error:", error);
+    }
+  };
+
+  const handleReject = async (id) => {
+    try {
+      await apiClient.post(`/liner/sales-input/${id}/reject/`, { reason: "Rejected from Dashboard" });
+      message.success("Sales Input Rejected");
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Rejection Error:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await apiClient.delete(`/liner/sales-input/${id}/`);
+      message.success("Draft Deleted Successfully");
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Delete Error:", error);
+      message.error("Failed to delete draft");
+    }
+  };
+
+  const handleSubmitDraft = async (id) => {
+    try {
+      await apiClient.post(`/liner/sales-input/${id}/submit/`);
+      message.success("Sales Input Submitted Successfully");
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Submit Error:", error);
+      message.error("Failed to submit draft");
+    }
+  };
 
   useEffect(() => {
     if (!hasShownMessage.current && location.state?.message) {
@@ -129,101 +227,129 @@ const ApprovalDashboard = () => {
     };
   }, []);
 
-  const dummyData = [
-    {
-      key: "1",
-      invoice_id: "BK001",
-      document_type_name: "ABC Logistics",
-      vendor_name: "Maersk",
-      invoice_number: "NYC - LON",
-      invoice_claim_amount: "2 x 40FT",
-    },
-    {
-      key: "2",
-      invoice_id: "BK002",
-      document_type_name: "Global Trade Ltd",
-      vendor_name: "MSC",
-      invoice_number: "DXB - SIN",
-      invoice_claim_amount: "1 x 20FT",
-    },
-    {
-      key: "3",
-      invoice_id: "BK003",
-      document_type_name: "Ocean Freight Co",
-      vendor_name: "CMA CGM",
-      invoice_number: "LAX - SHA",
-      invoice_claim_amount: "3 x 40FT",
-    },
-  ];
+  // const dummyData = [
+  //   ...
+  // ];
 
   const columns = [
     {
-      title: "Booking Note",
-      dataIndex: "invoice_id",
-      key: "invoice_id",
+      title: "Export Number",
+      dataIndex: "export_number",
+      key: "export_number",
       render: (text) => (
-        <span style={{ fontWeight: 600, color: "#1f2937" }}>{text || "-"}</span>
+        <span style={{ fontWeight: 600, color: "#1f2937" }}>{text || "N/A (Draft)"}</span>
       ),
     },
     {
-      title: "Customer",
-      dataIndex: "document_type_name",
-      key: "document_type_name",
+      title: "Customer Name",
+      dataIndex: "customer_name",
+      key: "customer_name",
     },
     {
-      title: "Carrier",
-      dataIndex: "vendor_name",
-      key: "vendor_name",
+      title: "Carrier Name",
+      dataIndex: "carrier_name",
+      key: "carrier_name",
     },
     {
-      title: "Route",
-      dataIndex: "invoice_number",
-      key: "invoice_number",
+      title: "Job No (AFSYS)",
+      dataIndex: "afsys_job_no",
+      key: "afsys_job_no",
+      render: (text) => <span style={{ fontStyle: 'italic' }}>{text || "-"}</span>
     },
     {
-      title: "Equipment",
-      dataIndex: "invoice_claim_amount",
-      key: "invoice_claim_amount",
+      title: "Booking Ref",
+      dataIndex: "booking_ref_no",
+      key: "booking_ref_no",
     },
     {
-      title: "Documents",
-      render: () => <span>-</span>,
+      title: "Created Date",
+      dataIndex: "export_created_date",
+      key: "export_created_date",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "N/A"
+    },
+    {
+      title: "Pending With",
+      dataIndex: "pending_with",
+      key: "pending_with",
+      render: (pw) => <Tag color="blue">{pw || "N/A"}</Tag>
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (s) => (
+        <Tag color={s === 'approved' ? 'success' : s === 'submitted' ? 'processing' : s === 'draft' ? 'default' : 'error'}>
+          {s === 'submitted' ? 'PENDING' : s?.toUpperCase()}
+        </Tag>
+      )
     },
     {
       title: "Actions",
       key: "actions",
       fixed: "right",
-      render: (_, record) => (
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<Icon icon="mdi:tick-circle" size={10} />}
-          >
-            Approve
-          </Button>
-          <Button
-            type="primary"
-            size="small"
-            icon={<Icon icon="mdi:cross-circle" size={10} />}
-          >
-            Reject
-          </Button>
-        </div>
-      ),
+      align: "center",
+      render: (_, record) => {
+        const isTerminal = record.status === 'approved' || record.status === 'rejected';
+        return (
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+            <Button
+              type="default"
+              size="small"
+              icon={<Icon icon="mdi:eye" />}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const page = record.status === "draft" ? "sales-input" : "approval";
+                const url = `${window.location.origin}/${page}?id=${record.id}`;
+                window.open(url, "_blank", "noopener,noreferrer");
+              }}
+            >
+              View
+            </Button>
+            {!isTerminal && record.status === 'submitted' && (
+              <>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<Icon icon="mdi:check-circle" />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleApprove(record.id);
+                  }}
+                  style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                >
+                  Approve
+                </Button>
+                <Button
+                  danger
+                  size="small"
+                  icon={<Icon icon="mdi:close-circle" />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Reject this sales input?")) handleReject(record.id);
+                  }}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
+        );
+      }
     },
   ];
 
   return (
-    <div className="main-container">
+    <div className="main-container" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       {/* Main Content */}
-      <main className="mx-auto px-4 py-4">
-        <StatusCards />
+      <main className="mx-auto px-4 py-6" style={{ maxWidth: "1600px" }}>
+        <StatusCards stats={stats} />
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Icon icon="mdi:chart-line" color="#6366f1" />
                 Export Trends (Monthly)
               </h2>
             </div>
@@ -232,9 +358,10 @@ const ApprovalDashboard = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Icon icon="mdi:chart-pie" color="#10b981" />
                 Status Distribution
               </h2>
             </div>
@@ -244,26 +371,95 @@ const ApprovalDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 mb-8">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <Icon icon="mdi:trophy-outline" color="#3b82f6" />
               Top Carriers Performance
             </h2>
           </div>
-          <div className="h-64">
+          <div className="h-72">
             <canvas id="carrierChart" />
           </div>
         </div>
 
-        <CommonTable
-          columns={columns}
-          data={dummyData}
-          // loading={loading}
-          yescomp={true}
-          page={1}
-          total={dummyData.length}
-          pagesize={10}
-        />
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Icon icon="mdi:file-edit-outline" color="#f59e0b" />
+              My Drafts
+            </h2>
+            <Tag color="orange">{draftsData.length} Drafts</Tag>
+          </div>
+          <CommonTable
+            columns={[
+              { title: "Customer", dataIndex: "customer_name", key: "customer" },
+              { title: "Carrier", dataIndex: "carrier_name", key: "carrier" },
+              { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (t) => t?.toUpperCase() },
+              { title: "Created", dataIndex: "created_at", key: "created", render: (d) => dayjs(d).format("YYYY-MM-DD") },
+              {
+                title: "Actions",
+                key: "actions",
+                align: "center",
+                render: (_, record) => (
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                    <Button
+                      size="small"
+                      icon={<Icon icon="mdi:eye" />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const url = `${window.location.origin}/sales-input?id=${record.id}`;
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      }}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<Icon icon="mdi:send" />}
+                      onClick={() => handleSubmitDraft(record.id)}
+                      style={{ backgroundColor: '#6366f1' }}
+                    >
+                      Submit
+                    </Button>
+                    <Button
+                      size="small"
+                      danger
+                      icon={<Icon icon="mdi:delete" />}
+                      onClick={() => {
+                        if (window.confirm("Delete this draft?")) handleDelete(record.id);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )
+              }
+            ]}
+            data={draftsData}
+            loading={loading}
+            yescomp={false}
+          />
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <Icon icon="mdi:ship-wheel" color="#2d7a82" />
+              Active Shipments & Approvals
+            </h2>
+          </div>
+          <CommonTable
+            columns={columns}
+            data={data}
+            loading={loading}
+            yescomp={true}
+            page={1}
+            total={data.length}
+            pagesize={10}
+          />
+        </div>
       </main>
     </div>
   );
