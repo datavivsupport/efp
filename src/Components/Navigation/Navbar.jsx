@@ -198,7 +198,7 @@ const Navigation = () => {
               />
             </span>{" "}
             <span style={{ fontSize: "14px" }}>
-              {user.first_name} {user.last_name}
+              {user?.first_name || ""} {user?.last_name || ""}
             </span>
           </button>
 

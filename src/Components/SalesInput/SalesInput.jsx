@@ -434,7 +434,11 @@ const SalesInput = () => {
                   label="Created By"
                   name="exportCreatedBy"
                 >
+<<<<<<< HEAD
                   <Input disabled placeholder="User Name" />
+=======
+                  <Input disabled placeholder="Enter Export Created By" />
+>>>>>>> 2555590bec0d4aeb9a8130430dc294dd758888ec
                 </Form.Item>
               </Col>
             </Row>

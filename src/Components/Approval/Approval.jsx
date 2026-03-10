@@ -30,7 +30,10 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
+<<<<<<< HEAD
 import dayjs from "dayjs";
+=======
+>>>>>>> 2555590bec0d4aeb9a8130430dc294dd758888ec
 import Styles from "./Approval.module.css";
 import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 import CategorySelect from "../SalesInput/Category";
