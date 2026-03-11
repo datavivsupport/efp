@@ -30,10 +30,7 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-<<<<<<< HEAD
 import dayjs from "dayjs";
-=======
->>>>>>> 2555590bec0d4aeb9a8130430dc294dd758888ec
 import Styles from "./Approval.module.css";
 import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 import CategorySelect from "../SalesInput/Category";
@@ -536,7 +533,8 @@ const Approval = () => {
       }
     } catch (err) {
       console.error(err);
-      message.error("Error performing action: " + (err.errorFields?.[0]?.errors?.[0] || "Check required fields"));
+      const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
+      message.error("Error performing action: " + errorMsg);
     } finally {
       setLoading(false);
     }
@@ -557,11 +555,17 @@ const Approval = () => {
           // Redirect to edit mode if newly created
           window.location.search = `?id=${response.data.data.id}`;
         } else {
-          fetchJobDetails();
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 1000);
         }
+      } else {
+        message.error(response.data.message || "Failed to save draft");
       }
     } catch (err) {
-      message.error("Failed to save draft");
+      console.error(err);
+      const errorMsg = err.response?.data?.message || "Internal server error";
+      message.error("Failed to save draft: " + errorMsg);
     } finally {
       setLoading(false);
     }

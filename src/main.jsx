@@ -41,6 +41,7 @@ const router = createBrowserRouter([
     element: <App />,
     loader: authLoader,
     children: [
+      { index: true, element: <ApprovalDashboard /> },
       { path: "dashboard", element: <ApprovalDashboard /> },
       { path: "approval", element: <Approval /> },
       { path: "sales-input", element: <SalesInput /> },
