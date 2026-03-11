@@ -85,21 +85,33 @@ const ApprovalDashboard = () => {
 
   const handleApprove = async (id) => {
     try {
-      await apiClient.post(`/liner/sales-input/${id}/approve/`);
-      message.success("Sales Input Approved");
+      const res = await apiClient.post(`/liner/sales-input/${id}/approve/`);
+      if (res.data?.status === "success") {
+        message.success(res.data?.message || "Sales Input Approved");
+      } else {
+        message.error(res.data?.message || "Approval failed");
+      }
       fetchDashboardData();
     } catch (error) {
-      console.error("Approval Error:", error);
+      const errMsg = error.response?.data?.message || "Failed to approve";
+      message.error(errMsg);
+      fetchDashboardData(); // Also refresh so button visibility updates
     }
   };
 
   const handleReject = async (id) => {
     try {
-      await apiClient.post(`/liner/sales-input/${id}/reject/`, { reason: "Rejected from Dashboard" });
-      message.success("Sales Input Rejected");
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, { reason: "Rejected from Dashboard" });
+      if (res.data?.status === "success") {
+        message.success(res.data?.message || "Sales Input Rejected");
+      } else {
+        message.error(res.data?.message || "Rejection failed");
+      }
       fetchDashboardData();
     } catch (error) {
-      console.error("Rejection Error:", error);
+      const errMsg = error.response?.data?.message || "Failed to reject";
+      message.error(errMsg);
+      fetchDashboardData(); // Refresh so button visibility updates
     }
   };
 
@@ -290,8 +302,9 @@ const ApprovalDashboard = () => {
       align: "center",
       render: (_, record) => {
         const isTerminal = record.status === 'approved' || record.status === 'rejected';
+        const canAct = !isTerminal && record.status === 'submitted' && !record.user_has_acted;
         return (
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
             <Button
               type="default"
               size="small"
@@ -306,7 +319,7 @@ const ApprovalDashboard = () => {
             >
               View
             </Button>
-            {!isTerminal && record.status === 'submitted' && (
+            {canAct && (
               <>
                 <Button
                   type="primary"
@@ -332,6 +345,9 @@ const ApprovalDashboard = () => {
                   Reject
                 </Button>
               </>
+            )}
+            {record.user_has_acted && !isTerminal && (
+              <Tag color="blue" style={{ margin: 0 }}>Already Reviewed</Tag>
             )}
           </div>
         );
