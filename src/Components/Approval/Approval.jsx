@@ -311,21 +311,21 @@ const Approval = () => {
 
         // Map to main form
         form.setFieldsValue({
-          exportNumber: data.export_number || "N/A",
-          exportCreatedDate: data.export_created_date ? dayjs(data.export_created_date) : null,
-          exportCreatedBy: data.created_by_name || "N/A",
-          carrierName: data.carrier_name,
-          customerName: data.customer_name,
-          contactPIC: data.contact_pic,
-          contactDetails: data.phone_no || data.email,
+          export_number: data.export_number || "N/A",
+          export_created_date: data.export_created_date ? dayjs(data.export_created_date) : null,
+          created_by_name: data.created_by_name || "N/A",
+          carrier_name: data.carrier_name,
+          customer_name: data.customer_name,
+          contact_pic: data.contact_pic,
+          phone_no: data.phone_no || data.email,
           commodity: data.commodities?.map(c => c.name).join(", "),
-          pol: data.port_of_loading,
-          pod: data.port_of_discharge,
-          fpod: data.final_pod,
-          termsOfShipment: data.terms_of_shipment,
-          haulierCode: data.haulier_code,
-          executiveName: data.name_of_executive,
-          specialRemarks: data.special_instructions,
+          port_of_loading: data.port_of_loading,
+          port_of_discharge: data.port_of_discharge,
+          final_pod: data.final_pod,
+          terms_of_shipment: data.terms_of_shipment,
+          haulier_code: data.haulier_code,
+          name_of_executive: data.name_of_executive,
+          special_instructions: data.special_instructions,
           hbl: data.hbl,
           fac: data.fac,
           documentation: data.documentation,
@@ -333,8 +333,8 @@ const Approval = () => {
 
           // Container Rows
           containerRows: data.container_details?.map(c => ({
-            equipmentType: c.equipment_type,
-            volume: c.quantity,
+            equipment_type: c.equipment_type,
+            quantity: c.quantity,
             category: c.category,
             quote: c.quote,
             cost: c.cost,
@@ -342,25 +342,24 @@ const Approval = () => {
 
           // Placement Rows
           placementRows: data.transportation_rows?.map(t => ({
-            equipmentType: t.equipment_type,
-            volume: t.no_of_containers,
+            equipment_type: t.equipment_type,
+            no_of_containers: t.no_of_containers,
             category: t.category,
-            date: t.placement_time ? dayjs(t.placement_time) : null,
-            time: t.placement_time ? dayjs(t.placement_time) : null,
-            remarks: t.special_remarks,
+            placement_time: t.placement_time ? dayjs(t.placement_time) : null,
+            special_remarks: t.special_remarks,
           })) || [{}],
 
           // Booking Details
-          afsysJobNo: data.approval_details?.afsys_job_no,
-          bookingVessel: data.approval_details?.booking_vessel,
-          bookingVoyage: data.approval_details?.booking_voyage,
-          vesselETA: data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
-          bookingRefNo: data.approval_details?.booking_ref_no,
-          siCutOffDate: data.approval_details?.si_cut_off_date ? dayjs(data.approval_details.si_cut_off_date) : null,
-          siCutOffTime: data.approval_details?.si_cut_off_time ? dayjs(data.approval_details.si_cut_off_time, "HH:mm") : null,
-          bookingRemarks: data.approval_details?.booking_remarks,
-          cnfRemarks: data.approval_details?.cnf_remarks,
-          accountRemarks: data.approval_details?.account_remarks,
+          afsys_job_no: data.approval_details?.afsys_job_no,
+          booking_vessel: data.approval_details?.booking_vessel,
+          booking_voyage: data.approval_details?.booking_voyage,
+          vessel_eta: data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
+          booking_ref_no: data.approval_details?.booking_ref_no,
+          si_cut_off_date: data.approval_details?.si_cut_off_date ? dayjs(data.approval_details.si_cut_off_date) : null,
+          si_cut_off_time: data.approval_details?.si_cut_off_time ? dayjs(data.approval_details.si_cut_off_time, "HH:mm") : null,
+          booking_remarks: data.approval_details?.booking_remarks,
+          cnf_remarks: data.approval_details?.cnf_remarks,
+          account_remarks: data.approval_details?.account_remarks,
         });
 
         // Map Documents
@@ -409,40 +408,40 @@ const Approval = () => {
       // ─── RELAXED PAYLOAD FOR TESTING ───────────────────────────────────────────
       // Sending all fields to allow everyone to edit everything for now.
       // ────────────────────────────────────────────────────────────────────────────
-      customer_name: values.customerName,
-      carrier_name: values.carrierName,
-      contact_pic: values.contactPIC,
-      phone_no: values.contactDetails,
-      port_of_loading: values.pol,
-      port_of_discharge: values.pod,
-      final_pod: values.fpod,
-      terms_of_shipment: values.termsOfShipment,
-      haulier_code: values.haulierCode,
+      customer_name: values.customer_name,
+      carrier_name: values.carrier_name,
+      contact_pic: values.contact_pic,
+      phone_no: values.phone_no,
+      port_of_loading: values.port_of_loading,
+      port_of_discharge: values.port_of_discharge,
+      final_pod: values.final_pod,
+      terms_of_shipment: values.terms_of_shipment,
+      haulier_code: values.haulier_code,
       hbl: values.hbl,
       fac: values.fac,
       documentation: values.documentation,
       transportation: values.transportation,
-      name_of_executive: values.executiveName,
-      special_instructions: values.specialRemarks,
+      name_of_executive: values.name_of_executive,
+      special_instructions: values.special_instructions,
       commodities: values.commodity !== undefined
         ? (values.commodity ? values.commodity.split(",").map(c => ({ name: c.trim() })).filter(c => c.name) : [])
         : undefined,
       container_details: values.containerRows?.map(r => ({
-        equipment_type: r.equipmentType,
-        quantity: parseInt(r.volume) || 0,
+        equipment_type: r.equipment_type,
+        quantity: parseInt(r.quantity) || 0,
         category: r.category,
         quote: r.quote,
         cost: parseFloat(r.cost) || 0
       })),
 
       transportation_rows: values.placementRows?.map(r => ({
-        equipment_type: r.equipmentType,
-        no_of_containers: parseInt(r.volume) || 0,
+        equipment_type: r.equipment_type,
+        no_of_containers: parseInt(r.no_of_containers) || 0,
         category: r.category,
-        placement_time: r.date && r.time
-          ? dayjs(r.date).format("YYYY-MM-DD") + "T" + dayjs(r.time).format("HH:mm:ss")
+        placement_time: r.placement_time
+          ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
           : null,
-        special_remarks: r.remarks
+        special_remarks: r.special_remarks
       })),
 
       documents: allDocs.map(d => ({
@@ -463,16 +462,16 @@ const Approval = () => {
 
   const getCommonPayloadApprovalDetails = (values) => {
     return {
-      afsys_job_no: values.afsysJobNo,
-      booking_vessel: values.bookingVessel,
-      booking_voyage: values.bookingVoyage,
-      vessel_eta: values.vesselETA ? values.vesselETA.format("YYYY-MM-DD") : null,
-      booking_ref_no: values.bookingRefNo,
-      si_cut_off_date: values.siCutOffDate ? values.siCutOffDate.format("YYYY-MM-DD") : null,
-      si_cut_off_time: values.siCutOffTime ? values.siCutOffTime.format("HH:mm") : null,
-      booking_remarks: values.bookingRemarks,
-      cnf_remarks: values.cnfRemarks,
-      account_remarks: values.accountRemarks,
+      afsys_job_no: values.afsys_job_no,
+      booking_vessel: values.booking_vessel,
+      booking_voyage: values.booking_voyage,
+      vessel_eta: values.vessel_eta ? values.vessel_eta.format("YYYY-MM-DD") : null,
+      booking_ref_no: values.booking_ref_no,
+      si_cut_off_date: values.si_cut_off_date ? values.si_cut_off_date.format("YYYY-MM-DD") : null,
+      si_cut_off_time: values.si_cut_off_time ? values.si_cut_off_time.format("HH:mm") : null,
+      booking_remarks: values.booking_remarks,
+      cnf_remarks: values.cnf_remarks,
+      account_remarks: values.account_remarks,
     };
   };
 
@@ -485,7 +484,7 @@ const Approval = () => {
       if (actionType === "Approved") {
         const stage = parseInt(jobData?.current_stage || "1");
 
-        if (stage === 3 && !values.afsysJobNo) {
+        if (stage === 3 && !values.afsys_job_no) {
           message.error("AFSYS Job No. is required for CS Team Allocation (Stage 3)");
           setLoading(false);
           return;
@@ -650,33 +649,33 @@ const Approval = () => {
             <div style={{ display: open.export ? "block" : "none" }}>
               <Row gutter={16}>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Number" name="exportNumber">
+                  <Form.Item className={Styles.formLabel} label="Export Number" name="export_number">
                     <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Created Date" name="exportCreatedDate">
+                  <Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date">
                     <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Customer Name" name="customerName" rules={[{ required: true }]}>
+                  <Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}>
                     <Input placeholder="Customer Name" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Carrier Name" name="carrierName">
+                  <Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name">
                     <Input placeholder="Carrier Name" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
 
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Job No (AFSYS)" name="afsysJobNo">
+                  <Form.Item className={Styles.formLabel} label="Job No (AFSYS)" name="afsys_job_no">
                     <Input placeholder="Job No" />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Ref No" name="bookingRefNo">
+                  <Form.Item className={Styles.formLabel} label="Booking Ref No" name="booking_ref_no">
                     <Input placeholder="Booking Ref" />
                   </Form.Item>
                 </Col>
@@ -697,12 +696,12 @@ const Approval = () => {
                 </Col>
 
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Contact PIC" name="contactPIC">
+                  <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
                     <Input placeholder="Contact PIC" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Contact Details" name="contactDetails">
+                  <Form.Item className={Styles.formLabel} label="Contact Details" name="phone_no">
                     <Input placeholder="Phone / Email" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
@@ -712,7 +711,7 @@ const Approval = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Created By" name="exportCreatedBy">
+                  <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
                     <Input readOnly variant="filled" />
                   </Form.Item>
                 </Col>
@@ -743,7 +742,7 @@ const Approval = () => {
                           <Form.Item
                             className={Styles.formLabel}
                             {...rest}
-                            name={[name, "equipmentType"]}
+                            name={[name, "equipment_type"]}
                             label="Equipment Type"
                             rules={[{ required: true }]}
                           >
@@ -838,22 +837,22 @@ const Approval = () => {
             <div style={{ display: open.otherDetails ? "block" : "none" }}>
               <Row gutter={16}>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="POL" name="pol" rules={[{ required: true }]}>
+                  <Form.Item className={Styles.formLabel} label="POL" name="port_of_loading" rules={[{ required: true }]}>
                     <Input placeholder="Port of Loading" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="POD" name="pod" rules={[{ required: true }]}>
+                  <Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge" rules={[{ required: true }]}>
                     <Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="FPOD" name="fpod">
+                  <Form.Item className={Styles.formLabel} label="FPOD" name="final_pod">
                     <Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Terms of Shipment" name="termsOfShipment">
+                  <Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment">
                     <Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}>
                       <Option value="prepaid">Prepaid</Option>
                       <Option value="collect">Collect</Option>
@@ -861,17 +860,17 @@ const Approval = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulierCode">
+                  <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code">
                     <Input placeholder="Enter Code" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={12} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Name of Executive" name="executiveName">
+                  <Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive">
                     <Input placeholder="Sales Executive" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={12} md={12}>
-                  <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="specialRemarks">
+                  <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
                     <TextArea placeholder="Enter any special instructions…" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
@@ -903,11 +902,11 @@ const Approval = () => {
                     <>
                       {fields.map(({ key, name, ...restField }) => (
                         <Row key={key} gutter={16} align="middle">
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipmentType"]} label="Equip Type"><Input placeholder="Type" disabled={isCNFSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "noOfContainers"]} label="Vol"><Input placeholder="Vol" disabled={isCNFSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><Input placeholder="Type" disabled={isCNFSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input placeholder="Vol" disabled={isCNFSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><Input placeholder="Cat" disabled={isCNFSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placementTime"]} label="Date/Time"><DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: "100%" }} disabled={isCNFSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={7}><Form.Item {...restField} name={[name, "specialRemarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isCNFSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: "100%" }} disabled={isCNFSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={7}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isCNFSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={2}>
                             <Button danger type="text" icon={<Icon icon="mdi:delete" />} onClick={() => remove(name)} style={{ marginTop: 24 }} disabled={isCNFSectionLocked} />
                           </Col>
@@ -937,28 +936,28 @@ const Approval = () => {
             <div style={{ display: open.booking ? "block" : "none" }}>
               <Row gutter={16}>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsysJobNo"><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Vessel" name="bookingVessel"><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Voyage" name="bookingVoyage"><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vesselETA"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Reference No." name="bookingRefNo"><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="siCutOffDate"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="siCutOffTime"><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time"><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Remarks" name="bookingRemarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
                 </Col>
 
                 <Col xs={24} md={6}>
@@ -981,7 +980,7 @@ const Approval = () => {
                     <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="booking" docType="Load List" disabled={isBookingSectionLocked} />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnfRemarks"><TextArea disabled={isCNFSectionLocked} /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFSectionLocked} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -1007,7 +1006,7 @@ const Approval = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={16}>
-                  <Form.Item className={Styles.formLabel} label="Account Remarks" name="accountRemarks"><TextArea autoSize={{ minRows: 2 }} disabled={isFinancialSectionLocked} /></Form.Item>
+                  <Form.Item className={Styles.formLabel} label="Account Remarks" name="account_remarks"><TextArea autoSize={{ minRows: 2 }} disabled={isFinancialSectionLocked} /></Form.Item>
                 </Col>
               </Row>
             </div>
