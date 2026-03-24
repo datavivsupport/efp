@@ -364,9 +364,9 @@ const Approval = () => {
   const isCNFOnlyLocked = isTerminal || isForwardingStage5 || (!isAdmin && !isCNF);
   const isAccountsOnlyLocked = isTerminal || (!isAdmin && !isAccounts);
 
-  // For Liner, CS can upload core docs throughout the workflow
+  // For Liner, CS can upload core docs immediately (any stage)
   const isLinerCSUploadLocked = isLiner
-    ? (isTerminal || (!isAdmin && !isCS))
+    ? (isTerminal || isHOD || isGM || (!isAdmin && !isCS))
     : (isTerminal || isForwardingStage5 || (!isAdmin && !isSales && !isCS && !isCreator) || (isHOD && !isCreator) || (isGM && !isCreator));
 
   // CNF handles operational docs only AFTER Sales HOD approval (Stage 3+)
@@ -1402,7 +1402,7 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
 
-                  {(isAdmin || (isLiner && isCS && String(currentStage) === '2') || (isCS && String(currentStage) === '2')) && !isTerminal && (
+                  {isLiner && isCNF && !isTerminal && (
                     <>
                       <Col xs={24} md={3}>
                         <Form.Item label="Load List Req?" name="is_load_list_required">
@@ -1481,8 +1481,7 @@ const Approval = () => {
             >
               <div style={{ display: open.documents ? "block" : "none" }}>
                 <Row gutter={16}>
-                  {/* LPO / INVOICE section for both Forwarding and Liner */}
-                  {(isLiner || !isLiner) && (
+                  {!isLiner && (
                     <>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label="LPO">
@@ -1512,7 +1511,7 @@ const Approval = () => {
                   </Col> */}
                   <Col xs={24} md={8}>
                     <Form.Item className={Styles.formLabel} label="ED">
-                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="financial" docType="ED" disabled={isLinerCSUploadLocked} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="financial" docType="ED" disabled={isStrictlyCSLocked} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   {isHNReq && (
@@ -1522,10 +1521,10 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                   )}
-                  {hblFlag && (
+                  {!isLiner && hblFlag && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="HBL">
-                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isLinerCSUploadLocked} user={user} isAdmin={isAdmin} />
+                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isStrictlyCSLocked} user={user} isAdmin={isAdmin} />
                       </Form.Item>
                     </Col>
                   )}
@@ -1763,7 +1762,7 @@ const Approval = () => {
                 ((!isHOD && !isGM) || (isLiner && isCS && (String(currentStage) === '2' || String(currentStage) === '3' || String(currentStage) === '4A' || String(currentStage) === '4B'))) && (
                   <>
                     <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
-                      {isLiner && (isCS || isCNF) && !isTerminal && (String(currentStage) === '2' || String(currentStage) === '3') ? "Submit CS Update" : "Submit"}
+                      {isLiner && isCS && (String(currentStage) === '2' || String(currentStage) === '3') ? "Submit CS Update" : "Submit"}
                     </Button>
                     {jobData?.status === "draft" && (
                       <Button
