@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
   Form,
@@ -13,8 +13,18 @@ import {
   Typography,
   Card,
   message,
+  Upload,
+  Tag,
+  Timeline,
+  Modal,
+  Spin,
 } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  UploadOutlined,
+  PaperClipOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import Styles from "./salesinput.module.css";
 import { Icon } from "@iconify/react";
@@ -22,9 +32,163 @@ import { useNavigate, useSearchParams } from "react-router";
 import CategorySelect from "./Category";
 import EquipmentTypeSelect from "./EquipmentType";
 import apiClient from "../../api/apiclient";
+import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 
 // const { Title } = Typography;
 const { TextArea } = Input;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FileChipList — shared chip renderer for every upload field
+───────────────────────────────────────────────────────────────────────────── */
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled }) => {
+  return (
+    <div style={{ marginTop: 8 }}>
+      {files.map((file, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Space>
+              <PaperClipOutlined style={{ color: '#1890ff' }} />
+              <Typography.Text ellipsis style={{ maxWidth: 200 }}>
+                {file.name || file.file_name}
+              </Typography.Text>
+            </Space>
+            <Space>
+              <Button type="link" size="small" onClick={() => onPreview(i)}>Preview</Button>
+              {!disabled && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}
+            </Space>
+          </div>
+          {!disabled && (
+            <Input
+              size="small"
+              placeholder="Add remarks for this document..."
+              value={file.remarks || ""}
+              onChange={(e) => onRemarkChange(i, e.target.value)}
+              style={{ fontSize: '12px' }}
+            />
+          )}
+          {disabled && file.remarks && (
+            <Typography.Text type="secondary" italic style={{ fontSize: '11px', paddingLeft: '4px' }}>
+              Remarks: {file.remarks}
+            </Typography.Text>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* DocUploadField — self-contained upload + chip-list */
+const DocUploadField = ({
+  label,
+  files,
+  setFiles,
+  color = "purple",
+  onPreview,
+  salesInputId,
+  category = "general",
+  docType = "Other",
+  disabled = false
+}) => {
+  const handleBeforeUpload = async (file) => {
+    if (!salesInputId) {
+      message.warning("Save the draft first before uploading documents");
+      return false;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', docType);
+    formData.append('category', category);
+
+    try {
+      const response = await apiClient.post(
+        `/liner/sales-input/${salesInputId}/upload-document/`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (response.data.status === "success") {
+        const uploadedDoc = response.data.data;
+        setFiles((prev) => [...prev, {
+          id: uploadedDoc.id,
+          name: uploadedDoc.file_name,
+          url: uploadedDoc.file_url,
+          file_name: uploadedDoc.file_name,
+          file_url: uploadedDoc.file_url,
+          doc_type: docType,
+          remarks: ""
+        }]);
+        message.success(`${file.name} uploaded successfully to S3`);
+      } else {
+        message.error("Upload failed: " + response.data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Upload failed. please check your connection.");
+    }
+    return false;
+  };
+
+  const debounceTimerField = useRef(null);
+
+  const handleRemarkChange = (index, value) => {
+    // 1. Get the ID of the document being updated from the filtered list 'files'
+    if (!files?.[index]) return;
+    const docId = files[index].id;
+
+    // 2. Functional update on the global state 'prev' to preserve all other document types
+    setFiles((prev) =>
+      prev.map((f) => (f.id === docId ? { ...f, remarks: value } : f))
+    );
+
+    // 2. Debounced sync to backend
+    if (salesInputId && docId) {
+      if (debounceTimerField.current) {
+        clearTimeout(debounceTimerField.current);
+      }
+      debounceTimerField.current = setTimeout(async () => {
+        try {
+          await apiClient.patch(
+            `/liner/sales-input/${salesInputId}/update-document-remarks/`,
+            { doc_id: docId, remarks: value }
+          );
+          console.log(`Synced remarks for doc ${docId}`);
+        } catch (err) {
+          console.error("Failed to sync remarks:", err);
+        }
+      }, 800); // 800ms debounce
+    }
+  };
+
+  return (
+    <div>
+      {!disabled && (
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }}>
+            {files.length === 0 ? `Upload ${label}` : "Add More"}
+          </Button>
+        </Upload>
+      )}
+
+      {files.length > 0 && (
+        <FileChipList
+          files={files}
+          color={color}
+          onRemove={(i) => {
+            const docId = files[i]?.id;
+            if (docId) {
+              setFiles((p) => p.filter((f) => f.id !== docId));
+            }
+          }}
+          onPreview={(i) => onPreview(files, i)}
+          onRemarkChange={handleRemarkChange}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+};
+
 
 const SalesInput = () => {
   const [form] = Form.useForm();
@@ -63,12 +227,54 @@ const SalesInput = () => {
   const [showApprovers, setShowApprovers] = useState(true);
   const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [jobTypeOptions, setJobTypeOptions] = useState([]);
+  const [termsOfShipmentOptions, setTermsOfShipmentOptions] = useState([]);
+  const [hodOptions, setHodOptions] = useState([]);
   const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
+
+  // Specialized Job Type Logic
+  const jobType = Form.useWatch("job_type", form);
+  const isOthers = jobType?.toUpperCase() === "OTHERS";
+  const isLiner = jobType?.toUpperCase() === "LINER";
+  const isForwarding = jobType?.toUpperCase() === "FORWARDING";
+  const isLLReqForm = Form.useWatch("is_load_list_required", form);
+  const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
+
+
+  const [workflowStatus, setWorkflowStatus] = useState({
+    is_hod_approved: false,
+    is_cs_updated: false,
+    is_cnf_loadlist_uploaded: false,
+    is_financial_trigger_activated: false,
+  });
+  const [approvalHistory, setApprovalHistory] = useState([]);
+  const [instanceStatus, setInstanceStatus] = useState("draft");
+  const [freightManifestFiles, setFreightManifestFiles] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  // General Remarks & Attachments State (for universal access)
+  const [remarks, setRemarks] = useState([]);
+  const [newRemark, setNewRemark] = useState("");
+  const [attachments, setAttachments] = useState([]);
+
+  const openPreview = (fileList, index = 0) => {
+    const urls = fileList.map((f) => f.url || f.file_url);
+    setPreviewUrls(urls);
+    setPreviewIndex(index);
+    setPreviewVisible(true);
+  };
   const [searchParams] = useSearchParams();
   const id = searchParams.get("id");
+  const typeParam = searchParams.get("type");
   const user = useSelector((state) => state.auth.user);
+  const userRoles = (user?.roles || []).map(r => r.name.toUpperCase());
+  const isHOD = userRoles.some(r => r.includes("HOD"));
 
-  const isReadOnly = currentStage && parseInt(currentStage) > 1; // Locked if beyond Stage 1
+  // PRD Section 3: Sales Input should not have role restrictions as per user.
+  const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
+  const isReadOnly = false; // Removed role and terminal restrictions for SalesInput page
 
   const addCommodity = () => {
     if (commodityInput.trim() && !commodities.includes(commodityInput.trim())) {
@@ -80,6 +286,11 @@ const SalesInput = () => {
   const removeCommodity = (value) => {
     setCommodities(commodities.filter((c) => c !== value));
   };
+
+  const isLLReq = isLLReqForm === true || isLLReqForm === "true";
+  const isHNReq = isHNReqForm === true || isHNReqForm === "true";
+
+  const isHalted = (isLiner || isForwarding) && (isLLReqForm === false || isHNReqForm === false);
 
   // const addEquipmentRow = () => {
   //   setEquipmentRows([
@@ -134,6 +345,41 @@ const SalesInput = () => {
   //   },
   //   { quote: 0, cost: 0, margin: 0 },
   // );
+  // Fetch master data for job type and terms of shipment dropdowns
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      // 1. Core Master Data (Essential)
+      try {
+        const [jtRes, tosRes] = await Promise.all([
+          apiClient.get("/accounts/master/EFPJobType/"),
+          apiClient.get("/accounts/master/EFPTermsOfShipment/"),
+        ]);
+        const jtData = jtRes.data?.results ?? jtRes.data ?? [];
+        const tosData = tosRes.data?.results ?? tosRes.data ?? [];
+        setJobTypeOptions(jtData.map((item) => ({ label: item.name, value: item.name })));
+        setTermsOfShipmentOptions(tosData.map((item) => ({ label: item.name, value: item.name })));
+      } catch (err) {
+        console.error("Failed to load core master data", err);
+      }
+
+      // 2. Staff Selection Data (Resilient)
+      try {
+        const [hodRes] = await Promise.all([
+          apiClient.get("/accounts/liner/admin/users/hods/"),
+        ]);
+        const hodData = hodRes.data?.results ?? hodRes.data ?? [];
+
+        setHodOptions(hodData.map((item) => ({
+          label: `${item.first_name} ${item.last_name}`,
+          value: `${item.first_name} ${item.last_name}`
+        })));
+      } catch (err) {
+        console.warn("Failed to load HOD selection data (permissions?)", err);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
   useEffect(() => {
     const fetchDraftData = async () => {
       if (!id) return;
@@ -143,38 +389,59 @@ const SalesInput = () => {
         if (response.status === 200) {
           const data = response.data.data;
           setCurrentStage(data.current_stage || "1");
+          setWorkflowStatus({
+            is_hod_approved: data.is_hod_approved,
+            is_cs_updated: data.is_cs_updated,
+            is_cnf_loadlist_uploaded: data.is_cnf_loadlist_uploaded,
+            is_financial_trigger_activated: data.is_financial_trigger_activated,
+          });
+          setApprovalHistory(data.approval_history || []);
+          setInstanceStatus(data.status);
+
+          // Load documents into state
+          const docs = data.documents || [];
+          setFreightManifestFiles(docs.filter(d => d.doc_type === "Freight Manifest"));
 
           // Map backend data to form fields
           form.setFieldsValue({
-            customerName: data.customer_name,
-            contactPIC: data.contact_pic,
-            phoneno: data.phone_no,
+            customer_name: data.customer_name,
+            contact_pic: data.contact_pic,
+            phone_no: data.phone_no,
             email: data.email,
-            jobType: data.job_type,
+            job_type: data.job_type,
             agent: data.agent,
-            carriername: data.carrier_name,
-            portofloading: data.port_of_loading,
-            portofdiachage: data.port_of_discharge,
-            finalpod: data.final_pod,
-            termsofshipment: data.terms_of_shipment,
-            hauliercode: data.haulier_code,
-            nameofexecutive: data.name_of_executive,
-            saleshod: data.sales_hod,
-            specialremarks: data.special_instructions,
-            otherchargesremarks: data.approval_details?.other_charges_remarks,
-            exportCreatedDate: data.export_created_date ? dayjs(data.export_created_date) : dayjs(),
-            exportNumber: data.export_number || "N/A",
-            exportCreatedBy: data.created_by_name || "",
-            lpoRequired: data.approval_details?.lpo_required ?? true,
-            releaseOrderRequired: data.approval_details?.release_order_required ?? true,
+            carrier_name: data.carrier_name,
+            vessel_voyage: data.vessel_voyage,
+            carrier_remarks: data.carrier_remarks,
+            vessel_voyage_remarks: data.vessel_voyage_remarks,
+            pol_remarks: data.pol_remarks,
+            pod_remarks: data.pod_remarks,
+            port_of_loading: data.port_of_loading,
+            port_of_discharge: data.port_of_discharge,
+            final_pod: data.final_pod,
+            terms_of_shipment: data.terms_of_shipment,
+            haulier_code: data.haulier_code,
+            name_of_executive: data.name_of_executive,
+            sales_hod: data.sales_hod,
+            special_instructions: data.special_instructions,
+            other_charges_remarks: data.approval_details?.other_charges_remarks,
+            export_created_date: data.export_created_date ? dayjs(data.export_created_date) : dayjs(),
+            export_number: data.export_number || "N/A",
+            created_by_name: data.created_by_name || "",
+            lpo_required: data.approval_details?.lpo_required ?? true,
+            release_order_required: data.approval_details?.release_order_required ?? true,
           });
+
+          setRemarks(data.general_remarks || []);
+          setAttachments(data.documents || []);
+
 
           // Set state for dynamic lists
           setCommodities((data.commodities || []).map(c => c.name));
 
           const mappedEquipment = (data.container_details || []).map((cd, index) => ({
             id: cd.id || index + 1,
-            equipmentType: cd.equipment_type,
+            equipment_type: cd.equipment_type,
             quantity: cd.quantity,
             category: cd.category,
             quote: cd.quote,
@@ -187,13 +454,13 @@ const SalesInput = () => {
           }
 
           const mappedTransportation = (data.transportation_rows || []).map((tr, index) => ({
-            id: tr.id || index + 1,
-            equipmentType: tr.equipment_type,
-            noOfContainers: tr.no_of_containers,
+            id: tr.id, // KEEP BACKEND ID
+            equipment_type: tr.equipment_type,
+            no_of_containers: tr.no_of_containers,
             category: tr.category,
-            placementTime: tr.placement_time ? dayjs(tr.placement_time) : null,
-            pickupLocation: tr.pickup_location,
-            specialRemarks: tr.special_remarks
+            placement_time: tr.placement_time ? dayjs(tr.placement_time) : null,
+            pickup_location: tr.pickup_location,
+            special_remarks: tr.special_remarks
           }));
 
           if (mappedTransportation.length > 0) {
@@ -201,6 +468,14 @@ const SalesInput = () => {
             form.setFieldsValue({ transportationRows: mappedTransportation });
             setAdditionalService(prev => ({ ...prev, showTransportation: true }));
           }
+
+          form.setFieldsValue({
+            vsl_initial_eta: data.vsl_initial_eta ? dayjs(data.vsl_initial_eta) : null,
+            vsl_latest_eta: data.vsl_latest_eta ? dayjs(data.vsl_latest_eta) : null,
+            vsl_etd: data.vsl_etd ? dayjs(data.vsl_etd) : null,
+            pod_eta: data.pod_eta ? dayjs(data.pod_eta) : null,
+            overseas_agent_name: data.overseas_agent_name || "",
+          });
 
           setAdditionalService(prev => ({
             ...prev,
@@ -220,10 +495,24 @@ const SalesInput = () => {
     fetchDraftData();
   }, [id, form]);
 
+  // Auto-populate Name of Executive and Job Type for new records
+  useEffect(() => {
+    if (!id && user) {
+      const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim();
+      if (fullName) {
+        form.setFieldsValue({ name_of_executive: fullName });
+      }
+
+      if (typeParam) {
+        form.setFieldsValue({ job_type: typeParam.toUpperCase() });
+      }
+    }
+  }, [id, user, form, typeParam]);
+
   const onFinish = async (values, statusValue = "submitted") => {
     setLoading(true);
     const cleanEquipment = (values.equipmentRows || []).map((row) => ({
-      equipment_type: row?.equipmentType || "",
+      equipment_type: row?.equipment_type || "",
       quantity: Number(row?.quantity) || 0,
       category: row?.category || "",
       quote: row?.quote || "",
@@ -232,14 +521,15 @@ const SalesInput = () => {
 
     const cleanTransportation = (values.transportationRows || []).map(
       (row) => ({
-        equipment_type: row?.equipmentType || "",
-        no_of_containers: Number(row?.noOfContainers) || 0,
+        id: row?.id, // SEND ID BACK TO PRESERVE ROWS
+        equipment_type: row?.equipment_type || "",
+        no_of_containers: Number(row?.no_of_containers) || 0,
         category: row?.category || "",
-        placement_time: row?.placementTime
-          ? row.placementTime.format("YYYY-MM-DD HH:mm:ss")
+        placement_time: row?.placement_time
+          ? row.placement_time.format("YYYY-MM-DD HH:mm:ss")
           : null,
-        pickup_location: row?.pickupLocation || "",
-        special_remarks: row?.specialRemarks || "",
+        pickup_location: row?.pickup_location || "",
+        special_remarks: row?.special_remarks || "",
       }),
     );
 
@@ -250,29 +540,39 @@ const SalesInput = () => {
     }
 
     const payload = {
-      customer_name: values?.customerName || "",
-      contact_pic: values?.contactPIC || "",
-      phone_no: values?.phoneno || "",
+      customer_name: (isOthers && !values?.customer_name)
+        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
+        : values?.customer_name || "",
+      contact_pic: (isOthers && !values?.contact_pic)
+        ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
+        : values?.contact_pic || "",
+      phone_no: values?.phone_no || "",
       email: values?.email || "",
-      job_type: values?.jobType || "liner",
+      job_type: values?.job_type?.toUpperCase() || "LINER",
       agent: values?.agent || "",
-      carrier_name: values?.carriername || "",
-      port_of_loading: values?.portofloading || "",
-      port_of_discharge: values?.portofdiachage || "",
-      final_pod: values?.finalpod || "",
-      terms_of_shipment: values?.termsofshipment || "",
-      haulier_code: values?.hauliercode || "",
+      carrier_name: values?.carrier_name || "",
+      vessel_voyage: values?.vessel_voyage || "",
+      carrier_remarks: values?.carrier_remarks || "",
+      vessel_voyage_remarks: values?.vessel_voyage_remarks || "",
+      pol_remarks: values?.pol_remarks || "",
+      pod_remarks: values?.pod_remarks || "",
+      port_of_loading: values?.port_of_loading || "",
+      port_of_discharge: values?.port_of_discharge || "",
+      final_pod: values?.final_pod || "",
+      terms_of_shipment: values?.terms_of_shipment || "",
+      haulier_code: values?.haulier_code || "",
       hbl: additionalService.hbl || false,
       fac: additionalService.fac || false,
       documentation: additionalService.documentation || false,
       transportation: additionalService.showTransportation || false,
-      name_of_executive: values?.nameofexecutive || "",
-      sales_hod: values?.saleshod || "",
-      special_instructions: values?.specialremarks || "",
+      name_of_executive: values?.name_of_executive || "",
+      sales_hod: values?.sales_hod || "",
+      special_instructions: values?.special_instructions || "",
+      remarks: values?.remarks || "",
       approval_details: {
-        other_charges_remarks: values?.otherchargesremarks || "",
-        lpo_required: values?.lpoRequired ?? true,
-        release_order_required: values?.releaseOrderRequired ?? true,
+        other_charges_remarks: values?.other_charges_remarks || "",
+        lpo_required: values?.lpo_required ?? true,
+        release_order_required: values?.release_order_required ?? true,
       },
       status: statusValue,
       commodities: allCommodities.map((c) => ({ name: c })),
@@ -280,8 +580,23 @@ const SalesInput = () => {
       transportation_rows: additionalService.showTransportation
         ? cleanTransportation || []
         : [],
-      export_created_date: values.exportCreatedDate ? values.exportCreatedDate.format("YYYY-MM-DD") : null,
-      export_number: values.exportNumber !== "N/A" ? values.exportNumber : null,
+      vsl_initial_eta: values.vsl_initial_eta ? values.vsl_initial_eta.format("YYYY-MM-DD") : null,
+      vsl_latest_eta: values.vsl_latest_eta ? values.vsl_latest_eta.format("YYYY-MM-DD") : null,
+      vsl_etd: values.vsl_etd ? values.vsl_etd.format("YYYY-MM-DD") : null,
+      pod_eta: values.pod_eta ? values.pod_eta.format("YYYY-MM-DD") : null,
+      overseas_agent_name: values.overseas_agent_name || "",
+      export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
+      export_number: values.export_number !== "N/A" ? values.export_number : null,
+      general_remarks: remarks,
+      documents: [
+        ...attachments.map(d => ({
+          id: d.id,
+          doc_type: d.doc_type || "Attachment",
+          file_url: d.url || d.file_url,
+          file_name: d.name || d.file_name,
+          remarks: d.remarks || ""
+        }))
+      ]
     };
 
     try {
@@ -290,12 +605,15 @@ const SalesInput = () => {
         created_by_name: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : payload.created_by_name
       };
 
+      // For OTHERS, we might need to handle document IDs or wait for sequential upload
+      // WritableNestedModelSerializer handles nested documents if provided
       const response = id
         ? await apiClient.put(`/liner/sales-input/${id}/`, payloadWithUser)
         : await apiClient.post("/liner/sales-input/", payloadWithUser);
 
       if (response.status === 201 || response.status === 200) {
-        message.success(`Form ${statusValue === 'draft' ? 'Saved' : 'Submitted'} Successfully`);
+        // Redirection as requested by user
+        message.success(`Form ${statusValue === 'draft' ? "Saved" : "Submitted"} Successfully`);
         navigate("/dashboard");
       }
     } catch (error) {
@@ -315,8 +633,8 @@ const SalesInput = () => {
     setEquipmentRows([
       {
         id: 1,
-        equipmentType: "",
-        volume: "",
+        equipment_type: "",
+        quantity: "",
         category: "",
         quote: "",
         cost: "",
@@ -325,15 +643,15 @@ const SalesInput = () => {
     setTransportationRows([
       {
         id: 1,
-        equipmentType: "",
-        container: "",
+        equipment_type: "",
+        no_of_containers: "",
         category: "",
-        date: "",
-        location: "",
-        remarks: "",
+        placement_time: "",
+        pickup_location: "",
+        special_remarks: "",
       },
     ]);
-    setShowTransportation(false);
+    setAdditionalService(prev => ({ ...prev, showTransportation: false }));
   };
 
   const navigate = useNavigate();
@@ -346,616 +664,435 @@ const SalesInput = () => {
         onFinish={onFinish}
         onFinishFailed={handleFinishFailed}
         initialValues={{
-          exportCreatedDate: dayjs(),
-          exportCreatedBy: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "",
+          export_created_date: dayjs(),
+          created_by_name: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "",
         }}
       >
-        {/* EXPORT DETAILS / HEADER */}
-        <Card
-          className={Styles.card}
-          bordered
-          title={
-            <div
-              onClick={() => setShowExportDetails((prev) => !prev)}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-              }}
-            >
-              <Space align="center">
-                <div className={Styles.mainhead}>
-                  <Icon icon="basil:document-solid" width="18" height="18" />
-                </div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  JOB HEADER
-                </Typography.Title>
-              </Space>
+        <>
+          {/* EXPORT DETAILS / HEADER */}
+          <Card
+            className={Styles.card}
+            bordered
+            title={
+              <div
+                onClick={() => setShowExportDetails((prev) => !prev)}
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
+              >
+                <Space align="center">
+                  <div className={Styles.mainhead}>
+                    <Icon icon="basil:document-solid" width="18" height="18" />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0 }}>
+                    JOB HEADER
+                  </Typography.Title>
+                </Space>
 
-              <span style={{ fontSize: 22, color: "#626161" }}>
-                {showExportDetails ? (
-                  <Icon icon="grommet-icons:form-up" />
-                ) : (
-                  <Icon icon="grommet-icons:form-down" />
-                )}
-              </span>
-            </div>
-          }
-        >
-          <div style={{ display: showExportDetails ? "block" : "none" }}>
-            <Row gutter={16}>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Job Type"
-                  name="jobType"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Select
-                    placeholder="Select Job Type"
-                    allowClear
+                <span style={{ fontSize: 22, color: "#626161" }}>
+                  {showExportDetails ? (
+                    <Icon icon="grommet-icons:form-up" />
+                  ) : (
+                    <Icon icon="grommet-icons:form-down" />
+                  )}
+                </span>
+              </div>
+            }
+          >
+            <div style={{ display: showExportDetails ? "block" : "none" }}>
+              <Row gutter={16}>
+                <Col xs={24} md={24}>
+                  <Form.Item
+                    className={Styles.formLabel}
+                    label="Job Type"
+                    name="job_type"
+                    rules={[{ required: true, message: "Required" }]}
                   >
-                    <Select.Option value="forwarding">Forwarding</Select.Option>
-                    <Select.Option value="liner">Liner</Select.Option>
-                    <Select.Option value="cross-trade">Cross Trade</Select.Option>
-                    <Select.Option value="others">Others</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Export Number"
-                  name="exportNumber"
-                >
-                  <Input disabled placeholder="N/A" />
-                </Form.Item>
-              </Col>
+                    <Select
+                      className={Styles.bigJobSelect}
+                      placeholder="Select Job Type"
+                      allowClear
+                      disabled={isReadOnly}
+                      options={jobTypeOptions}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col xs={24} md={8}>
+                  <Form.Item
+                    className={Styles.formLabel}
+                    label="Export Number"
+                    name="export_number"
+                  >
+                    <Input disabled placeholder="N/A" />
+                  </Form.Item>
+                </Col>
 
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Created Date"
-                  name="exportCreatedDate"
-                >
-                  <DatePicker
-                    placeholder="YYYY-MM-DD"
-                    disabled
-                    style={{ width: "100%" }}
-                  />
-                </Form.Item>
-              </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item
+                    className={Styles.formLabel}
+                    label="Created Date"
+                    name="export_created_date"
+                  >
+                    <DatePicker
+                      placeholder="YYYY-MM-DD"
+                      disabled={isReadOnly || true} // Created Date is usually system-managed or locked
+                      style={{ width: "100%" }}
+                    />
+                  </Form.Item>
+                </Col>
 
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Created By"
-                  name="exportCreatedBy"
-                >
-                  <Input disabled placeholder="Enter Export Created By" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
-        </Card>
-
-        {/* BASIC INFO */}
-        <Card
-          className={Styles.card}
-          bordered
-          title={
-            <div
-              onClick={() => setShowBasicInformation((prev) => !prev)}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-              }}
-            >
-              <Space align="center">
-                <div className={Styles.mainhead}>
-                  <Icon
-                    icon="carbon:information-filled"
-                    width="18"
-                    height="18"
-                  />
-                </div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  BASIC INFORMATION
-                </Typography.Title>
-              </Space>
-
-              {/* Optional arrow indicator */}
-              <span style={{ fontSize: 22, color: "#626161" }}>
-                {showBasicInformation ? (
-                  <Icon icon="grommet-icons:form-up" />
-                ) : (
-                  <Icon icon="grommet-icons:form-down" />
-                )}
-              </span>
-            </div>
-          }
-        >
-          <div style={{ display: showBasicInformation ? "block" : "none" }}>
-            <Row gutter={16}>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Carrier Name"
-                  name="carriername"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Enter Carrier Name" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Customer Name"
-                  name="customerName"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Enter Customer Name" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Contact PIC"
-                  name="contactPIC"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Person in Charge" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} md={6}>
-                <Form.Item className={Styles.formLabel} label="Commodity">
-                  <Input
-                    value={commodityInput}
-                    onChange={(e) => setCommodityInput(e.target.value)}
-                    onPressEnter={addCommodity}
-                    placeholder="Type and Press Enter to add"
-                    rules={[{ required: true, message: "Required" }]}
-                  />
-                  <Space wrap style={{ marginTop: 8 }}>
-                    {commodities.map((c) => (
-                      <Button
-                        key={c}
-                        size="small"
-                        onClick={() => removeCommodity(c)}
-                      >
-                        {c} ✕
-                      </Button>
-                    ))}
-                  </Space>
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="E-mail"
-                  name="email"
-                >
-                  <Input placeholder="E-mail" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Contact Details"
-                  name="phoneno"
-                >
-                  <Input placeholder="Phone Number" />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Agent"
-                  name="agent"
-                >
-                  <Input placeholder="Enter Agent Name" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
-        </Card >
-
-        {/* CONTAINER DETAILS */}
-        < Card
-          className={Styles.card}
-          bordered
-          title={
-            < div
-              onClick={() => setShowContainerDetails((prev) => !prev)}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-              }}
-            >
-              <Space align="center">
-                <div className={Styles.mainhead}>
-                  <Icon icon="octicon:container-24" width="20" height="20" />
-                </div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  CONTAINER DETAILS
-                </Typography.Title>
-              </Space>
-
-              {/* Optional arrow indicator */}
-              <span style={{ fontSize: 22, color: "#626161" }}>
-                {showContainerDetails ? (
-                  <Icon icon="grommet-icons:form-up" />
-                ) : (
-                  <Icon icon="grommet-icons:form-down" />
-                )}
-              </span>
-            </div >
-          }
-        >
-          <div style={{ display: showContainerDetails ? "block" : "none" }}>
-            <Form.List name="equipmentRows" initialValue={[{}]}>
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.map(({ key, name, ...restField }) => (
-                    <Row gutter={16} key={key} align="middle">
-                      <Col xs={24} md={5}>
-                        <Form.Item
-                          className={Styles.formLabel}
-                          {...restField}
-                          name={[name, "equipmentType"]}
-                          label="Equipment Type"
-                          rules={[{ required: true, message: "Required" }]}
-                        >
-                          <EquipmentTypeSelect />
-                        </Form.Item>
-                      </Col>
-
-                      <Col xs={24} md={4}>
-                        <Form.Item
-                          className={Styles.formLabel}
-                          {...restField}
-                          name={[name, "quantity"]}
-                          label="Volume"
-                        >
-                          <Input placeholder="Qty" />
-                        </Form.Item>
-                      </Col>
-
-                      <Col xs={24} md={5}>
-                        <Form.Item
-                          className={Styles.formLabel}
-                          {...restField}
-                          name={[name, "category"]}
-                          label="Category"
-                        >
-                          <CategorySelect />
-                        </Form.Item>
-                      </Col>
-
-                      <Col xs={24} md={4}>
-                        <Form.Item
-                          className={Styles.formLabel}
-                          {...restField}
-                          name={[name, "quote"]}
-                          label="Quote"
-                        >
-                          <Input placeholder="Quote" />
-                        </Form.Item>
-                      </Col>
-
-                      <Col xs={24} md={4}>
-                        <Form.Item
-                          className={Styles.formLabel}
-                          {...restField}
-                          name={[name, "cost"]}
-                          label="Cost"
-                        >
-                          <Input placeholder="Cost" />
-                        </Form.Item>
-                      </Col>
-
-                      <Col xs={24} md={1}>
-                        <Button
-                          danger
-                          style={{ marginTop: "1rem" }}
-                          disabled={fields.length <= 1}
-                          icon={<DeleteOutlined />}
-                          onClick={() => remove(name)}
-                        />
-                      </Col>
-                      <Col xs={24} md={1}>
-                        <Button
-                          type="primary"
-                          style={{ marginTop: "1rem" }}
-                          icon={<PlusOutlined />}
-                          onClick={() => add()}
-                          block
-                        />
-                      </Col>
-                    </Row>
-                  ))}
-                </>
+                <Col xs={24} md={8}>
+                  <Form.Item
+                    className={Styles.formLabel}
+                    label="Created By"
+                    name="created_by_name"
+                  >
+                    <Input disabled={isReadOnly || true} placeholder="Enter Export Created By" />
+                  </Form.Item>
+                </Col>
+              </Row>
+              {isHalted && (
+                <Row gutter={16} style={{ marginTop: 16 }}>
+                  <Col span={24}>
+                    <Alert
+                      message="Process Halted"
+                      description={`This ${jobTypeForm} job cannot proceed because a mandatory workflow component has been marked as 'No'. Please verify with your supervisor.`}
+                      type="warning"
+                      showIcon
+                    />
+                  </Col>
+                </Row>
               )}
-            </Form.List>
-            <Row gutter={16}>
-              <Col xs={24} md={24}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Other Charges"
-                  name="otherchargesremarks"
-                // rules={[{ required: true, message: "Required" }]}
-                >
-                  <TextArea placeholder="Enter any additional charges or fees" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
-        </Card >
+            </div>
+          </Card>
 
-        {/* SHIPMENT DETAILS */}
-        < Card
-          className={Styles.card}
-          bordered
-          title={
-            < div
-              onClick={() => setShowShipmentDetails((prev) => !prev)}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-              }}
-            >
-              <Space align="center">
-                <div className={Styles.mainhead}>
-                  <Icon icon="mingcute:ship-fill" width="18" height="18" />
-                </div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  SHIPMENT DETAILS
-                </Typography.Title>
-              </Space>
 
-              {/* Optional arrow indicator */}
-              <span style={{ fontSize: 22, color: "#626161" }}>
-                {showShipmentDetails ? (
-                  <Icon icon="grommet-icons:form-up" />
-                ) : (
-                  <Icon icon="grommet-icons:form-down" />
-                )}
-              </span>
-            </div >
-          }
-        >
-          <div style={{ display: showShipmentDetails ? "block" : "none" }}>
-            <Row gutter={16}>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Port Of Loading"
-                  name="portofloading"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Port of Loading" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Port Of Discharge"
-                  name="portofdiachage"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Port of Disacharge" />
-                </Form.Item>
-              </Col>
-
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Final Port Of Discharge"
-                  name="finalpod"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input
-                    rules={[{ required: true, message: "Required" }]}
-                    placeholder="Final Port Of Discharge"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Terms of Shipment"
-                  name="termsofshipment"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Select placeholder="Select Terms of Shipment" allowClear>
-                    <Select.Option value="prepaid">
-                      Freight Prepaiad
-                    </Select.Option>
-                    <Select.Option value="collect">
-                      Freight Collect
-                    </Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} md={6}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Haulier Code"
-                  name="hauliercode"
-                  rules={[{ required: true, message: "Required" }]}
-                >
-                  <Input placeholder="Enter Code" />
-                </Form.Item>
-              </Col>
-
-              {/* <Col xs={24} md={18}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Remarks"
-                  name="remarks"
-                >
-                  <TextArea placeholder="Enter Remakrs" />
-                </Form.Item>
-              </Col> */}
-              <Col xs={24} md={3}>
-                <Checkbox
-                  checked={additionalService.hbl}
-                  onChange={(e) =>
-                    setAdditionalService((prev) => ({
-                      ...prev,
-                      hbl: e.target.checked,
-                    }))
+          {/* OTHERS SPECIFIC FIELDS */}
+          <Form.Item noStyle shouldUpdate={(prevVal, curVal) => prevVal.job_type !== curVal.job_type}>
+            {({ getFieldValue }) =>
+              getFieldValue("job_type") === "OTHERS" ? (
+                <Card
+                  className={Styles.card}
+                  bordered
+                  title={
+                    <Space align="center">
+                      <div className={Styles.mainhead}>
+                        <Icon icon="mdi:package-variant" width="18" height="18" />
+                      </div>
+                      <Typography.Title level={5} style={{ margin: 0 }}>
+                        OTHERS JOB DETAILS
+                      </Typography.Title>
+                    </Space>
                   }
                 >
-                  HBL
-                </Checkbox>
-              </Col>
-              <Col xs={24} md={3}>
-                <Checkbox
-                  checked={additionalService.fac}
-                  onChange={(e) =>
-                    setAdditionalService((prev) => ({
-                      ...prev,
-                      fac: e.target.checked,
-                    }))
-                  }
-                >
-                  FAC
-                </Checkbox>
-              </Col>
-              <Col xs={24} md={6}>
-                <Checkbox
-                  checked={additionalService.documentation}
-                  onChange={(e) =>
-                    setAdditionalService((prev) => ({
-                      ...prev,
-                      documentation: e.target.checked,
-                    }))
-                  }
-                >
-                  DOCUMENTATION
-                </Checkbox>
-              </Col>
-              <Col xs={24} md={6}>
-                <Checkbox
-                  checked={additionalService.showTransportation}
-                  onChange={(e) =>
-                    setAdditionalService((prev) => ({
-                      ...prev,
-                      showTransportation: e.target.checked,
-                    }))
-                  }
-                >
-                  TRANSPORTATION
-                </Checkbox>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} md={24}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="SPECIAL INSTRUCTION IF ANY"
-                  name="specialremarks"
-                >
-                  <TextArea placeholder="Enter any special instructions or requirements..." />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Name of Executive"
-                  name="nameofexecutive"
-                >
-                  <Input placeholder="Sales Executive" />
-                </Form.Item>
-              </Col>
+                  <Row gutter={16}>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
+                        <Input placeholder="Free text carrier" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="VSL/VOY" name="vessel_voyage_remarks" className={Styles.formLabel}>
+                        <Input placeholder="Free text vessel/voyage" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="POL (Port of Loading)" name="pol_remarks" className={Styles.formLabel}>
+                        <Input placeholder="Free text POL" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
+                        <Input placeholder="Free text POD" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col xs={24} md={12}>
+                      <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
+                        <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="others" docType="FREIGHT MANIFEST" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
+                        <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="others" docType="LOAD LIST UPLOADING" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col xs={24} md={12}>
+                      <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
+                        <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="others" docType="TDR/SAILING REPORT" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
+                        <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Card>
+              ) : null
+            }
+          </Form.Item>
+          {/* WORKFLOW STATUS (Parallel Indicators) */}
+          {parseInt(currentStage) > 1 && (
+            <Card className={Styles.card} bordered title="WORKFLOW STATUS">
+              <Row gutter={16} justify="space-around">
+                <Col>
+                  <Space direction="vertical" align="center">
+                    <Icon
+                      icon={workflowStatus.is_hod_approved ? "mdi:check-circle" : "mdi:clock-outline"}
+                      color={workflowStatus.is_hod_approved ? "#52c41a" : "#faad14"}
+                      fontSize={24}
+                    />
+                    <Typography.Text strong>Sales HOD Approval</Typography.Text>
+                    <Typography.Text type="secondary">{workflowStatus.is_hod_approved ? "Approved" : "Pending"}</Typography.Text>
+                  </Space>
+                </Col>
+                <Col>
+                  <Space direction="vertical" align="center">
+                    <Icon
+                      icon={workflowStatus.is_cs_updated ? "mdi:check-circle" : "mdi:clock-outline"}
+                      color={workflowStatus.is_cs_updated ? "#52c41a" : "#faad14"}
+                      fontSize={24}
+                    />
+                    <Typography.Text strong>CS Update</Typography.Text>
+                    <Typography.Text type="secondary">{workflowStatus.is_cs_updated ? "Updated" : "Pending"}</Typography.Text>
+                  </Space>
+                </Col>
+                <Col>
+                  <Space direction="vertical" align="center">
+                    <Icon
+                      icon={workflowStatus.is_cnf_loadlist_uploaded ? "mdi:check-circle" : "mdi:lock"}
+                      color={workflowStatus.is_cnf_loadlist_uploaded ? "#52c41a" : (workflowStatus.is_hod_approved && workflowStatus.is_cs_updated ? "#faad14" : "#bfbfbf")}
+                      fontSize={24}
+                    />
+                    <Typography.Text strong>CNF Load List</Typography.Text>
+                    <Typography.Text type="secondary">
+                      {workflowStatus.is_cnf_loadlist_uploaded ? "Uploaded" : (
+                        workflowStatus.is_hod_approved && workflowStatus.is_cs_updated ? "Ready to Upload" : "Blocked"
+                      )}
+                    </Typography.Text>
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
+          )}
 
-              <Col xs={24} md={12}>
-                <Form.Item
-                  className={Styles.formLabel}
-                  label="Name of Sales HOD"
-                  name="saleshod"
-                  rules={[{ required: true, message: "Required" }]}
+          {/* BASIC INFO */}
+          {!isOthers && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <div
+                  onClick={() => setShowBasicInformation((prev) => !prev)}
+                  style={{
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
                 >
-                  <Input placeholder="Sales HOD" />
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
-          {
-            additionalService.showTransportation && (
-              <Card
-                className={Styles.card}
-                bordered
-                title={
                   <Space align="center">
                     <div className={Styles.mainhead}>
                       <Icon
-                        icon="hugeicons:delivery-truck-02"
-                        width="19"
-                        height="19"
+                        icon="carbon:information-filled"
+                        width="18"
+                        height="18"
                       />
                     </div>
                     <Typography.Title level={5} style={{ margin: 0 }}>
-                      Transportation
+                      BASIC INFORMATION
                     </Typography.Title>
                   </Space>
-                }
-              >
-                <Form.List name="transportationRows" initialValue={[{}]}>
+
+                  {/* Optional arrow indicator */}
+                  <span style={{ fontSize: 22, color: "#626161" }}>
+                    {showBasicInformation ? (
+                      <Icon icon="grommet-icons:form-up" />
+                    ) : (
+                      <Icon icon="grommet-icons:form-down" />
+                    )}
+                  </span>
+                </div>
+              }
+            >
+              <div style={{ display: showBasicInformation ? "block" : "none" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Carrier Name"
+                      name="carrier_name"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Customer Name"
+                      name="customer_name"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Enter Customer Name" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Contact PIC"
+                      name="contact_pic"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Person in Charge" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Commodity">
+                      <Input
+                        value={commodityInput}
+                        onChange={(e) => setCommodityInput(e.target.value)}
+                        onPressEnter={addCommodity}
+                        placeholder="Type and Press Enter to add"
+                        disabled={isReadOnly}
+                        rules={[{ required: !isOthers, message: "Required" }]}
+                      />
+                      <Space wrap style={{ marginTop: 8 }}>
+                        {commodities.map((c) => (
+                          <Button
+                            key={c}
+                            size="small"
+                            onClick={() => removeCommodity(c)}
+                          >
+                            {c} ✕
+                          </Button>
+                        ))}
+                      </Space>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="E-mail"
+                      name="email"
+                    >
+                      <Input placeholder="E-mail" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Contact Details"
+                      name="phone_no"
+                    >
+                      <Input placeholder="Phone Number" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Agent"
+                      name="agent"
+                    >
+                      <Input placeholder="Enter Agent Name" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            </Card>
+          )}
+
+          {/* CONTAINER DETAILS */}
+          {!isOthers && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <div
+                  onClick={() => setShowContainerDetails((prev) => !prev)}
+                  style={{
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <Space align="center">
+                    <div className={Styles.mainhead}>
+                      <Icon icon="octicon:container-24" width="20" height="20" />
+                    </div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      CONTAINER DETAILS
+                    </Typography.Title>
+                  </Space>
+
+                  {/* Optional arrow indicator */}
+                  <span style={{ fontSize: 22, color: "#626161" }}>
+                    {showContainerDetails ? (
+                      <Icon icon="grommet-icons:form-up" />
+                    ) : (
+                      <Icon icon="grommet-icons:form-down" />
+                    )}
+                  </span>
+                </div>
+              }
+            >
+              <div style={{ display: showContainerDetails ? "block" : "none" }}>
+                <Form.List name="equipmentRows" initialValue={[{}]}>
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map(({ key, name, ...restField }) => (
                         <Row gutter={16} key={key} align="middle">
-                          <Col xs={24} md={4}>
+                          <Col xs={24} md={5}>
                             <Form.Item
                               className={Styles.formLabel}
                               {...restField}
-                              name={[name, "equipmentType"]}
+                              name={[name, "equipment_type"]}
                               label="Equipment Type"
-                              rules={[{ required: true, message: "Required" }]}
+                              rules={[{ required: !isOthers, message: "Required" }]}
                             >
-                              <EquipmentTypeSelect />
+                              <EquipmentTypeSelect disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
-                          <Col xs={24} md={3}>
+                          <Col xs={24} md={4}>
                             <Form.Item
                               className={Styles.formLabel}
                               {...restField}
-                              name={[name, "noOfContainers"]}
-                              label="No. Of Containers"
+                              name={[name, "quantity"]}
+                              label="Volume"
                             >
-                              <Input placeholder="Qty" />
+                              <Input placeholder="Qty" disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
-                          <Col xs={24} md={4}>
+
+                          <Col xs={24} md={5}>
                             <Form.Item
                               className={Styles.formLabel}
                               {...restField}
                               name={[name, "category"]}
                               label="Category"
                             >
-                              <CategorySelect />
+                              <CategorySelect disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
@@ -963,13 +1100,10 @@ const SalesInput = () => {
                             <Form.Item
                               className={Styles.formLabel}
                               {...restField}
-                              name={[name, "placementTime"]}
-                              label="Placement Date & Time"
+                              name={[name, "quote"]}
+                              label="Quote"
                             >
-                              <DatePicker
-                                placeholder="YYYY-MM-DD"
-                                style={{ width: "100%" }}
-                              />
+                              <Input placeholder="Quote" disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
@@ -977,25 +1111,389 @@ const SalesInput = () => {
                             <Form.Item
                               className={Styles.formLabel}
                               {...restField}
-                              name={[name, "pickupLocation"]}
-                              label="Pickup/Delivery Location"
+                              name={[name, "cost"]}
+                              label="Cost"
                             >
-                              <Input placeholder="Location" />
-                            </Form.Item>
-                          </Col>
-
-                          <Col xs={24} md={3}>
-                            <Form.Item
-                              className={Styles.formLabel}
-                              {...restField}
-                              name={[name, "specialRemarks"]}
-                              label="Special Remarks"
-                            >
-                              <Input placeholder="CFS Stuffing, WA" />
+                              <Input placeholder="Cost" disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
                           <Col xs={24} md={1}>
+                            {!isReadOnly && (
+                              <Button
+                                danger
+                                style={{ marginTop: "1rem" }}
+                                disabled={fields.length <= 1}
+                                icon={<DeleteOutlined />}
+                                onClick={() => remove(name)}
+                              />
+                            )}
+                          </Col>
+                          <Col xs={24} md={1}>
+                            {!isReadOnly && (
+                              <Button
+                                type="primary"
+                                style={{ marginTop: "1rem" }}
+                                icon={<PlusOutlined />}
+                                onClick={() => add()}
+                                block
+                              />
+                            )}
+                          </Col>
+                        </Row>
+                      ))}
+                    </>
+                  )}
+                </Form.List>
+                <Row gutter={16}>
+                  <Col xs={24} md={24}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Other Charges"
+                      name="other_charges_remarks"
+                    // rules={[{ required: true, message: "Required" }]}
+                    >
+                      <TextArea placeholder="Enter any additional charges or fees" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            </Card>
+          )}
+
+
+          {/* SHIPMENT DETAILS */}
+          {!isOthers && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <div
+                  onClick={() => setShowShipmentDetails((prev) => !prev)}
+                  style={{
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <Space align="center">
+                    <div className={Styles.mainhead}>
+                      <Icon icon="mingcute:ship-fill" width="18" height="18" />
+                    </div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      SHIPMENT DETAILS
+                    </Typography.Title>
+                  </Space>
+
+                  {/* Optional arrow indicator */}
+                  <span style={{ fontSize: 22, color: "#626161" }}>
+                    {showShipmentDetails ? (
+                      <Icon icon="grommet-icons:form-up" />
+                    ) : (
+                      <Icon icon="grommet-icons:form-down" />
+                    )}
+                  </span>
+                </div>
+              }
+            >
+              <div style={{ display: showShipmentDetails ? "block" : "none" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Port Of Loading"
+                      name="port_of_loading"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Port of Loading" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Port Of Discharge"
+                      name="port_of_discharge"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Port of Disacharge" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Final Port Of Discharge"
+                      name="final_pod"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input
+                        placeholder="Final Port Of Discharge"
+                        disabled={isReadOnly}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Terms of Shipment"
+                      name="terms_of_shipment"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Select
+                        placeholder="Select Terms of Shipment"
+                        allowClear
+                        disabled={isReadOnly}
+                        options={termsOfShipmentOptions}
+                        showSearch
+                      />
+                    </Form.Item>
+                  </Col>
+
+                </Row>
+
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item label="POL VSL Initial ETA" name="vsl_initial_eta" className={Styles.formLabel}>
+                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item label="POL VSL Latest ETA" name="vsl_latest_eta" className={Styles.formLabel}>
+                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item label="POL ETD" name="vsl_etd" className={Styles.formLabel}>
+                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel}>
+                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Haulier Code"
+                      name="haulier_code"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Enter Code" disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={18}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Remarks"
+                      name="remarks"
+                    >
+                      <TextArea placeholder="Enter Remarks" />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={3}>
+                    <Checkbox
+                      disabled={isReadOnly}
+                      checked={additionalService.hbl}
+                      onChange={(e) =>
+                        setAdditionalService((prev) => ({
+                          ...prev,
+                          hbl: e.target.checked,
+                        }))
+                      }
+                    >
+                      HBL
+                    </Checkbox>
+                  </Col>
+                  <Col xs={24} md={3}>
+                    <Checkbox
+                      disabled={isReadOnly}
+                      checked={additionalService.fac}
+                      onChange={(e) =>
+                        setAdditionalService((prev) => ({
+                          ...prev,
+                          fac: e.target.checked,
+                        }))
+                      }
+                    >
+                      FAC
+                    </Checkbox>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Checkbox
+                      disabled={isReadOnly}
+                      checked={additionalService.documentation}
+                      onChange={(e) =>
+                        setAdditionalService((prev) => ({
+                          ...prev,
+                          documentation: e.target.checked,
+                        }))
+                      }
+                    >
+                      DOCUMENTATION
+                    </Checkbox>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Checkbox
+                      disabled={isReadOnly}
+                      checked={additionalService.showTransportation}
+                      onChange={(e) =>
+                        setAdditionalService((prev) => ({
+                          ...prev,
+                          showTransportation: e.target.checked,
+                        }))
+                      }
+                    >
+                      TRANSPORTATION
+                    </Checkbox>
+                  </Col>
+                </Row>
+
+                <Row gutter={16}>
+                  <Col xs={24} md={24}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="SPECIAL INSTRUCTION IF ANY"
+                      name="special_instructions"
+                    >
+                      <TextArea placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Name of Executive"
+                      name="name_of_executive"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Sales Executive" disabled={true} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Name of Sales HOD"
+                      name="sales_hod"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Select
+                        placeholder="Select Sales HOD"
+                        disabled={isReadOnly}
+                        options={hodOptions}
+                        showSearch
+                        optionFilterProp="label"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            </Card>
+          )}
+          {additionalService.showTransportation && !isOthers && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <Space align="center">
+                  <div className={Styles.mainhead}>
+                    <Icon
+                      icon="hugeicons:delivery-truck-02"
+                      width="19"
+                      height="19"
+                    />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0 }}>
+                    Transportation
+                  </Typography.Title>
+                </Space>
+              }
+            >
+              <Form.List name="transportationRows" initialValue={[{}]}>
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <Row gutter={16} key={key} align="middle">
+                        <Col xs={24} md={4}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "equipment_type"]}
+                            label="Equipment Type"
+                            rules={[{ required: !isOthers, message: "Required" }]}
+                          >
+                            <EquipmentTypeSelect disabled={isReadOnly} />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} md={3}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "no_of_containers"]}
+                            label="No. Of Containers"
+                          >
+                            <Input placeholder="Qty" disabled={isReadOnly} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={4}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "category"]}
+                            label="Category"
+                          >
+                            <CategorySelect disabled={isReadOnly} />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} md={4}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "placement_time"]}
+                            label="Placement Date & Time"
+                          >
+                            <DatePicker
+                              placeholder="YYYY-MM-DD"
+                              style={{ width: "100%" }}
+                              disabled={isReadOnly}
+                            />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} md={4}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "pickup_location"]}
+                            label="Pickup/Delivery Location"
+                          >
+                            <Input placeholder="Location" disabled={isReadOnly} />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} md={3}>
+                          <Form.Item
+                            className={Styles.formLabel}
+                            {...restField}
+                            name={[name, "special_remarks"]}
+                            label="Special Remarks"
+                          >
+                            <Input placeholder="CFS Stuffing, WA" disabled={isReadOnly} />
+                          </Form.Item>
+                        </Col>
+
+                        <Col xs={24} md={1}>
+                          {!isReadOnly && (
                             <Button
                               danger
                               style={{ marginTop: "1rem" }}
@@ -1003,72 +1501,211 @@ const SalesInput = () => {
                               icon={<DeleteOutlined />}
                               onClick={() => remove(name)}
                             />
-                          </Col>
-                          <Col xs={24} md={1}>
-                            <Button
-                              type="primary"
-                              style={{ marginTop: "1rem" }}
-                              icon={<PlusOutlined />}
-                              onClick={() => add()}
-                              block
-                            />
-                          </Col>
-                        </Row>
-                      ))}
-                    </>
-                  )}
-                </Form.List>
-              </Card>
-            )
-          }
-        </Card >
+                          )}
+                        </Col>
+                      </Row>
+                    ))}
+                    {!isReadOnly && (
+                      <Button
+                        type="dashed"
+                        onClick={() => add()}
+                        block
+                        icon={<Icon icon="mdi:plus" />}
+                        style={{ marginTop: 16 }}
+                      >
+                        Add Transportation Detail
+                      </Button>
+                    )}
+                  </>
+                )}
+              </Form.List>
+            </Card>
+          )}
 
-        {!isReadOnly && (
-          <Space
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              width: "100%",
-              marginTop: "1rem",
-            }}
+          {/* AUDIT TRAIL / APPROVAL HISTORY */}
+          {approvalHistory.length > 0 && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <Space align="center">
+                  <div className={Styles.mainhead}>
+                    <Icon icon="mdi:history" width="18" height="18" />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0 }}>
+                    AUDIT TRAIL
+                  </Typography.Title>
+                </Space>
+              }
+            >
+              <Timeline
+                mode="left"
+                items={approvalHistory.map((item) => ({
+                  children: (
+                    <div style={{ marginBottom: "1rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <Typography.Text strong style={{ fontSize: "14px" }}>{item.stage}</Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
+                          {dayjs(item.created_at).format("DD MMM YYYY HH:mm")}
+                        </Typography.Text>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                        <Tag color={item.status === "Approved" ? "success" : item.status === "Rejected" ? "error" : "processing"}>
+                          {item.status.toUpperCase()}
+                        </Tag>
+                        <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
+                          by {item.updated_by_name}
+                        </Typography.Text>
+                      </div>
+                      {item.remarks && item.remarks !== "N/A" && (
+                        <div style={{ marginTop: "8px", backgroundColor: "#f9fafb", padding: "8px 12px", borderRadius: "6px", border: "1px solid #f0f0f0", fontSize: "13px" }}>
+                          {item.remarks}
+                        </div>
+                      )}
+                    </div>
+                  ),
+                  color: item.status === "Approved" ? "green" : item.status === "Rejected" ? "red" : "blue",
+                }))}
+              />
+            </Card>
+          )}
+
+          {/* ════════ ATTACHMENTS AND COMMENTS (Universal) ════════ */}
+          <Card
+            className={Styles.card}
+            bordered
+            title={
+              <Space align="center">
+                <div className={Styles.mainhead}>
+                  <Icon icon="mdi:comment-text-multiple-outline" width="18" height="18" />
+                </div>
+                <Typography.Title level={5} style={{ margin: 0 }}>
+                  ATTACHMENTS AND COMMENTS
+                </Typography.Title>
+              </Space>
+            }
           >
-            <Button
-              icon={<Icon icon="mdi:tick-circle" />}
-              type="primary"
-              onClick={() => form.validateFields().then(values => onFinish(values, "submitted"))}
-              loading={loading}
+            <div>
+              <Row gutter={32}>
+                <Col xs={24} md={isOthers ? 24 : 12}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
+                  <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+                    {remarks.map((r, i) => (
+                      <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          style={{ position: "absolute", top: 6, right: 6 }}
+                          onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
+                        />
+                        <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{r}</p>
+                      </div>
+                    ))}
+                    {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
+                  </div>
+
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
+                  <TextArea
+                    value={newRemark}
+                    onChange={(e) => setNewRemark(e.target.value)}
+                    placeholder="Enter your remarks here…"
+                    autoSize={{ minRows: 3 }}
+                    style={{ marginBottom: 12 }}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={() => {
+                      if (newRemark.trim()) {
+                        setRemarks(p => [...p, newRemark.trim()]);
+                        setNewRemark("");
+                      }
+                    }}
+                    icon={<PlusOutlined />}
+                  >
+                    Add Remark
+                  </Button>
+                </Col>
+
+                <Col xs={24} md={isOthers ? 0 : 12} style={{ display: isOthers ? 'none' : 'block' }}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
+                  <DocUploadField
+                    label="Attachment"
+                    files={attachments.filter(d => d.doc_type === "Attachment")}
+                    setFiles={setAttachments}
+                    color="blue"
+                    onPreview={openPreview}
+                    salesInputId={id}
+                    category="attachments"
+                    docType="Attachment"
+                  />
+                </Col>
+              </Row>
+            </div>
+          </Card>
+
+          {!isReadOnly && (
+            <Space
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                marginTop: "1rem",
+              }}
             >
-              Submit
-            </Button>
-            <Button
-              icon={<Icon icon="mdi:content-save-edit" />}
-              type="default"
-              onClick={() => onFinish(form.getFieldsValue(), "draft")}
-              loading={loading}
-            >
-              Save Draft
-            </Button>
-            <Button
-              icon={<Icon icon="tabler:refresh" />}
-              type="primary"
-              onClick={handleCancel}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-          </Space>
-        )}
-        {
-          isReadOnly && (
+              <Button
+                icon={<Icon icon="mdi:tick-circle" />}
+                type="primary"
+                onClick={() => form.validateFields().then(values => onFinish(values, "submitted"))}
+                loading={loading}
+              >
+                Submit
+              </Button>
+              <Button
+                icon={<Icon icon="mdi:content-save-edit" />}
+                type="default"
+                onClick={() => onFinish(form.getFieldsValue(), "draft")}
+                loading={loading}
+              >
+                Save Draft
+              </Button>
+              <Button
+                icon={<Icon icon="tabler:refresh" />}
+                type="primary"
+                onClick={handleCancel}
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+            </Space>
+          )}
+          {isReadOnly && (
             <div style={{ textAlign: 'center', marginTop: '1rem' }}>
               <Typography.Text type="secondary" italic>
                 This job is currently in the approval workflow and is read-only.
               </Typography.Text>
             </div>
-          )
-        }
-      </Form >
-    </div >
+          )}
+        </>
+      </Form>
+
+      {/* ════════ PREVIEW MODAL ════════ */}
+      <Modal
+        open={previewVisible}
+        footer={null}
+        title={"Document Preview"}
+        onCancel={() => setPreviewVisible(false)}
+        width="90%"
+        style={{ top: 20 }}
+        styles={{ body: { height: "87vh", padding: 0 } }}
+        destroyOnClose
+      >
+        {previewVisible && previewUrls.length > 0 && (
+          <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
+        )}
+      </Modal>
+    </div>
   );
 };
 

@@ -1,20 +1,34 @@
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import StatusCards from "../StatsCard/StatsCard";
-import { Button, message, Tag } from "antd";
+import { Button, message, Tag, Select, Modal, Card as AntCard, Typography, Space } from "antd";
 import { Chart } from "chart.js";
 import CommonTable from "../Commontable/Commontable";
 import "../Commontable/InvoiceTable.scss";
 import { Icon } from "@iconify/react";
 import apiClient from "../../api/apiclient";
-import { useState } from "react";
 import dayjs from "dayjs";
 
 const ApprovalDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
 
-  // useEffect(() => {
+  const userRoles = (user?.roles || []).map(r => r.name.toUpperCase());
+  const userDepts = [
+    ...(user?.departments_assigned_names || []),
+    ...(user?.department_names || []),
+    user?.department || ""
+  ].filter(Boolean).map(d => d.toUpperCase());
+
+  const isAdmin = userRoles.some(r => ["ADMIN", "SUPER ADMIN"].includes(r));
+  const isCS = userDepts.some(d => d.includes("CUSTOMER SERVICE") || d.includes("CS")) ||
+    userRoles.some(r => r.includes("CS") || r.includes("DOCS") || r.includes("APPROVER") || r.includes("CUSTOMER SERVICE"));
+  const isSales = userDepts.some(d => d.includes("SALES")) ||
+    userRoles.some(r => r.includes("SALES") || r.includes("EXECUTIVE") || r.includes("UPLOADER"));
+  const isHOD = userRoles.includes("HOD");
+  const isSalesHOD = isSales && isHOD;
   //   // Only show message if it exists
   //   if (location.state?.message) {
   //     message.success(location.state.message);
@@ -33,6 +47,15 @@ const ApprovalDashboard = () => {
   const [draftsData, setDraftsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
+  const [jobTypeFilter, setJobTypeFilter] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const jobTypes = [
+    { label: "LINER", icon: "mdi:ship", color: "#17a2b8" },
+    { label: "FORWARDING", icon: "mdi:truck-delivery", color: "#6366f1" },
+    { label: "CROSS TRADE", icon: "mdi:swap-horizontal", color: "#f59e0b" },
+    { label: "OTHERS", icon: "mdi:package-variant", color: "#6b7280" },
+  ];
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -258,6 +281,16 @@ const ApprovalDashboard = () => {
       key: "customer_name",
     },
     {
+      title: "Job Type",
+      dataIndex: "job_type",
+      key: "job_type",
+      render: (t) => (
+        <Tag color={t === "OTHERS" ? "orange" : t === "LINER" ? "cyan" : "blue"}>
+          {t || "N/A"}
+        </Tag>
+      ),
+    },
+    {
       title: "Carrier Name",
       dataIndex: "carrier_name",
       key: "carrier_name",
@@ -290,7 +323,7 @@ const ApprovalDashboard = () => {
       dataIndex: "status",
       key: "status",
       render: (s) => (
-        <Tag color={s === 'approved' ? 'success' : s === 'submitted' ? 'processing' : s === 'draft' ? 'default' : 'error'}>
+        <Tag color={s === 'approved' ? 'success' : s === 'submitted' ? 'processing' : s === 'draft' ? 'default' : s === 'STOPPED' ? 'error' : 'error'}>
           {s === 'submitted' ? 'PENDING' : s?.toUpperCase()}
         </Tag>
       )
@@ -331,7 +364,9 @@ const ApprovalDashboard = () => {
                   }}
                   style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
                 >
-                  Approve
+                  {record.job_type === 'FORWARDING' && record.current_stage === '2' ? (
+                    isCS ? "Apply CS Updates" : (isSalesHOD ? "Approve (Sales HOD)" : "Approve")
+                  ) : "Approve"}
                 </Button>
                 <Button
                   danger
@@ -359,6 +394,10 @@ const ApprovalDashboard = () => {
     <div className="main-container" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       {/* Main Content */}
       <main className="mx-auto px-4 py-6" style={{ maxWidth: "1600px" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <Typography.Title level={4} style={{ margin: 0 }}>Dashboard Overview</Typography.Title>
+        </div>
+
         <StatusCards stats={stats} />
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -460,15 +499,27 @@ const ApprovalDashboard = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
-          <div className="mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
               <Icon icon="mdi:ship-wheel" color="#2d7a82" />
               Active Shipments & Approvals
             </h2>
+            <Select
+              placeholder="Filter by Job Type"
+              allowClear
+              style={{ width: 180 }}
+              onChange={(v) => setJobTypeFilter(v)}
+              options={[
+                { label: "LINER", value: "LINER" },
+                { label: "FORWARDING", value: "FORWARDING" },
+                { label: "CROSS TRADE", value: "CROSS TRADE" },
+                { label: "OTHERS", value: "OTHERS" },
+              ]}
+            />
           </div>
           <CommonTable
             columns={columns}
-            data={data}
+            data={jobTypeFilter ? data.filter(i => i.job_type === jobTypeFilter) : data}
             loading={loading}
             yescomp={true}
             page={1}
@@ -477,6 +528,49 @@ const ApprovalDashboard = () => {
           />
         </div>
       </main>
+
+      <Modal
+        title={null}
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+        width={700}
+        centered
+        styles={{ body: { padding: '24px' } }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Typography.Title level={3}>Select Job Type</Typography.Title>
+          <Typography.Text type="secondary">Choose the type of shipment you want to create</Typography.Text>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {jobTypes.map((type) => (
+            <AntCard
+              key={type.label}
+              hoverable
+              onClick={() => {
+                setIsModalVisible(false);
+                navigate(`/sales-input?type=${type.label}`);
+              }}
+              style={{ textAlign: 'center', borderRadius: 12, border: '2px solid #f3f4f6' }}
+            >
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                backgroundColor: `${type.color}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 12px',
+                color: type.color
+              }}>
+                <Icon icon={type.icon} fontSize={28} />
+              </div>
+              <Typography.Text strong style={{ fontSize: 16 }}>{type.label}</Typography.Text>
+            </AntCard>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 };

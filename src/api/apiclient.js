@@ -180,48 +180,48 @@ apiClient.interceptors.response.use(
         "Your session has ended. Please log in again."
       );
       window.location.href = `/login?redirect=${window.location.pathname}`;
-    } 
+    }
     else if (status === 403) {
       showError(
         "Access Restricted",
         "You don't have permission to view this page."
       );
       window.location.href = "/unauthorized";
-    } 
+    }
     else if (status === 429) {
       showError(
         "Too Many Requests",
         "Please wait and try again."
       );
-    } 
+    }
     else if (status === 502) {
       showError(
         "Server Unreachable",
         "The server is temporarily unavailable."
       );
-    } 
+    }
     else if (status === 500) {
       showError(
         "Something Went Wrong",
         "Please try again later."
       );
-    } 
+    }
     else if (status === 413) {
       showError(
         "File Too Large",
         "The file you are trying to upload is too large."
       );
-    } 
+    }
     else if (error.code === "ERR_NETWORK") {
       showError(
         "Network Error",
         "Check your internet connection."
       );
-    } 
+    }
     else if (error.response?.data) {
       const data = error.response.data;
       errorHandle(data);
-    } 
+    }
     else {
       showError(
         "Error",

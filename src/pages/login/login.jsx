@@ -36,18 +36,16 @@ const Login = () => {
 
       if (!res.data?.is_mfa_verified && res.data?.is_multi_factor_auth_enabled) {
         navigate(
-          `/mfa?mode=setup${
-            redirect && !avoid.includes(redirect)
-              ? `&redirect=${redirect}`
-              : ""
+          `/mfa?mode=setup${redirect && !avoid.includes(redirect)
+            ? `&redirect=${redirect}`
+            : ""
           }`
         );
       } else if (res.data?.is_mfa_verified) {
         navigate(
-          `/mfa?mode=verify${
-            redirect && !avoid.includes(redirect)
-              ? `&redirect=${redirect}`
-              : ""
+          `/mfa?mode=verify${redirect && !avoid.includes(redirect)
+            ? `&redirect=${redirect}`
+            : ""
           }`
         );
       } else if (redirect) {

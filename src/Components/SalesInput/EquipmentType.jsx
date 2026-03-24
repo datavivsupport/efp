@@ -1,31 +1,46 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Select } from "antd";
-
-const EQUIPMENT_TYPE_OPTIONS = [
-  { label: "40 HC RF", value: "40 HC RF" },
-  { label: "40 HQ", value: "40 HQ" },
-  { label: "SOC", value: "SOC" },
-  { label: "Truck", value: "Truck" },
-  { label: "ISO Tanks", value: "ISO Tanks" },
-  { label: "20GP", value: "20GP" },
-  { label: "40GP", value: "40GP" },
-  { label: "Reefer 20", value: "Reefer 20" },
-  { label: "Reefer 40", value: "Reefer 40" },
-  { label: "LCL", value: "LCL" },
-  { label: "B/Bulk", value: "B/Bulk" },
-  { label: "Air Shipment", value: "Air Shipment" },
-  { label: "Roro", value: "Roro" },
-];
+import apiClient from "../../api/apiclient";
 
 const EquipmentTypeSelect = ({
   placeholder = "Select Equipment Type",
   ...rest
 }) => {
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchEquipment = async () => {
+      setLoading(true);
+      try {
+        const res = await apiClient.get("/accounts/master/EFPEquipment/");
+        if (!cancelled) {
+          const data = res.data?.results ?? res.data ?? [];
+          setOptions(
+            data.map((item) => ({ label: item.name, value: item.name }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load equipment types", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchEquipment();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <Select
       allowClear
       placeholder={placeholder}
-      options={EQUIPMENT_TYPE_OPTIONS}
+      options={options}
+      loading={loading}
+      showSearch
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
       {...rest}
     />
   );
