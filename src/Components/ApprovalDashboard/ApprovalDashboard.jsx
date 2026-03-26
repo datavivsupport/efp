@@ -307,6 +307,19 @@ const ApprovalDashboard = () => {
       key: "booking_ref_no",
     },
     {
+      title: "Carrier Name 2",
+      dataIndex: "carrier_name_2",
+      key: "carrier_name_2",
+      render: (text) => text || "-"
+    },
+    {
+      title: "Invoice Date",
+      dataIndex: "invoice_date",
+      key: "invoice_date",
+      render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-"
+    },
+
+    {
       title: "Created Date",
       dataIndex: "export_created_date",
       key: "export_created_date",
