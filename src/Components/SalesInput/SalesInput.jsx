@@ -24,6 +24,8 @@ import {
   DeleteOutlined,
   UploadOutlined,
   PaperClipOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import Styles from "./salesinput.module.css";
@@ -87,10 +89,30 @@ const DocUploadField = ({
   salesInputId,
   category = "general",
   docType = "Other",
-  disabled = false
+  disabled = false,
+  restrictionMessage = null,
+  isMasterMode = false,
+  user,
+  isAdmin,
+  onAutoSave,
+  isOthers
 }) => {
   const handleBeforeUpload = async (file) => {
-    if (!salesInputId) {
+    if (restrictionMessage) {
+      message.error(restrictionMessage);
+      return false;
+    }
+    if (isMasterMode) {
+      message.warning("Uploads are disabled in View-Only Mode");
+      return false;
+    }
+
+    let currentId = salesInputId;
+    if (!currentId && isOthers && onAutoSave) {
+      currentId = await onAutoSave();
+    }
+
+    if (!currentId && !isMasterMode) {
       message.warning("Save the draft first before uploading documents");
       return false;
     }
@@ -102,7 +124,7 @@ const DocUploadField = ({
 
     try {
       const response = await apiClient.post(
-        `/liner/sales-input/${salesInputId}/upload-document/`,
+        `/liner/sales-input/${currentId}/upload-document/`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
@@ -116,7 +138,9 @@ const DocUploadField = ({
           file_name: uploadedDoc.file_name,
           file_url: uploadedDoc.file_url,
           doc_type: docType,
-          remarks: ""
+          remarks: "",
+          uploaded_by_user: user?.id,
+          uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me"
         }]);
         message.success(`${file.name} uploaded successfully to S3`);
       } else {
@@ -162,7 +186,7 @@ const DocUploadField = ({
 
   return (
     <div>
-      {!disabled && (
+      {(!disabled || restrictionMessage) && (
         <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
           <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }}>
             {files.length === 0 ? `Upload ${label}` : "Add More"}
@@ -192,6 +216,7 @@ const DocUploadField = ({
 
 const SalesInput = () => {
   const [form] = Form.useForm();
+  const jobTypeWatch = Form.useWatch("job_type", form);
 
   const [commodities, setCommodities] = useState([]);
   const [commodityInput, setCommodityInput] = useState("");
@@ -218,6 +243,7 @@ const SalesInput = () => {
     fac: false,
     documentation: false,
   });
+
 
   const [showBasicInformation, setShowBasicInformation] = useState(true);
   const [showAdditionalService, setShowAdditionalService] = useState(true);
@@ -265,12 +291,16 @@ const SalesInput = () => {
     setPreviewIndex(index);
     setPreviewVisible(true);
   };
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const id = searchParams.get("id");
   const typeParam = searchParams.get("type");
   const user = useSelector((state) => state.auth.user);
-  const userRoles = (user?.roles || []).map(r => r.name.toUpperCase());
+  const userRoles = (user?.roles || []).map(r => (r.name || "").toUpperCase());
+  const userDepts = (user?.departments_assigned || []).map(d => (d.name || "").toUpperCase());
   const isHOD = userRoles.some(r => r.includes("HOD"));
+  const isAdmin = userRoles.includes("ADMIN") || userRoles.includes("SUPER ADMIN");
+  const isCS = userDepts.some(d => d.includes("CUSTOMER SERVICE") || d.includes("CS"));
+  const isCNF = userDepts.some(d => d.includes("CNF") || d.includes("OPERATIONS") || d.includes("CLEARANCE"));
 
   // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
@@ -512,6 +542,7 @@ const SalesInput = () => {
   const onFinish = async (values, statusValue = "submitted") => {
     setLoading(true);
     const cleanEquipment = (values.equipmentRows || []).map((row) => ({
+      id: row?.id,
       equipment_type: row?.equipment_type || "",
       quantity: Number(row?.quantity) || 0,
       category: row?.category || "",
@@ -571,19 +602,23 @@ const SalesInput = () => {
       remarks: values?.remarks || "",
       approval_details: {
         other_charges_remarks: values?.other_charges_remarks || "",
-        lpo_required: values?.lpo_required ?? true,
-        release_order_required: values?.release_order_required ?? true,
+        lpo_required: values?.is_lpo_required ?? true,
+        release_order_required: values?.is_release_order_required ?? true,
+        is_load_list_required: values?.is_load_list_required ?? true,
+        is_haulier_note_required: values?.is_haulier_note_required ?? true,
       },
+      is_lpo_required: values?.is_lpo_required ?? true,
+      is_invoice_required: values?.is_lpo_required ?? true,
+      is_release_order_required: values?.is_release_order_required ?? true,
+      is_load_list_required: values?.is_load_list_required ?? true,
+      is_haulier_note_required: values?.is_haulier_note_required ?? true,
       status: statusValue,
       commodities: allCommodities.map((c) => ({ name: c })),
       container_details: cleanEquipment || [],
       transportation_rows: additionalService.showTransportation
         ? cleanTransportation || []
         : [],
-      vsl_initial_eta: values.vsl_initial_eta ? values.vsl_initial_eta.format("YYYY-MM-DD") : null,
-      vsl_latest_eta: values.vsl_latest_eta ? values.vsl_latest_eta.format("YYYY-MM-DD") : null,
-      vsl_etd: values.vsl_etd ? values.vsl_etd.format("YYYY-MM-DD") : null,
-      pod_eta: values.pod_eta ? values.pod_eta.format("YYYY-MM-DD") : null,
+      /* 2026-03-25: ETA fields relocated to Approval Page (Stage 3+) per PRD */
       overseas_agent_name: values.overseas_agent_name || "",
       export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
       export_number: values.export_number !== "N/A" ? values.export_number : null,
@@ -766,7 +801,7 @@ const SalesInput = () => {
                   <Col span={24}>
                     <Alert
                       message="Process Halted"
-                      description={`This ${jobTypeForm} job cannot proceed because a mandatory workflow component has been marked as 'No'. Please verify with your supervisor.`}
+                      description={`This ${jobType} job cannot proceed because a mandatory workflow component has been marked as 'No'. Please verify with your supervisor.`}
                       type="warning"
                       showIcon
                     />
@@ -825,7 +860,19 @@ const SalesInput = () => {
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
-                        <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="others" docType="LOAD LIST UPLOADING" disabled={isReadOnly} />
+                        <DocUploadField
+                          label="Load List"
+                          files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")}
+                          setFiles={setAttachments}
+                          color="gold"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="others"
+                          docType="LOAD LIST UPLOADING"
+                          disabled={isReadOnly}
+                          user={user}
+                          isAdmin={isAdmin}
+                        />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1254,28 +1301,8 @@ const SalesInput = () => {
 
                 </Row>
 
-                <Row gutter={16}>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POL VSL Initial ETA" name="vsl_initial_eta" className={Styles.formLabel}>
-                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POL VSL Latest ETA" name="vsl_latest_eta" className={Styles.formLabel}>
-                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POL ETD" name="vsl_etd" className={Styles.formLabel}>
-                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel}>
-                      <DatePicker style={{ width: '100%' }} disabled={isReadOnly} format="YYYY-MM-DD" />
-                    </Form.Item>
-                  </Col>
-                </Row>
+                    {/* vsl_initial_eta, vsl_latest_eta, vsl_etd, pod_eta relocated to Approval Page per PRD */}
+
                 <Row gutter={16}>
                   <Col xs={24} md={6}>
                     <Form.Item
@@ -1297,20 +1324,22 @@ const SalesInput = () => {
                       <TextArea placeholder="Enter Remarks" />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={3}>
-                    <Checkbox
-                      disabled={isReadOnly}
-                      checked={additionalService.hbl}
-                      onChange={(e) =>
-                        setAdditionalService((prev) => ({
-                          ...prev,
-                          hbl: e.target.checked,
-                        }))
-                      }
-                    >
-                      HBL
-                    </Checkbox>
-                  </Col>
+                  {jobTypeWatch !== 'LINER' && jobTypeWatch !== 'liner' && (
+                    <Col xs={24} md={3}>
+                      <Checkbox
+                        disabled={isReadOnly}
+                        checked={additionalService.hbl}
+                        onChange={(e) =>
+                          setAdditionalService((prev) => ({
+                            ...prev,
+                            hbl: e.target.checked,
+                          }))
+                        }
+                      >
+                        HBL
+                      </Checkbox>
+                    </Col>
+                  )}
                   <Col xs={24} md={3}>
                     <Checkbox
                       disabled={isReadOnly}
@@ -1354,6 +1383,7 @@ const SalesInput = () => {
                     </Checkbox>
                   </Col>
                 </Row>
+
 
                 <Row gutter={16}>
                   <Col xs={24} md={24}>
@@ -1600,7 +1630,12 @@ const SalesInput = () => {
                           style={{ position: "absolute", top: 6, right: 6 }}
                           onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
                         />
-                        <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{r}</p>
+                        <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</p>
+                        {typeof r === 'object' && r.user_name && (
+                          <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>
+                            — {r.user_name} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}
+                          </Typography.Text>
+                        )}
                       </div>
                     ))}
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
@@ -1618,7 +1653,12 @@ const SalesInput = () => {
                     type="primary"
                     onClick={() => {
                       if (newRemark.trim()) {
-                        setRemarks(p => [...p, newRemark.trim()]);
+                        setRemarks(p => [...p, {
+                          text: newRemark.trim(),
+                          user_id: user?.id,
+                          user_name: user?.first_name || user?.name || "User",
+                          date: new Date().toISOString()
+                        }]);
                         setNewRemark("");
                       }
                     }}
@@ -1628,19 +1668,23 @@ const SalesInput = () => {
                   </Button>
                 </Col>
 
-                <Col xs={24} md={isOthers ? 0 : 12} style={{ display: isOthers ? 'none' : 'block' }}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField
-                    label="Attachment"
-                    files={attachments.filter(d => d.doc_type === "Attachment")}
-                    setFiles={setAttachments}
-                    color="blue"
-                    onPreview={openPreview}
-                    salesInputId={id}
-                    category="attachments"
-                    docType="Attachment"
-                  />
-                </Col>
+                {!isOthers && (
+                  <Col xs={24} md={12}>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
+                    <DocUploadField
+                      label="Attachment"
+                      files={attachments.filter(d => d.doc_type === "Attachment")}
+                      setFiles={setAttachments}
+                      color="blue"
+                      onPreview={openPreview}
+                      salesInputId={id}
+                      category="attachments"
+                      docType="Attachment"
+                      user={user}
+                      isAdmin={isAdmin}
+                    />
+                  </Col>
+                )}
               </Row>
             </div>
           </Card>
