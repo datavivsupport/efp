@@ -295,8 +295,10 @@ const Approval = () => {
   const [croFiles, setCroFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
+  const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
+  const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
   const [remarks, setRemarks] = useState([]);
@@ -493,6 +495,23 @@ const Approval = () => {
     }
   }, [id]);
 
+  // Fetch CS HOD options for dropdown
+  useEffect(() => {
+    const fetchCsHodOptions = async () => {
+      try {
+        const res = await apiClient.get("/accounts/liner/admin/users/hods/");
+        const data = res.data?.results ?? res.data ?? [];
+        setCsHodOptions(data.map(item => ({
+          value: item.id,
+          label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}`
+        })));
+      } catch (err) {
+        console.error("Failed to fetch CS HOD options:", err);
+      }
+    };
+    fetchCsHodOptions();
+  }, []);
+
   const fetchJobDetails = async () => {
     setLoading(true);
     try {
@@ -575,6 +594,7 @@ const Approval = () => {
           booking_remarks: data.approval_details?.booking_remarks,
           cnf_remarks: data.approval_details?.cnf_remarks,
           account_remarks: data.approval_details?.account_remarks,
+          cs_hod: data.cs_hod,
         });
 
         // Map Documents (Properly Partitioned)
@@ -603,6 +623,7 @@ const Approval = () => {
           const hnList = filterBy(["HAULAGE NOTE", "HAULAGE NOTE UPLOADING"], ["HAULAGE_NOTE", "HAULAGENOTE"]);
           const bankList = filterBy(["BANK SLIP"], ["BANK_SLIP", "BANK SLIP"]);
           const hblList = filterBy(["HBL"], ["HBL"]);
+          const preAlertList = filterBy(["PRE-ALERT", "PRE ALERT", "PREALERT"], ["PRE_ALERT", "PREALERT"]);
 
           setReleaseOrderFiles(roList);
           setBocFiles(bocList);
@@ -616,6 +637,7 @@ const Approval = () => {
           setHaulierNoteFiles(hnList);
           setBankSlips(bankList);
           setHblFiles(hblList);
+          setPreAlertFiles(preAlertList);
 
           const capturedIds = new Set([
             ...roList.map(d => d.id),
@@ -630,6 +652,7 @@ const Approval = () => {
             ...hnList.map(d => d.id),
             ...bankList.map(d => d.id),
             ...hblList.map(d => d.id),
+            ...preAlertList.map(d => d.id),
           ]);
           setAttachments(docs.filter(d => !capturedIds.has(d.id)));
 
@@ -664,6 +687,7 @@ const Approval = () => {
       ...croFiles.map(f => ({ ...f, doc_type: "CRO", category: "financial" })),
       ...edFiles.map(f => ({ ...f, doc_type: "ED", category: "financial" })),
       ...haulierNoteFiles.map(f => ({ ...f, doc_type: "Haulage Note", category: "financial" })),
+      ...preAlertFiles.map(f => ({ ...f, doc_type: "Pre-Alert", category: "booking" })),
       ...bankSlips.map(f => ({ ...f, doc_type: "Bank Slip", category: "financial" })),
       ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
       ...hblFiles.map(f => ({ ...f, doc_type: "HBL", category: "financial" })),
@@ -695,6 +719,7 @@ const Approval = () => {
       special_instructions: values.special_instructions,
       fac: values.fac,
       hbl: values.hbl,
+      cs_hod: values.cs_hod,
 
       // PRD v3.2 Relocated ETA Fields
       vsl_initial_eta: values.vsl_initial_eta ? dayjs(values.vsl_initial_eta).format("YYYY-MM-DD") : null,
@@ -883,10 +908,12 @@ const Approval = () => {
     setReleaseOrderFiles([]);
     setBocFiles([]);
     setHaulageCostFiles([]);
+    setHaulierNoteFiles([]);
     setLoadListFiles([]);
     setLpoFiles([]);
     setInvoiceFiles([]);
     setFacFiles([]);
+    setPreAlertFiles([]);
     message.info("Form reset");
   };
 
@@ -1499,10 +1526,15 @@ const Approval = () => {
                       {(isHNReq || (!isLiner && !isExtended) || isMasterMode) && (
                         <Col xs={24} md={6}>
                           <Form.Item className={Styles.formLabel} label="Haulier Note">
-                            <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulier Note" disabled={isCNFUploadLocked} restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                            <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Note" disabled={isCNFUploadLocked} restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                           </Form.Item>
                         </Col>
                       )}
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Pre-Alert">
+                          <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={isCNFUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        </Form.Item>
+                      </Col>
                     </>
 
 
@@ -1621,11 +1653,25 @@ const Approval = () => {
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (
-                    <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="HBL">
-                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                      </Form.Item>
-                    </Col>
+                    <>
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="HBL">
+                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod">
+                          <Select
+                            placeholder="Select CS HOD"
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={csHodOptions}
+                            disabled={isCSUploadLocked || isMasterMode}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </>
                   )}
                   {facFlag && (
                     <Col xs={24} md={8}>

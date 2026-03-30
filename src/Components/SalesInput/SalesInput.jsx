@@ -1062,6 +1062,17 @@ const SalesInput = () => {
                       <Input placeholder="Enter Agent Name" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
+                  {isForwarding && (
+                    <Col xs={24} md={6}>
+                      <Form.Item
+                        className={Styles.formLabel}
+                        label="Overseas Agent Name"
+                        name="overseas_agent_name"
+                      >
+                        <Input placeholder="Enter Overseas Agent Name" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                  )}
                 </Row>
               </div>
             </Card>
@@ -1104,11 +1115,16 @@ const SalesInput = () => {
               }
             >
               <div style={{ display: showContainerDetails ? "block" : "none" }}>
-                <Form.List name="equipmentRows" initialValue={[{}]}>
+                <Form.List name="equipmentRows">
                   {(fields, { add, remove }) => (
                     <>
+                      {fields.length === 0 && add()}
                       {fields.map(({ key, name, ...restField }) => (
                         <Row gutter={16} key={key} align="middle">
+                          {/* Hidden ID field to preserve row identity */}
+                          <Form.Item name={[name, "id"]} hidden>
+                            <Input />
+                          </Form.Item>
                           <Col xs={24} md={5}>
                             <Form.Item
                               className={Styles.formLabel}
@@ -1447,11 +1463,16 @@ const SalesInput = () => {
                 </Space>
               }
             >
-              <Form.List name="transportationRows" initialValue={[{}]}>
+              <Form.List name="transportationRows">
                 {(fields, { add, remove }) => (
                   <>
+                    {fields.length === 0 && add()}
                     {fields.map(({ key, name, ...restField }) => (
                       <Row gutter={16} key={key} align="middle">
+                        {/* Hidden ID field to preserve row identity */}
+                        <Form.Item name={[name, "id"]} hidden>
+                          <Input />
+                        </Form.Item>
                         <Col xs={24} md={4}>
                           <Form.Item
                             className={Styles.formLabel}
