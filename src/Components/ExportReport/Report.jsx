@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiclient";
 import dayjs from "dayjs";
-import { Spin, Empty, message } from "antd";
+import { Spin, Empty, message, Tag } from "antd";
+import CommonTable from "../Commontable/Commontable";
 
 const ExportReport = () => {
   const navigate = useNavigate();
@@ -54,15 +55,15 @@ const ExportReport = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="px-6 py-8" style={{ maxWidth: "100%" }}>
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
 
         {/* Header */}
-        <div className="bg-teal-600 px-8 py-5">
+        <div style={{ backgroundColor: "#1b9cac" }} className="px-8 py-5">
           <h3 className="text-xl font-bold text-white">
             EXPORT REPORT
           </h3>
-          <p className="text-teal-100 text-sm mt-1">
+          <p className="text-white/70 text-sm mt-1">
             Export forwarding status overview
           </p>
         </div>
@@ -128,13 +129,15 @@ const ExportReport = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => navigate("/liner/sales-input")}
-                  className="px-6 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg transition"
+                  style={{ backgroundColor: "#1b9cac" }}
+                  className="px-6 py-2 hover:opacity-90 text-white rounded-lg transition"
                 >
                   Add
                 </button>
                 <button
                   onClick={fetchData}
-                  className="px-6 py-2 bg-teal-600 text-white rounded-lg"
+                  style={{ backgroundColor: "#1b9cac" }}
+                  className="px-6 py-2 hover:opacity-90 text-white rounded-lg transition"
                 >
                   Search
                 </button>
@@ -163,74 +166,35 @@ const ExportReport = () => {
               />
             </div>
 
-            <div className="border border-gray-200 rounded-lg overflow-auto">
-              {loading ? (
-                <div className="p-20 text-center"><Spin tip="Loading reports..." /></div>
-              ) : filteredData.length === 0 ? (
-                <div className="p-20"><Empty description="No export records found" /></div>
-              ) : (
-                <table className="w-full min-w-[1200px]">
-                  <thead className="bg-gray-100 border-b border-gray-200">
-                    <tr>
-                      {[
-                        'Export No', 'Created Date', 'Created By', 'Carrier', 'Customer',
-                        'Job No (AFSYS)', 'Booking Ref', 'Pending With', 'Status'
-                      ].map(h => (
-                        <th
-                          key={h}
-                          className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredData.map(row => (
-                      <tr
-                        key={row.id}
-                        onClick={() => {
-                          const url = `${window.location.origin}/approval?id=${row.id}`;
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        className="hover:bg-gray-50 transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-3 text-sm font-medium text-teal-700">{row.export_number || "N/A (Draft)"}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {row.export_created_date ? dayjs(row.export_created_date).format("YYYY-MM-DD") : "N/A"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{row.created_by_name || "N/A"}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{row.carrier_name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700 truncate max-w-[200px]">
-                          {row.customer_name}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-mono text-gray-600">{row.afsys_job_no || "N/A"}</td>
-                        <td className="px-4 py-3 text-xs font-mono text-gray-600 truncate">
-                          {row.booking_ref_no || "N/A"}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 font-semibold">{row.pending_with}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex px-3 py-1 text-xs font-medium rounded-full border transition-colors
-          ${row.status === 'approved'
-                                ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                                : row.status === 'submitted' || row.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                                  : row.status === 'draft'
-                                    ? 'bg-gray-100 text-gray-600 border-gray-300'
-                                    : 'bg-red-100 text-red-700 border-red-300'
-                              }`}
-                          >
-                            {row.status.toUpperCase()}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <CommonTable
+              columns={[
+                { title: "Export No", dataIndex: "export_number", key: "export_number", render: (v) => <span style={{ fontWeight: 600, color: '#0d9488' }}>{v || "N/A (Draft)"}</span> },
+                { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "N/A" },
+                { title: "Created By", dataIndex: "created_by_name", key: "created_by_name", render: (v) => v || "N/A" },
+                { title: "Carrier", dataIndex: "carrier_name", key: "carrier_name" },
+                { title: "Customer", dataIndex: "customer_name", key: "customer_name" },
+                { title: "Job No (AFSYS)", dataIndex: "afsys_job_no", key: "afsys_job_no", render: (v) => <span style={{ fontFamily: 'monospace' }}>{v || "N/A"}</span> },
+                { title: "Booking Ref", dataIndex: "booking_ref_no", key: "booking_ref_no", render: (v) => <span style={{ fontFamily: 'monospace' }}>{v || "N/A"}</span> },
+                { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (v) => <Tag color="blue">{v}</Tag> },
+                {
+                  title: "Status", dataIndex: "status", key: "status",
+                  render: (v) => (
+                    <Tag color={v === 'approved' ? 'green' : v === 'submitted' || v === 'pending' ? 'orange' : v === 'draft' ? 'default' : 'red'}>
+                      {v?.toUpperCase()}
+                    </Tag>
+                  )
+                },
+              ]}
+              data={filteredData.map((r) => ({ ...r, key: r.id }))}
+              yescomp
+              onRow={(record) => ({
+                onClick: () => {
+                  const url = `${window.location.origin}/approval?id=${record.id}`;
+                  window.open(url, "_blank", "noopener,noreferrer");
+                },
+                style: { cursor: "pointer" },
+              })}
+            />
           </section>
 
         </div>

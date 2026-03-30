@@ -1,18 +1,17 @@
 .ant-table-wrapper .ant-table-thead>tr>th {
-  background-color: #2d7a82 !important;
+  background-color: #1b9cac !important;
   color: #ffffff;
   text-align: center !important;
   font-weight: 600;
-  padding: 12px 0px !important;
+  font-size: 15px;
   border-bottom: none !important;
 }
 
 /* ===== TABLE BODY CELLS ===== */
 .ant-table-wrapper .ant-table-tbody>tr>td {
-  padding: 5px 16px !important;
   color: #1f2937 !important;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 15px;
   border-bottom: 1px solid #f1f5f9;
 }
 

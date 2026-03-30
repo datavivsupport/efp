@@ -20,11 +20,11 @@
 
 .card :global(.ant-card-body) {
   padding: 12px 20px !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
 }
 
 .formLabel :global(.ant-form-item-label > label) {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ================= HEADER ICON ================= */
@@ -52,7 +52,7 @@
 /* ================= TABLE ================= */
 .card :global(.ant-table-thead > tr > th) {
   background: #f8fafc !important;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   color: #374151;
@@ -60,7 +60,7 @@
 }
 
 .card :global(.ant-table-tbody > tr > td) {
-  font-size: 12px;
+  font-size: 13px;
   vertical-align: top;
   padding: 8px 12px !important;
 }

@@ -1774,7 +1774,7 @@ const Approval = () => {
                       </Form.Item>
                     </div>
                   )}
-                  <Space>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     <Button
                       type="primary"
                       onClick={() => handleAction("Approved")}
@@ -1801,7 +1801,7 @@ const Approval = () => {
                         Reject
                       </Button>
                     )}
-                  </Space>
+                  </div>
                 </div>
               )}
             </div>
@@ -1823,10 +1823,12 @@ const Approval = () => {
           )}
 
           {((!isHOD && !isGM) || canApprove || isOthers) && (
-            <Space
+            <div
               style={{
                 display: "flex",
                 justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
                 width: "100%",
                 marginTop: "1.5rem",
                 marginBottom: "1rem",
@@ -1885,7 +1887,7 @@ const Approval = () => {
               <Button icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
                 Reset Form
               </Button>
-            </Space>
+            </div>
           )}
           {/* ════════ PREVIEW MODAL ════════ */}
           <Modal

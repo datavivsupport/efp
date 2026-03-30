@@ -133,3 +133,13 @@ html, body, #root {
   -webkit-text-security: disc; /* Chrome */
   text-security: disc;         /* Other browsers */
 }
+
+/* Darker placeholder text for all antd inputs */
+.ant-input::placeholder,
+.ant-input-affix-wrapper input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker-input input::placeholder,
+.ant-input-number-input::placeholder,
+textarea.ant-input::placeholder {
+  color: rgba(0, 0, 0, 0.85) !important;
+}

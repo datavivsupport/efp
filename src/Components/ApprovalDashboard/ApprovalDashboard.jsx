@@ -350,7 +350,7 @@ const ApprovalDashboard = () => {
         const isTerminal = record.status === 'approved' || record.status === 'rejected';
         const canAct = !isTerminal && record.status === 'submitted' && !record.user_has_acted;
         return (
-          <div style={{ display: "flex", gap: "8px", justifyContent: "center", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-start", alignItems: "center" }}>
             <Button
               type="default"
               size="small"
@@ -375,7 +375,7 @@ const ApprovalDashboard = () => {
                     e.stopPropagation();
                     handleApprove(record.id);
                   }}
-                  style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}
+                  style={{ backgroundColor: '#10b981', borderColor: '#10b981', minWidth: 200 }}
                 >
                   {record.job_type === 'FORWARDING' && record.current_stage === '2' ? (
                     isCS ? "Apply CS Updates" : (isSalesHOD ? "Approve (Sales HOD)" : "Approve")
@@ -406,7 +406,7 @@ const ApprovalDashboard = () => {
   return (
     <div className="main-container" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
       {/* Main Content */}
-      <main className="mx-auto px-4 py-6" style={{ maxWidth: "1600px" }}>
+      <main className="px-4 py-6" style={{ maxWidth: "100%" }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <Typography.Title level={4} style={{ margin: 0 }}>Dashboard Overview</Typography.Title>
         </div>

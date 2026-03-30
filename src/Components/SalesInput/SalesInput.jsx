@@ -1690,10 +1690,12 @@ const SalesInput = () => {
           </Card>
 
           {!isReadOnly && (
-            <Space
+            <div
               style={{
                 display: "flex",
                 justifyContent: "center",
+                gap: 12,
+                flexWrap: "wrap",
                 width: "100%",
                 marginTop: "1rem",
               }}
@@ -1722,7 +1724,7 @@ const SalesInput = () => {
               >
                 Refresh
               </Button>
-            </Space>
+            </div>
           )}
           {isReadOnly && (
             <div style={{ textAlign: 'center', marginTop: '1rem' }}>
