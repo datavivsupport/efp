@@ -529,6 +529,7 @@ const Approval = () => {
           customer_name: data.customer_name,
           contact_pic: data.contact_pic,
           phone_no: data.phone_no || data.email,
+          overseas_agent_name: data.overseas_agent_name,
           commodity: data.commodities?.map(c => c.name).join(", "),
           port_of_loading: data.port_of_loading,
           port_of_discharge: data.port_of_discharge,
@@ -580,6 +581,7 @@ const Approval = () => {
             no_of_containers: t.no_of_containers,
             category: t.category,
             placement_time: t.placement_time ? dayjs(t.placement_time) : null,
+            pickup_location: t.pickup_location,
             special_remarks: t.special_remarks,
           })) || [{}],
 
@@ -715,6 +717,7 @@ const Approval = () => {
       is_payment_docs_required: values.is_payment_docs_required,
       is_load_list_required: values.is_load_list_required,
       is_haulier_note_required: values.is_haulier_note_required,
+      overseas_agent_name: values.overseas_agent_name,
       name_of_executive: values.name_of_executive,
       special_instructions: values.special_instructions,
       fac: values.fac,
@@ -751,6 +754,7 @@ const Approval = () => {
         placement_time: r.placement_time
           ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
           : null,
+        pickup_location: r.pickup_location,
         special_remarks: r.special_remarks
       })),
 
@@ -1055,6 +1059,13 @@ const Approval = () => {
                     <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
+                {isForwarding && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name">
+                      <Input placeholder="Enter Overseas Agent Name" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
                     <Input readOnly variant="filled" />
@@ -1328,7 +1339,8 @@ const Approval = () => {
                           <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input placeholder="Vol" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={7}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={2}>
                             <Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} />
                           </Col>
@@ -1566,7 +1578,7 @@ const Approval = () => {
             </Card>
           )}
 
-          {(jobData?.job_type !== "OTHERS" && !isLiner || isMasterMode) && (isPaymentReq || !isExtended || isMasterMode) && (
+          {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
@@ -1638,7 +1650,7 @@ const Approval = () => {
             >
               <div style={{ display: open.documents ? "block" : "none" }}>
                 <Row gutter={16}>
-                  {isPaymentReq && !isLiner && (
+                  {(isPaymentReq || isLiner) && (
                     <>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label="LPO">
