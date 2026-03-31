@@ -47,7 +47,7 @@ const ApprovalDashboard = () => {
   const [draftsData, setDraftsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
-  const [jobTypeFilter, setJobTypeFilter] = useState(null);
+  const [jobTypeFilter, setJobTypeFilter] = useState("FORWARDING");
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const jobTypes = [
@@ -521,7 +521,8 @@ const ApprovalDashboard = () => {
               placeholder="Filter by Job Type"
               allowClear
               style={{ width: 180 }}
-              onChange={(v) => setJobTypeFilter(v)}
+              value={jobTypeFilter}
+              onChange={(value) => setJobTypeFilter(value)}
               options={[
                 { label: "LINER", value: "LINER" },
                 { label: "FORWARDING", value: "FORWARDING" },
