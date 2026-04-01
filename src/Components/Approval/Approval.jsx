@@ -267,6 +267,7 @@ const Approval = () => {
   const id = searchParams.get("id");
   const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(false);
+  const actionThrottleRef = useRef(false);
   const [jobData, setJobData] = useState(null);
   const [open, setOpen] = useState({
     export: true,

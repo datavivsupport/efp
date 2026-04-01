@@ -169,7 +169,9 @@ const MFA = () => {
             {mode === "setup" && (
               <div
                 style={{
-                  textAlign: "center",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
                   marginTop: "24px",
                   marginBottom: "16px",
                 }}
@@ -178,7 +180,7 @@ const MFA = () => {
                   <img
                     src={qrCode}
                     alt="MFA QR"
-                    style={{ width: 180, height: 180 }}
+                    style={{ width: 180, height: 180, display: "block" }}
                   />
                 ) : (
                   <p>Loading QR code...</p>

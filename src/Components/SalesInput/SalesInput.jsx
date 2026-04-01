@@ -255,6 +255,7 @@ const SalesInput = () => {
   const [showApprovers, setShowApprovers] = useState(true);
   const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [hodOptions, setHodOptions] = useState([]);
   const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
 
@@ -532,6 +533,8 @@ const SalesInput = () => {
   }, [id, user, form, typeParam]);
 
   const onFinish = async (values, statusValue = "submitted") => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     const cleanEquipment = (values.equipmentRows || []).map((row) => ({
       id: row?.id,
@@ -646,6 +649,7 @@ const SalesInput = () => {
     } catch (error) {
       console.error("API Error:", error);
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
