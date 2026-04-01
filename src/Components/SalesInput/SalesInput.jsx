@@ -33,6 +33,8 @@ import { Icon } from "@iconify/react";
 import { useNavigate, useSearchParams } from "react-router";
 import CategorySelect from "./Category";
 import EquipmentTypeSelect from "./EquipmentType";
+import JobTypeSelect from "./JobTypeSelect";
+import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 
@@ -253,8 +255,6 @@ const SalesInput = () => {
   const [showApprovers, setShowApprovers] = useState(true);
   const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [jobTypeOptions, setJobTypeOptions] = useState([]);
-  const [termsOfShipmentOptions, setTermsOfShipmentOptions] = useState([]);
   const [hodOptions, setHodOptions] = useState([]);
   const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
 
@@ -380,14 +380,6 @@ const SalesInput = () => {
     const fetchMasterData = async () => {
       // 1. Core Master Data (Essential)
       try {
-        const [jtRes, tosRes] = await Promise.all([
-          apiClient.get("/accounts/master/EFPJobType/"),
-          apiClient.get("/accounts/master/EFPTermsOfShipment/"),
-        ]);
-        const jtData = jtRes.data?.results ?? jtRes.data ?? [];
-        const tosData = tosRes.data?.results ?? tosRes.data ?? [];
-        setJobTypeOptions(jtData.map((item) => ({ label: item.name, value: item.name })));
-        setTermsOfShipmentOptions(tosData.map((item) => ({ label: item.name, value: item.name })));
       } catch (err) {
         console.error("Failed to load core master data", err);
       }
@@ -747,16 +739,9 @@ const SalesInput = () => {
                     name="job_type"
                     rules={[{ required: true, message: "Required" }]}
                   >
-                    <Select
+                    <JobTypeSelect
                       className={Styles.bigJobSelect}
-                      placeholder="Select Job Type"
-                      allowClear
                       disabled={isReadOnly}
-                      options={jobTypeOptions}
-                      showSearch
-                      filterOption={(input, option) =>
-                        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                      }
                     />
                   </Form.Item>
                 </Col>
@@ -1305,12 +1290,8 @@ const SalesInput = () => {
                       name="terms_of_shipment"
                       rules={[{ required: !isOthers, message: "Required" }]}
                     >
-                      <Select
-                        placeholder="Select Terms of Shipment"
-                        allowClear
+                      <TermsOfShipmentSelect
                         disabled={isReadOnly}
-                        options={termsOfShipmentOptions}
-                        showSearch
                       />
                     </Form.Item>
                   </Col>
