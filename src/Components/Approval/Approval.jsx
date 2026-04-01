@@ -279,7 +279,7 @@ const Approval = () => {
     otherDetails: true,
     placement: true,
     booking: true,
-    bankAccounts: true,
+    bankAccounts: false,
     documents: true,
     attachments: true,
     approvalStatus: true,
@@ -382,6 +382,10 @@ const Approval = () => {
   // Unified Stage Sequence (Stage 3=CNF, Stage 5=CSHOD Approval, Stage 6=Accounts)
   const isCNFStage = (isLiner || isExtended) ? currentStage === "3" : false;
   const isCSHODStage = (isLiner || isExtended) ? currentStage === "5" : false;
+  const isStage2 = currentStage === "2";
+  const isStage3 = currentStage === "3";
+  const showDocumentUploads = !(isStage2 || isStage3) || isMasterMode||isCNF||isForwardingStage5; // Hide document uploads in Sales HOD and CS stages, show in Master Mode
+  const needsLpoInvoice = currentStage === "4" || currentStage === "4B" || currentStage === "5";
 
   // Sales HOD Restriction for Liner (Attachments & Comments only)
   const isSalesHODLinerRestricted = isLiner && isSalesHOD && !isAdmin;
@@ -826,14 +830,15 @@ const Approval = () => {
       if (actionType === "Approved") {
         const stage = jobData?.current_stage || "1";
 
+        if (needsLpoInvoice && (!lpoFiles.length || !invoiceFiles.length)) {
+          message.error("LPO and Invoice are required for Stage 4 and Stage 5");
+          setLoading(false);
+          return;
+        }
+
         if (isForwarding) {
           if (stage === '3' && !values.afsys_job_no) {
             message.error("AFSYS Job No. is required for Stage 3");
-            setLoading(false);
-            return;
-          }
-          if (stage === '4B' && (!lpoFiles.length && !invoiceFiles.length)) {
-            message.error("Financial document (LPO or Invoice) is required for Stage 4B");
             setLoading(false);
             return;
           }
@@ -845,23 +850,12 @@ const Approval = () => {
             setLoading(false);
             return;
           }
-          if (stage === '4B' && (!lpoFiles.length && !invoiceFiles.length)) {
-            message.error("Main Document (LPO or Invoice) is required for Stage 4B");
-            setLoading(false);
-            return;
-          }
           /* 2026-03-25: Bank Slip requirement removed per PRD refactoring */
 
         } else {
           // Legacy / Generic Validations
           if (stage === '3' && !values.afsys_job_no) {
             message.error("AFSYS Job No. is required");
-            setLoading(false);
-            return;
-          }
-
-          if (stage === '4' && releaseOrderFiles.length === 0 && bocFiles.length === 0) {
-            message.error("Release Order or BOC Attachment is required");
             setLoading(false);
             return;
           }
@@ -1115,7 +1109,9 @@ const Approval = () => {
               }
             >
               <div style={{ display: open.others ? "block" : "none" }}>
-                <Row gutter={16}>
+                {showDocumentUploads && (
+                  <>
+                  <Row gutter={16}>
                   <Col xs={24} md={6}>
                     <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
                       <Input placeholder="Free text carrier" disabled={isSalesSectionLocked} />
@@ -1161,6 +1157,8 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                 </Row>
+                </>
+                )}
               </div>
             </Card>
           )}
@@ -1522,59 +1520,72 @@ const Approval = () => {
                       />
                     </Col>
                   )}
+                </Row>
 
-                  {/* Removed misleading Load List note as it is part of parallel track */}
-
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Release Order(s)">
-                      <DocUploadField
-                        label="Release Order"
-                        files={releaseOrderFiles}
-                        setFiles={setReleaseOrderFiles}
-                        color="blue"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="booking"
-                        docType="Release Order"
-                        disabled={releaseOrderDisabled}
-                        restrictionMessage={releaseOrderRestrictionMessage}
-                        isMasterMode={isMasterMode}
-                        user={user}
-                        isAdmin={isAdmin}
-                      />
-                    </Form.Item>
-                  </Col>
-                  
-                    <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="BOC Attachment">
-                        <DocUploadField
-                          label="BOC"
-                          files={bocFiles}
-                          setFiles={setBocFiles}
-                          color="volcano"
-                          onPreview={openPreview}
-                          salesInputId={id}
-                          category="booking"
-                          docType="BOC"
-                          disabled={isCNFUploadLocked && !isCS}
-                          restrictionMessage={
-                            isCNFUploadLocked && !isCS && isLiner && !isCNF
-                              ? "CNF is allowd to uplaod it"
-                              : null
-                          }
-                          isMasterMode={isMasterMode}
-                          user={user}
-                          isAdmin={isAdmin}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <>
+                {showDocumentUploads && (
+                  <>
+                    <Row gutter={16}>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
-                          <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Cost" disabled={isCNFUploadLocked} restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <Form.Item className={Styles.formLabel} label="Release Order(s)">
+                          <DocUploadField
+                            label="Release Order"
+                            files={releaseOrderFiles}
+                            setFiles={setReleaseOrderFiles}
+                            color="blue"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Release Order"
+                            disabled={releaseOrderDisabled}
+                            restrictionMessage={releaseOrderRestrictionMessage}
+                            isMasterMode={isMasterMode}
+                            user={user}
+                            isAdmin={isAdmin}
+                          />
                         </Form.Item>
                       </Col>
-
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="BOC Attachment">
+                          <DocUploadField
+                            label="BOC"
+                            files={bocFiles}
+                            setFiles={setBocFiles}
+                            color="volcano"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="BOC"
+                            disabled={isCNFUploadLocked && !isCS}
+                            restrictionMessage={
+                              isCNFUploadLocked && !isCS && isLiner && !isCNF
+                                ? "CNF is allowd to uplaod it"
+                                : null
+                            }
+                            isMasterMode={isMasterMode}
+                            user={user}
+                            isAdmin={isAdmin}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
+                          <DocUploadField
+                            label="Haulage Cost"
+                            files={haulageCostFiles}
+                            setFiles={setHaulageCostFiles}
+                            color="orange"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Haulage Cost"
+                            disabled={isCNFUploadLocked}
+                            restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
+                            user={user}
+                            isAdmin={isAdmin}
+                            isMasterMode={isMasterMode}
+                          />
+                        </Form.Item>
+                      </Col>
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Haulier Note">
                           <DocUploadField
@@ -1602,6 +1613,8 @@ const Approval = () => {
                           />
                         </Form.Item>
                       </Col>
+                    </Row>
+                    <Row gutter={16}>
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Pre-Alert">
                           <DocUploadField
@@ -1620,44 +1633,48 @@ const Approval = () => {
                           />
                         </Form.Item>
                       </Col>
-                    </>
-
-
-
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List">
-                      <DocUploadField
-                        label="Load List"
-                        files={loadListFiles}
-                        setFiles={setLoadListFiles}
-                        color="gold"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="booking"
-                        docType="Load List"
-                        disabled={!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked}
-                        restrictionMessage={
-                          isCNFUploadLocked
-                            ? null
-                            : !isLLReq
-                            ? "Load List upload is disabled until the requirement is turned on."
-                            : isLiner && jobData?.is_hod_approved && !isCNF
-                            ? "CNF is allowd to uplaod it"
-                            : null
-                        }
-                        isMasterMode={isMasterMode}
-                        user={user}
-                        isAdmin={isAdmin}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} /></Form.Item></Col>
-                </Row>
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Load List">
+                          <DocUploadField
+                            label="Load List"
+                            files={loadListFiles}
+                            setFiles={setLoadListFiles}
+                            color="gold"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Load List"
+                            disabled={!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked}
+                            restrictionMessage={
+                              isCNFUploadLocked
+                                ? null
+                                : !isLLReq
+                                ? "Load List upload is disabled until the requirement is turned on."
+                                : isLiner && jobData?.is_hod_approved && !isCNF
+                                ? "CNF is allowd to uplaod it"
+                                : null
+                            }
+                            isMasterMode={isMasterMode}
+                            user={user}
+                            isAdmin={isAdmin}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      <Col xs={24} md={24}>
+                        <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
+                          <TextArea disabled={isCNFUploadLocked} />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </>
+                )}
               </div>
             </Card>
           )}
 
-          {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (
+          {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (parseInt(currentStage) >= 7 || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
@@ -1714,7 +1731,7 @@ const Approval = () => {
 
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {(jobData?.job_type !== "OTHERS" || isMasterMode) && (
+          {showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
