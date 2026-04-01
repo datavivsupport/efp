@@ -311,7 +311,7 @@ const Approval = () => {
     ...(user?.departments_assigned_names || []),
     ...(user?.department_names || []),
     user?.department || ""
-  ].filter(Boolean).map(d => d.toUpperCase());
+  ].filter(Boolean).map(d => String(d).toUpperCase()).filter(Boolean);
 
   const isAdmin = userRoles.some(r => ["admin", "ADMIN", "SUPER ADMIN"].includes(r));
   const isSuperUser = userRoles.some(r => r.toUpperCase().includes("SUPER USER")) || isAdmin;
