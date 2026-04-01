@@ -1369,12 +1369,18 @@ const SalesInput = () => {
                     <Checkbox
                       disabled={isReadOnly}
                       checked={additionalService.showTransportation}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setAdditionalService((prev) => ({
                           ...prev,
                           showTransportation: e.target.checked,
-                        }))
-                      }
+                        }));
+                        if (e.target.checked) {
+                          const current = form.getFieldValue("transportationRows") || [];
+                          if (current.length === 0) {
+                            form.setFieldsValue({ transportationRows: [{}] });
+                          }
+                        }
+                      }}
                     >
                       TRANSPORTATION
                     </Checkbox>
@@ -1447,7 +1453,6 @@ const SalesInput = () => {
               <Form.List name="transportationRows">
                 {(fields, { add, remove }) => (
                   <>
-                    {fields.length === 0 && add()}
                     {fields.map(({ key, name, ...restField }) => (
                       <Row gutter={16} key={key} align="middle">
                         {/* Hidden ID field to preserve row identity */}
