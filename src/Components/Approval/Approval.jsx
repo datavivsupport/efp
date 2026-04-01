@@ -230,12 +230,15 @@ const DocUploadField = ({
 
   return (
     <div>
-      {(!disabled || restrictionMessage) && (
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }}>
-            {files.length === 0 ? `Upload ${label}` : "Add More"}
-          </Button>
-        </Upload>
+      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>
+          {files.length === 0 ? `Upload ${label}` : "Add More"}
+        </Button>
+      </Upload>
+      {disabled && restrictionMessage && (
+        <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>
+          {restrictionMessage}
+        </Typography.Text>
       )}
 
       {files.length > 0 && (
@@ -439,6 +442,20 @@ const Approval = () => {
   const isLLReq = isTrue(isLLReqForm, jobData?.is_load_list_required);
   const isHNReq = isTrue(isHNReqForm, jobData?.is_haulier_note_required);
   const isROReq = isTrue(isROReqForm, jobData?.is_release_order_required);
+  const releaseOrderRequirementMet =
+    isROReq || (!isLiner && !isExtended) || isMasterMode;
+  const releaseOrderDisabled =
+    (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
+  const releaseOrderRestrictionMessage = (() => {
+    if (isCNFUploadLocked && !isCS) {
+      return isLiner && !isCNF ? "CNF is allowed to upload it" : null;
+    }
+    if (!releaseOrderRequirementMet && !isCS) {
+      return "Release Order upload is disabled until the requirement is turned on.";
+    }
+    return null;
+  })();
+  const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
   const isPaymentReq = isTrue(isLNR_LPO_ReqForm, jobData?.is_lpo_invoice_required) || isTrue(isPaymentReqForm, jobData?.is_payment_processing_required);
   const facFlag = isTrue(facFlagForm, jobData?.fac);
   const hblFlag = isTrue(hblFlagForm, jobData?.hbl);
@@ -553,6 +570,7 @@ const Approval = () => {
           carrier_remarks: data.carrier_remarks,
           vessel_voyage_remarks: data.vessel_voyage_remarks,
           pol_remarks: data.pol_remarks,
+          name_of_executive: data.name_of_executive,
           pod_remarks: data.pod_remarks,
 
           // PRD v3.2 Relocated ETA Fields
@@ -1297,7 +1315,7 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code">
-                      <Input placeholder="Enter Code" disabled={isSalesSectionLocked} />
+                      <Input placeholder="Enter Code" disabled={isBookingSectionLocked} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
@@ -1310,6 +1328,20 @@ const Approval = () => {
                       <TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={12}>
+                    <Form.Item
+                      className={Styles.formLabel}
+                      label="Name of Executive"
+                      name="name_of_executive"
+                      rules={[{ required: !isOthers, message: "Required" }]}
+                    >
+                      <Input placeholder="Sales Executive" disabled={true} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
                   {!isLiner && (
                     <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}>HBL</Checkbox></Form.Item></Col>
                   )}
@@ -1425,7 +1457,7 @@ const Approval = () => {
                   </Col>
 
                   {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
-                  {((isLiner || isCrossTrade || isForwarding) || isMasterMode) && (
+                  {((isLiner || isCrossTrade ) || isMasterMode) && (
                     <Col span={24}>
                       <Alert
                         message="Workflow Configuration (Action Required)"
@@ -1493,28 +1525,26 @@ const Approval = () => {
 
                   {/* Removed misleading Load List note as it is part of parallel track */}
 
-                  {(isROReq || (!isLiner && !isExtended) || isMasterMode) && (
-                    <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Release Order(s)">
-                        <DocUploadField
-                          label="Release Order"
-                          files={releaseOrderFiles}
-                          setFiles={setReleaseOrderFiles}
-                          color="blue"
-                          onPreview={openPreview}
-                          salesInputId={id}
-                          category="booking"
-                          docType="Release Order"
-                          disabled={isCNFUploadLocked}
-                          restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
-                          isMasterMode={isMasterMode}
-                          user={user}
-                          isAdmin={isAdmin}
-                        />
-                      </Form.Item>
-                    </Col>
-                  )}
-                  {(!isExtended || isMasterMode) && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Release Order(s)">
+                      <DocUploadField
+                        label="Release Order"
+                        files={releaseOrderFiles}
+                        setFiles={setReleaseOrderFiles}
+                        color="blue"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="booking"
+                        docType="Release Order"
+                        disabled={releaseOrderDisabled}
+                        restrictionMessage={releaseOrderRestrictionMessage}
+                        isMasterMode={isMasterMode}
+                        user={user}
+                        isAdmin={isAdmin}
+                      />
+                    </Form.Item>
+                  </Col>
+                  
                     <Col xs={24} md={6}>
                       <Form.Item className={Styles.formLabel} label="BOC Attachment">
                         <DocUploadField
@@ -1526,15 +1556,18 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={isCNFUploadLocked}
-                          restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
+                          disabled={isCNFUploadLocked && !isCS}
+                          restrictionMessage={
+                            isCNFUploadLocked && !isCS && isLiner && !isCNF
+                              ? "CNF is allowd to uplaod it"
+                              : null
+                          }
                           isMasterMode={isMasterMode}
                           user={user}
                           isAdmin={isAdmin}
                         />
                       </Form.Item>
                     </Col>
-                  )}
                     <>
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
@@ -1542,43 +1575,82 @@ const Approval = () => {
                         </Form.Item>
                       </Col>
 
-                      {(isHNReq || (!isLiner && !isExtended) || isMasterMode) && (
-                        <Col xs={24} md={6}>
-                          <Form.Item className={Styles.formLabel} label="Haulier Note">
-                            <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Note" disabled={isCNFUploadLocked} restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                          </Form.Item>
-                        </Col>
-                      )}
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Haulier Note">
+                          <DocUploadField
+                            label="Haulier Note"
+                            files={haulierNoteFiles}
+                            setFiles={setHaulierNoteFiles}
+                            color="geekblue"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Haulage Note"
+                            disabled={isCNFUploadLocked || !haulierNoteEnabled}
+                            restrictionMessage={
+                              isCNFUploadLocked
+                                ? null
+                                : !haulierNoteEnabled
+                                ? "Haulier Note uploading is disabled until the requirement is turned on."
+                                : isLiner && !isCNF
+                                ? "CNF is allowd to uplaod it"
+                                : null
+                            }
+                            user={user}
+                            isAdmin={isAdmin}
+                            isMasterMode={isMasterMode}
+                          />
+                        </Form.Item>
+                      </Col>
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Pre-Alert">
-                          <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={isCNFUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          <DocUploadField
+                            label="Pre-Alert"
+                            files={preAlertFiles}
+                            setFiles={setPreAlertFiles}
+                            color="cyan"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Pre-Alert"
+                            disabled={isCNFUploadLocked}
+                            user={user}
+                            isAdmin={isAdmin}
+                            isMasterMode={isMasterMode}
+                          />
                         </Form.Item>
                       </Col>
                     </>
 
 
 
-                  {isLLReq && (
-                    <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Load List">
-                        <DocUploadField
-                          label="Load List"
-                          files={loadListFiles}
-                          setFiles={setLoadListFiles}
-                          color="gold"
-                          onPreview={openPreview}
-                          salesInputId={id}
-                          category="booking"
-                          docType="Load List"
-                          disabled={(!jobData?.is_hod_approved) || isCNFUploadLocked}
-                          restrictionMessage={isLiner && jobData?.is_hod_approved && !isCNF ? "CNF is allowd to uplaod it" : null}
-                          isMasterMode={isMasterMode}
-                          user={user}
-                          isAdmin={isAdmin}
-                        />
-                      </Form.Item>
-                    </Col>
-                  )}
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Load List">
+                      <DocUploadField
+                        label="Load List"
+                        files={loadListFiles}
+                        setFiles={setLoadListFiles}
+                        color="gold"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="booking"
+                        docType="Load List"
+                        disabled={!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked}
+                        restrictionMessage={
+                          isCNFUploadLocked
+                            ? null
+                            : !isLLReq
+                            ? "Load List upload is disabled until the requirement is turned on."
+                            : isLiner && jobData?.is_hod_approved && !isCNF
+                            ? "CNF is allowd to uplaod it"
+                            : null
+                        }
+                        isMasterMode={isMasterMode}
+                        user={user}
+                        isAdmin={isAdmin}
+                      />
+                    </Form.Item>
+                  </Col>
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} /></Form.Item></Col>
                 </Row>
               </div>
