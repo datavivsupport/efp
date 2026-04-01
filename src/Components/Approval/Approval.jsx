@@ -798,6 +798,8 @@ const Approval = () => {
   };
 
   const handleAction = async (actionType, remarksVal = "") => {
+    if (actionThrottleRef.current) return;
+    actionThrottleRef.current = true;
     setLoading(true);
     try {
       const values = await form.validateFields();
@@ -872,11 +874,14 @@ const Approval = () => {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
       message.error("Error performing action: " + errorMsg);
     } finally {
+      actionThrottleRef.current = false;
       setLoading(false);
     }
   };
 
   const onFinish = async (values) => {
+    if (actionThrottleRef.current) return;
+    actionThrottleRef.current = true;
     setLoading(true);
     try {
       const isCSUpdate = isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3);
@@ -900,6 +905,7 @@ const Approval = () => {
       const errorMsg = err.response?.data?.message || "Internal server error";
       message.error("Failed to save draft: " + errorMsg);
     } finally {
+      actionThrottleRef.current = false;
       setLoading(false);
     }
   };
