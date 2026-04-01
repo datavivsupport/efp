@@ -64,25 +64,10 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     if (!value) return;
 
     const fromInitial = initialOptions.find((item) => item[valueKey] === value);
-
     if (fromInitial) {
       setSelectedOption(fromInitial);
       setData([fromInitial]);
-      return;
     }
-
-    (async () => {
-      try {
-        const res = await apiClient.get(`${url}${value}/`);
-        const result = res.data;
-        if (result) {
-          setSelectedOption(result);
-          setData([result]);
-        }
-      } catch (err) {
-        console.error("Failed to load selected option", err);
-      }
-    })();
   }, [value]);
 
   /* ------------------ Fetch data ------------------ */
