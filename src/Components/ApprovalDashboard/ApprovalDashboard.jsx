@@ -15,12 +15,12 @@ const ApprovalDashboard = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
 
-  const userRoles = (user?.roles || []).map(r => r.name.toUpperCase());
+  const userRoles = (user?.roles || []).map(r => r.name?.toUpperCase());
   const userDepts = [
-    ...(user?.departments_assigned_names || []),
-    ...(user?.department_names || []),
+    ...(Array.isArray(user?.departments_assigned_names) ? user.departments_assigned_names : []),
+    ...(Array.isArray(user?.department_names) ? user.department_names : []),
     user?.department || ""
-  ].filter(Boolean).map(d => d.toUpperCase());
+  ].filter(Boolean).map(d => String(d).toUpperCase());
 
   const isAdmin = userRoles.some(r => ["ADMIN", "SUPER ADMIN"].includes(r));
   const isCS = userDepts.some(d => d.includes("CUSTOMER SERVICE") || d.includes("CS")) ||
