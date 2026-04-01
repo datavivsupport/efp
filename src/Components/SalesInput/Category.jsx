@@ -4,6 +4,7 @@ const CategorySelect = ({ placeholder = "Select Category", ...rest }) => (
   <SearchableSelect
     url="/accounts/master/EFPCategory/"
     placeholder={placeholder}
+    valueKey="name"
     {...rest}
   />
 );

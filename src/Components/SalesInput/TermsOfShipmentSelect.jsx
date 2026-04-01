@@ -4,6 +4,7 @@ const TermsOfShipmentSelect = ({ placeholder = "Select Terms of Shipment", ...re
   <SearchableSelect
     url="/accounts/master/EFPTermsOfShipment/"
     placeholder={placeholder}
+    valueKey="name"
     {...rest}
   />
 );
