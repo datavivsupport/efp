@@ -34,22 +34,23 @@ const Login = () => {
         { skipErrorHandler: true }
       );
 
-      if (!res.data?.is_mfa_verified && res.data?.is_multi_factor_auth_enabled) {
+      const isMfaEnabled = res.data?.is_multi_factor_auth_enabled;
+      const isMfaVerified = res.data?.is_mfa_verified;
+      const safeRedirect =
+        redirect && !avoid.includes(redirect) ? redirect : null;
+
+      if (isMfaEnabled && !isMfaVerified) {
         navigate(
-          `/mfa?mode=setup${redirect && !avoid.includes(redirect)
-            ? `&redirect=${redirect}`
-            : ""
-          }`
+          `/mfa?mode=setup${safeRedirect ? `&redirect=${safeRedirect}` : ""}`
         );
-      } else if (res.data?.is_mfa_verified) {
+      } else if (isMfaEnabled && isMfaVerified) {
         navigate(
-          `/mfa?mode=verify${redirect && !avoid.includes(redirect)
-            ? `&redirect=${redirect}`
-            : ""
-          }`
+          `/mfa?mode=verify${safeRedirect ? `&redirect=${safeRedirect}` : ""}`
         );
-      } else if (redirect) {
-        navigate(!avoid.includes(redirect) ? redirect : "/dashboard");
+      } else if (safeRedirect) {
+        navigate(safeRedirect);
+      } else {
+        navigate("/dashboard");
       }
     } catch (error) {
       setShowError(error?.response?.data?.msg || "Login failed");
