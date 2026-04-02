@@ -1504,7 +1504,9 @@ const SalesInput = () => {
                             label="Placement Date & Time"
                           >
                             <DatePicker
-                              placeholder="YYYY-MM-DD"
+                            showTime={{ defaultValue: dayjs() }}
+                              format="YYYY-MM-DD HH:mm:ss"
+                              placeholder="YYYY-MM-DD HH:mm:ss"
                               style={{ width: "100%" }}
                               disabled={isReadOnly}
                             />
