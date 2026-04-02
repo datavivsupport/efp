@@ -1504,7 +1504,9 @@ const SalesInput = () => {
                             label="Placement Date & Time"
                           >
                             <DatePicker
-                              placeholder="YYYY-MM-DD"
+                            showTime={{ defaultValue: dayjs() }}
+                              format="YYYY-MM-DD HH:mm:ss"
+                              placeholder="YYYY-MM-DD HH:mm:ss"
                               style={{ width: "100%" }}
                               disabled={isReadOnly}
                             />
@@ -1721,7 +1723,7 @@ const SalesInput = () => {
               </Button>
               <Button
                 icon={<Icon icon="mdi:content-save-edit" />}
-                type="default"
+                type="primary"
                 onClick={() => onFinish(form.getFieldsValue(), "draft")}
                 loading={loading}
               >

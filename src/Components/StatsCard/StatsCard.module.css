@@ -2,7 +2,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .card {
@@ -11,11 +11,11 @@
   -webkit-backdrop-filter: blur(8px);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  padding: 20px;
+  padding: 14px 12px;
   border: 1px solid rgba(229, 231, 235, 0.5);
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   box-sizing: border-box;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -54,14 +54,14 @@
 
 .textContainer {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  /* flex-direction: column; */
+  justify-content: space-between;
   flex: 1;
 }
 
 .label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -69,21 +69,21 @@
 }
 
 .number {
-  font-weight: 800;
-  font-size: 24px;
+  font-weight: 500;
+  font-size: 18px;
   color: #1f2937;
   margin: 0;
   line-height: 1;
 }
 
 .iconCircle {
-  width: 52px;
-  height: 52px;
+  width: 30px;
+  height: 30px;
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 16px;
   flex-shrink: 0;
   transition: transform 0.3s ease;
 }
