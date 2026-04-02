@@ -34,22 +34,12 @@ const Login = () => {
         { skipErrorHandler: true }
       );
 
-      const isMfaEnabled = res.data?.is_multi_factor_auth_enabled;
-      const isMfaVerified = res.data?.is_mfa_verified;
-      const safeRedirect =
-        redirect && !avoid.includes(redirect) ? redirect : null;
-
-      if (isMfaEnabled && !isMfaVerified) {
-        navigate(
-          `/mfa?mode=setup${safeRedirect ? `&redirect=${safeRedirect}` : ""}`
-        );
-      } else if (isMfaEnabled && isMfaVerified) {
-        navigate(
-          `/mfa?mode=verify${safeRedirect ? `&redirect=${safeRedirect}` : ""}`
-        );
-      } else if (safeRedirect) {
-        navigate(safeRedirect);
-      } else {
+      if (!res.data?.is_mfa_verified) {
+        navigate('/mfa?mode=setup')
+      }
+      else if (res.data?.is_mfa_verified){
+        navigate(`/mfa?mode=verify`)
+      }else {
         navigate("/dashboard");
       }
     } catch (error) {
