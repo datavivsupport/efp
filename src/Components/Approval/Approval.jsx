@@ -360,7 +360,7 @@ const Approval = () => {
     r.includes("UPLOADER")
   ) || isAdmin;
 
-  const currentStage = jobData?.current_stage || "1";
+  const currentStage = String(jobData?.current_stage || "1");
 
   // Creator check (PRD Section 3 & user request: creators can edit even after submit)
   const isCreator = jobData?.created_by_user === user?.id;
@@ -1392,7 +1392,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {(!isOthers || isMasterMode) && (
+          {(isMasterMode) && !(isSalesHOD && currentStage === "2") && (
             <Card
               className={Styles.card}
               bordered
