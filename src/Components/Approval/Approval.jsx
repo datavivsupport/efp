@@ -1946,7 +1946,7 @@ const Approval = () => {
                     </Button>
                     {(isHOD || isAdmin || isGM) && (
                       <Button
-                        danger
+                        type="primary"
                         onClick={() => handleAction("Rejected")}
                         icon={<Icon icon="mdi:close-circle" />}
                         loading={loading}
@@ -2007,7 +2007,7 @@ const Approval = () => {
                   </Button>
                   {(isHOD || isAdmin || isGM) && (
                     <Button
-                      danger
+                      type="primary"
                       onClick={() => handleAction("Rejected")}
                       icon={<Icon icon="mdi:close-circle" />}
                       loading={loading}
@@ -2038,7 +2038,7 @@ const Approval = () => {
                 )
               )}
 
-              <Button icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
+              <Button type="primary" icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
                 Reset Form
               </Button>
             </div>

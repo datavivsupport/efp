@@ -1723,7 +1723,7 @@ const SalesInput = () => {
               </Button>
               <Button
                 icon={<Icon icon="mdi:content-save-edit" />}
-                type="default"
+                type="primary"
                 onClick={() => onFinish(form.getFieldsValue(), "draft")}
                 loading={loading}
               >

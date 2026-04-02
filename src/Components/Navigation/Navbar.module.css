@@ -27,13 +27,13 @@
 
 /* Individual tab button */
 .navTab {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-radius: 7px;
   border: none;
   background: transparent;
   color: #6b7280; /* Gray text */
-  font-weight: 500;
-  font-size: 14px;
+  /* font-weight: 500; */
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
