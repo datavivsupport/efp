@@ -411,15 +411,18 @@ const Approval = () => {
   const isGlobalHODReadOnly = isHOD && !isAdmin && !isCreator;
   const baseLocked = isMasterMode || stage2.creatorLocked || isTerminal; // true = always locked regardless of role
 
+  // CNF work is done once load list is uploaded — lock everything for CNF after that
+  const isCNFDone = !isAdmin && isCNF && !!jobData?.is_cnf_loadlist_uploaded;
+
   const isSalesSectionLocked   = baseLocked || ((!isSalesExecutive && !isCreator && !isAdmin) || (currentStage !== "1" && currentStage !== "2" && currentStage !== "3" && !isAdmin) || isGlobalHODReadOnly);
-  const csBookingEditStage = isStage2 || ((isLiner || isExtended) && currentStage === "4");
+  const csBookingEditStage = isStage2 || (isLiner && currentStage === "4"); // Forwarding stage 4: booking is read-only for CS
   const isBookingSectionLocked = baseLocked || (!isAdmin && (!isCS || !csBookingEditStage));
-  const isCNFSectionLocked     = baseLocked || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
+  const isCNFSectionLocked     = baseLocked || isCNFDone || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
   const isAccountsOnlyFieldLocked     = baseLocked || ((!isAccountsTeam && !isAdmin) || (!isAccountsStage && !isAdmin));
   const isAccountsEditableFieldLocked = (isExtended && isAccountsStage) ? (!isAccountsTeam && !isAdmin) : isAccountsOnlyFieldLocked;
 
   const isCSUploadLocked       = baseLocked || (!isCS && !isAdmin);
-  const isCNFUploadLocked      = baseLocked || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
+  const isCNFUploadLocked      = baseLocked || isCNFDone || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
   const isAccountsUploadLocked = isMasterMode || isTerminal || (!isAccountsTeam && !isAdmin) || (currentStage < "5" && !isAdmin);
   const isRequirementSelectorLocked = (!isCS && !isAdmin && !isMasterMode) || isSalesHODLinerRestricted || (!isMasterMode && parseInt(currentStage) > 2 && !isAdmin);
 
@@ -452,8 +455,9 @@ const Approval = () => {
   const isROReq = isTrue(isROReqForm, jobData?.is_release_order_required);
   const releaseOrderRequirementMet =
     isROReq || (!isLiner && !isExtended) || isMasterMode;
+  const csStage4UploadLocked = isCS && !isAdmin && currentStage === "4"; // RO/BOC locked for CS at stage 4 (already uploaded at stage 2)
   const releaseOrderDisabled =
-    (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
+    csStage4UploadLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) {
       return isLiner && !isCNF ? "CNF is allowed to upload it" : null;
@@ -503,9 +507,9 @@ const Approval = () => {
   // Unified 7-Stage Workflow canApprove Logic
   const canApprove = hasAllowedRole && (isAdmin || (
     (currentStage === "2" && (isSalesHOD || stage2.isThisJobsHOD || isCS || isCNF)) ||
-    (currentStage === "3" && (isLiner || isCrossTrade ? isCNFHOD : isCSHOD)) || // CNF HOD for CT/FWD, CSHOD for others? 
-    // Wait! User said CT/FWD Stage 3 is CNF HOD.
-    (isExtended && currentStage === "3" && isCNFHOD) ||
+    (isForwarding && currentStage === "3" && isCNF && !isCNFDone) ||  // CNF team acts at stage 3 for Forwarding (until load list uploaded)
+    (currentStage === "3" && !isForwarding && (isLiner || isCrossTrade ? isCNFHOD : isCSHOD)) ||
+    (isExtended && !isForwarding && currentStage === "3" && isCNFHOD) ||
     (isExtended && currentStage === "4" && isCS) ||
     (isExtended && currentStage === "5" && isAccountsTeam) ||
     ((isLiner && isCNFStage) && (isCNF || (isLiner && isSalesHOD))) ||
@@ -859,7 +863,18 @@ const Approval = () => {
           }
         }
 
-        if (needsLpoInvoice && (!lpoFiles.length || !invoiceFiles.length)) {
+        if (needsLpoInvoice && isCS) {
+          const missingFinancial = [];
+          if (!lpoFiles.length) missingFinancial.push("LPO");
+          if (!invoiceFiles.length) missingFinancial.push("Invoice");
+          if (!values.cs_hod) missingFinancial.push("CS HOD");
+          if (missingFinancial.length) {
+            message.error(`Required at this stage: ${missingFinancial.join(", ")}`);
+            setLoading(false);
+            actionThrottleRef.current = false;
+            return;
+          }
+        } else if (needsLpoInvoice && (!lpoFiles.length || !invoiceFiles.length)) {
           message.error("LPO and Invoice are required for Stage 4 and Stage 5");
           setLoading(false);
           return;
@@ -870,6 +885,19 @@ const Approval = () => {
             message.error("AFSYS Job No. is required for Stage 3");
             setLoading(false);
             return;
+          }
+          if (stage === '3' && isCNF) {
+            const missingCNF = [];
+            if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
+            if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
+            if (!preAlertFiles.length) missingCNF.push("Pre-Alert");
+            if (!loadListFiles.length) missingCNF.push("Load List");
+            if (missingCNF.length) {
+              message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
+              setLoading(false);
+              actionThrottleRef.current = false;
+              return;
+            }
           }
           /* 2026-03-25: Bank Slip requirement removed per PRD refactoring */
 
@@ -1343,7 +1371,7 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code">
-                      <Input placeholder="Enter Code" disabled={isBookingSectionLocked} />
+                      <Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isCNF && isForwarding && currentStage === "3" && !isCNFDone)} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
@@ -1584,7 +1612,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={isCNFUploadLocked && !isCS}
+                          disabled={csStage4UploadLocked || (isCNFUploadLocked && !isCS)}
                           restrictionMessage={
                             isCNFUploadLocked && !isCS && isLiner && !isCNF
                               ? "CNF is allowd to uplaod it"
@@ -1784,12 +1812,12 @@ const Approval = () => {
                   {(isPaymentReq || isLiner) && (
                     <>
                       <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="LPO">
+                        <Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
                           <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="INVOICE">
+                        <Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
                           <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
@@ -1803,7 +1831,7 @@ const Approval = () => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod">
+                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
                           <Select
                             placeholder="Select CS HOD"
                             allowClear
@@ -1973,7 +2001,7 @@ const Approval = () => {
                       style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
                     >
                       {currentStage === "2" ? (stage2.isThisJobsHOD ? "Approve (Sales HOD)" : isCS ? "Verify & Config (CS)" : "Approve / Verify") :
-                        currentStage === "3" ? (isForwarding ? "Approve (CS HOD)" : "Approve CNF Docs") :
+                        currentStage === "3" ? (isForwarding ? "Submit CNF Update" : "Approve CNF Docs") :
                           currentStage === "4" ? "Approve CS Docs" :
                             currentStage === "5" ? (isForwarding ? "Approve CNF Docs" : "Approve (CS HOD)") :
                               currentStage === "6" ? "Approve (Accounts)" :
