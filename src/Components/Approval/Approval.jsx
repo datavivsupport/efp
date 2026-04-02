@@ -362,8 +362,9 @@ const Approval = () => {
 
   const currentStage = String(jobData?.current_stage || "1");
 
-  // Creator check (PRD Section 3 & user request: creators can edit even after submit)
-  const isCreator = jobData?.created_by_user === user?.id;
+  // Creator check — use created_by_user from jobData or fall back to "Sales Created" history entry
+  const creatorUserId = jobData?.created_by_user || approvalHistory.find(h => h.stage === "Sales Created")?.updated_by_user;
+  const isCreator = !!(creatorUserId && creatorUserId === user?.id);
 
   const jobTypeUpper = (jobData?.job_type || "").toUpperCase();
   const isLiner = jobTypeUpper.includes("LINER");
@@ -384,40 +385,43 @@ const Approval = () => {
   const isCSHODStage = (isLiner || isExtended) ? currentStage === "5" : false;
   const isStage2 = currentStage === "2";
   const isStage3 = currentStage === "3";
-  const showDocumentUploads = !(isStage2 || isStage3) || isMasterMode||isCNF||isForwardingStage5; // Hide document uploads in Sales HOD and CS stages, show in Master Mode
+  const userFullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim();
+
+  // ─── Stage 2 Role Gates (edit this block to change stage 2 access rules) ───
+  const stage2 = {
+    isThisJobsHOD : isStage2 && !jobData?.is_hod_approved && jobData?.sales_hod?.toLowerCase().trim() === userFullName?.toLowerCase().trim(),  // current user is the designated HOD for this job (hidden once approved)
+    csCanAct      : isStage2 && isCS && jobData?.is_hod_approved && !jobData?.is_cs_updated, // HOD approved + CS hasn't submitted yet
+    creatorLocked : isCreator && jobData?.status !== "draft",           // creator sees read-only after submitting
+  };
+  // Approve/Reject buttons hidden when user has no action to take at stage 2
+  const isStage2ButtonsHidden = isStage2 && !isAdmin && (
+    (isCS  && !stage2.csCanAct) ||
+    (!isCS && !stage2.isThisJobsHOD)
+  );
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const showDocumentUploads = !(isStage2 || isStage3) || isMasterMode || isCNF || isForwardingStage5;
+  const showROBOCForCS = isStage2 && isCS && !isAdmin;
   const needsLpoInvoice = currentStage === "4" || currentStage === "4B" || currentStage === "5";
 
   // Sales HOD Restriction for Liner (Attachments & Comments only)
   const isSalesHODLinerRestricted = isLiner && isSalesHOD && !isAdmin;
 
-  // PRD v4.0 Section Locks (Strict Separation: Executive = Edit, HOD = Read-Only)
+  // PRD v4.0 Section Locks — all share the same base guards for clarity
   const isGlobalHODReadOnly = isHOD && !isAdmin && !isCreator;
+  const baseLocked = isMasterMode || stage2.creatorLocked || isTerminal; // true = always locked regardless of role
 
-  // 1. Sales Section: Locked for others, open for Sales in early stages
-  const isSalesSectionLocked = isMasterMode ? true : (isTerminal || (!isSalesExecutive && !isCreator && !isAdmin) || (currentStage !== "1" && currentStage !== "2" && currentStage !== "3" && !isAdmin) || isGlobalHODReadOnly);
-  
-  // 2. Booking Section: Strictly owned by CS. ALWAYS editable for CS in any non-terminal stage.
-  const isBookingSectionLocked = isMasterMode ? true : (isTerminal || (!isCS && !isAdmin));
-  
-  // 3. CNF Section: Strictly owned by CNF. Restricted to CNF Stage (3 or 2 for Liner).
-  const isCNFSectionLocked = isMasterMode ? true : (isTerminal || (!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && currentStage === "2") && !isAdmin));
-  
-  // 4. Accounts Section: Strictly owned by Accounts. Restricted to Accounts Stage (5 or 6).
-  const isAccountsOnlyFieldLocked = isMasterMode ? true : (isTerminal || (!isAccountsTeam && !isAdmin) || (!isAccountsStage && !isAdmin));
-  
-  // CT/FWD Stage 5 Accounts Field Gating: Only Carrier 2, Inv Date, Remarks, Bank Slip editable
+  const isSalesSectionLocked   = baseLocked || ((!isSalesExecutive && !isCreator && !isAdmin) || (currentStage !== "1" && currentStage !== "2" && currentStage !== "3" && !isAdmin) || isGlobalHODReadOnly);
+  const csBookingEditStage = isStage2 || ((isLiner || isExtended) && currentStage === "4");
+  const isBookingSectionLocked = baseLocked || (!isAdmin && (!isCS || !csBookingEditStage));
+  const isCNFSectionLocked     = baseLocked || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
+  const isAccountsOnlyFieldLocked     = baseLocked || ((!isAccountsTeam && !isAdmin) || (!isAccountsStage && !isAdmin));
   const isAccountsEditableFieldLocked = (isExtended && isAccountsStage) ? (!isAccountsTeam && !isAdmin) : isAccountsOnlyFieldLocked;
 
-  // Specific Upload Locks
-  const isCSUploadLocked = isMasterMode ? true : (isTerminal || (!isCS && !isAdmin));
-  
-  const isCNFUploadLocked = isMasterMode ? true : (isTerminal || (!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && currentStage === "2") && !isAdmin));
-  
-  const isAccountsUploadLocked = isMasterMode ? true : (isTerminal || (!isAccountsTeam && !isAdmin) || (currentStage < "5" && !isAdmin));
-
-  const isRequirementSelectorLocked = (!isCS && !isAdmin && !isMasterMode) ||
-    isSalesHODLinerRestricted ||
-    (!isMasterMode && parseInt(currentStage) > 2 && !isAdmin);
+  const isCSUploadLocked       = baseLocked || (!isCS && !isAdmin);
+  const isCNFUploadLocked      = baseLocked || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
+  const isAccountsUploadLocked = isMasterMode || isTerminal || (!isAccountsTeam && !isAdmin) || (currentStage < "5" && !isAdmin);
+  const isRequirementSelectorLocked = (!isCS && !isAdmin && !isMasterMode) || isSalesHODLinerRestricted || (!isMasterMode && parseInt(currentStage) > 2 && !isAdmin);
 
   // Reactive visibility using Form.useWatch (handles both initial values and live changes)
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
@@ -498,7 +502,7 @@ const Approval = () => {
   // Stage 1: Sales (Draft) -> Stage 2: Sales HOD -> Stage 3: CS -> Stage 4: CNF -> Stage 5: CS -> Stage 6: CS HOD -> Stage 7: Accounts
   // Unified 7-Stage Workflow canApprove Logic
   const canApprove = hasAllowedRole && (isAdmin || (
-    (currentStage === "2" && (isSalesHOD || isCS || isCNF)) ||
+    (currentStage === "2" && (isSalesHOD || stage2.isThisJobsHOD || isCS || isCNF)) ||
     (currentStage === "3" && (isLiner || isCrossTrade ? isCNFHOD : isCSHOD)) || // CNF HOD for CT/FWD, CSHOD for others? 
     // Wait! User said CT/FWD Stage 3 is CNF HOD.
     (isExtended && currentStage === "3" && isCNFHOD) ||
@@ -830,6 +834,31 @@ const Approval = () => {
       if (actionType === "Approved") {
         const stage = jobData?.current_stage || "1";
 
+        // CS at stage 2: booking details + RO + BOC are compulsory
+        if (stage === "2" && isCS) {
+          const missingBooking = [];
+          if (!values.afsys_job_no) missingBooking.push("AFSYS Job No.");
+          if (!values.booking_vessel) missingBooking.push("Booking Vessel");
+          if (!values.booking_voyage) missingBooking.push("Booking Voyage");
+          if (!values.vessel_eta) missingBooking.push("Vessel ETA Date");
+          if (!values.vsl_initial_eta) missingBooking.push("Initial ETA");
+          if (!values.vsl_latest_eta) missingBooking.push("Latest ETA");
+          if (!values.vsl_etd) missingBooking.push("ETD");
+          if (!values.pod_eta) missingBooking.push("POD ETA");
+          if (!values.booking_ref_no) missingBooking.push("Booking Reference No.");
+          if (!values.si_cut_off_date) missingBooking.push("Load List/SI Cut Off Date");
+          if (!values.si_cut_off_time) missingBooking.push("Load List/SI Cut Off Time");
+          if (!values.booking_remarks) missingBooking.push("Booking Remarks");
+          if (!releaseOrderFiles.length) missingBooking.push("Release Order");
+          if (!bocFiles.length) missingBooking.push("BOC Attachment");
+          if (missingBooking.length) {
+            message.error(`Please fill/upload required fields: ${missingBooking.join(", ")}`);
+            setLoading(false);
+            actionThrottleRef.current = false;
+            return;
+          }
+        }
+
         if (needsLpoInvoice && (!lpoFiles.length || !invoiceFiles.length)) {
           message.error("LPO and Invoice are required for Stage 4 and Stage 5");
           setLoading(false);
@@ -988,6 +1017,7 @@ const Approval = () => {
           layout="vertical"
           form={form}
           onFinish={onFinish}
+          disabled={isStage2ButtonsHidden || (isCreator && jobData?.status !== "draft")}
           initialValues={{
             containerRows: [{}],
             placementRows: [{}]
@@ -1392,7 +1422,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {(isMasterMode) && !(isSalesHOD && currentStage === "2") && (
+          {!stage2.isThisJobsHOD && (
             <Card
               className={Styles.card}
               bordered
@@ -1408,50 +1438,50 @@ const Approval = () => {
               <div style={{ display: open.booking ? "block" : "none" }}>
                 <Row gutter={16}>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
 
                   {/* PRD v3.2 Relocated ETA Fields */}
                   <Col xs={24} md={6}>
-                    <Form.Item label="Initial ETA" name="vsl_initial_eta" className={Styles.formLabel}>
+                    <Form.Item label="Initial ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel}>
+                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel}>
+                    <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel}>
+                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date"><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time"><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time" rules={[{ required: isStage2 && isCS, message: "Required" }]}><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks" rules={[{ required: isStage2 && isCS, message: "Required" }]}><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
 
                   {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
@@ -1522,51 +1552,56 @@ const Approval = () => {
                   )}
                 </Row>
 
+                {(showDocumentUploads || showROBOCForCS) && (
+                  <Row gutter={16}>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Release Order(s)">
+                        <DocUploadField
+                          label="Release Order"
+                          files={releaseOrderFiles}
+                          setFiles={setReleaseOrderFiles}
+                          color="blue"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="booking"
+                          docType="Release Order"
+                          disabled={releaseOrderDisabled}
+                          restrictionMessage={releaseOrderRestrictionMessage}
+                          isMasterMode={isMasterMode}
+                          user={user}
+                          isAdmin={isAdmin}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="BOC Attachment">
+                        <DocUploadField
+                          label="BOC"
+                          files={bocFiles}
+                          setFiles={setBocFiles}
+                          color="volcano"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="booking"
+                          docType="BOC"
+                          disabled={isCNFUploadLocked && !isCS}
+                          restrictionMessage={
+                            isCNFUploadLocked && !isCS && isLiner && !isCNF
+                              ? "CNF is allowd to uplaod it"
+                              : null
+                          }
+                          isMasterMode={isMasterMode}
+                          user={user}
+                          isAdmin={isAdmin}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                )}
+
                 {showDocumentUploads && (
                   <>
                     <Row gutter={16}>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Release Order(s)">
-                          <DocUploadField
-                            label="Release Order"
-                            files={releaseOrderFiles}
-                            setFiles={setReleaseOrderFiles}
-                            color="blue"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="booking"
-                            docType="Release Order"
-                            disabled={releaseOrderDisabled}
-                            restrictionMessage={releaseOrderRestrictionMessage}
-                            isMasterMode={isMasterMode}
-                            user={user}
-                            isAdmin={isAdmin}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="BOC Attachment">
-                          <DocUploadField
-                            label="BOC"
-                            files={bocFiles}
-                            setFiles={setBocFiles}
-                            color="volcano"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="booking"
-                            docType="BOC"
-                            disabled={isCNFUploadLocked && !isCS}
-                            restrictionMessage={
-                              isCNFUploadLocked && !isCS && isLiner && !isCNF
-                                ? "CNF is allowd to uplaod it"
-                                : null
-                            }
-                            isMasterMode={isMasterMode}
-                            user={user}
-                            isAdmin={isAdmin}
-                          />
-                        </Form.Item>
-                      </Col>
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
                           <DocUploadField
@@ -1929,7 +1964,7 @@ const Approval = () => {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    <Button
+                    {!isStage2ButtonsHidden && <Button
                       type="primary"
                       onClick={() => handleAction("Approved")}
                       icon={<Icon icon="mdi:check-circle" />}
@@ -1937,14 +1972,14 @@ const Approval = () => {
                       disabled={isHalted}
                       style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
                     >
-                      {currentStage === "2" ? (isSalesHOD ? "Approve (Sales HOD)" : "Verify & Config (CS)") :
+                      {currentStage === "2" ? (stage2.isThisJobsHOD ? "Approve (Sales HOD)" : isCS ? "Verify & Config (CS)" : "Approve / Verify") :
                         currentStage === "3" ? (isForwarding ? "Approve (CS HOD)" : "Approve CNF Docs") :
                           currentStage === "4" ? "Approve CS Docs" :
                             currentStage === "5" ? (isForwarding ? "Approve CNF Docs" : "Approve (CS HOD)") :
                               currentStage === "6" ? "Approve (Accounts)" :
                                 currentStage === "7" ? "Close Job" : "Approve / Verify"}
-                    </Button>
-                    {(isHOD || isAdmin || isGM) && (
+                    </Button>}
+                    {(isHOD || isAdmin || isGM) && !isStage2ButtonsHidden && (
                       <Button
                         danger
                         onClick={() => handleAction("Rejected")}
@@ -1988,59 +2023,28 @@ const Approval = () => {
                 marginBottom: "1rem",
               }}
             >
-              {canApprove ? (
+              {!canApprove && (!isGM || (isOthers && jobData?.status === 'draft')) && !isMasterMode && (!isCS || csBookingEditStage) && (
                 <>
-                  <Button
-                    type="primary"
-                    onClick={() => handleAction("Approved")}
-                    icon={<Icon icon="mdi:check-circle" />}
-                    loading={loading}
-                    disabled={isHalted}
-                    style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
-                  >
-                    {currentStage === "2" ? (isSalesHOD ? "Approve (Sales HOD)" : (isLiner && isCNF ? "Verify Docs (CNF)" : "Verify & Config (CS)")) :
-                      currentStage === "3" ? "Approve CNF Docs" :
-                        currentStage === "4" ? "Approve CS Docs" :
-                          currentStage === "5" ? "Approve (CS HOD)" :
-                            currentStage === "6" ? "Approve (Accounts)" :
-                              currentStage === "7" ? "Close Job" : "Approve / Verify"}
+                  <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
+                    {isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3) ? "Submit CS Update" :
+                      isLiner && isCNF && parseInt(currentStage) === 2 ? "Submit CNF Update" : "Submit"}
                   </Button>
-                  {(isHOD || isAdmin || isGM) && (
+                  {jobData?.status === "draft" && (
                     <Button
-                      danger
-                      onClick={() => handleAction("Rejected")}
-                      icon={<Icon icon="mdi:close-circle" />}
-                      loading={loading}
-                      style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
+                      type="primary"
+                      style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                      icon={<Icon icon="mdi:send" />}
+                      onClick={() => handleAction("Submit")}
                     >
-                      Reject
+                      Submit Job
                     </Button>
                   )}
                 </>
-              ) : (
-                (!isGM || (isOthers && jobData?.status === 'draft')) && !isMasterMode && (
-                  <>
-                    <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
-                      {isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3) ? "Submit CS Update" :
-                        isLiner && isCNF && parseInt(currentStage) === 2 ? "Submit CNF Update" : "Submit"}
-                    </Button>
-                    {jobData?.status === "draft" && (
-                      <Button
-                        type="primary"
-                        style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-                        icon={<Icon icon="mdi:send" />}
-                        onClick={() => handleAction("Submit")}
-                      >
-                        Submit Job
-                      </Button>
-                    )}
-                  </>
-                )
               )}
 
-              <Button icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
+              {!id && <Button icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
                 Reset Form
-              </Button>
+              </Button>}
             </div>
           )}
           {/* ════════ PREVIEW MODAL ════════ */}
