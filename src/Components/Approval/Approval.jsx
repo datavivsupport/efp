@@ -409,7 +409,7 @@ const Approval = () => {
 
   // PRD v4.0 Section Locks — all share the same base guards for clarity
   const isGlobalHODReadOnly = isHOD && !isAdmin && !isCreator;
-  const baseLocked = isMasterMode || stage2.creatorLocked || isTerminal; // true = always locked regardless of role
+  const baseLocked = isMasterMode || stage2.creatorLocked || isTerminal || (!isAdmin && isForwarding && currentStage === "5"); // stage 5 Forwarding = CS HOD approval only, all fields read-only
 
   // CNF work is done once load list is uploaded — lock everything for CNF after that
   const isCNFDone = !isAdmin && isCNF && !!jobData?.is_cnf_loadlist_uploaded;
@@ -511,7 +511,8 @@ const Approval = () => {
     (currentStage === "3" && !isForwarding && (isLiner || isCrossTrade ? isCNFHOD : isCSHOD)) ||
     (isExtended && !isForwarding && currentStage === "3" && isCNFHOD) ||
     (isExtended && currentStage === "4" && isCS) ||
-    (isExtended && currentStage === "5" && isAccountsTeam) ||
+    (isForwarding && currentStage === "5" && isCSHOD) ||  // CS HOD approves at stage 5 for Forwarding
+    (isExtended && !isForwarding && currentStage === "5" && isAccountsTeam) ||
     ((isLiner && isCNFStage) && (isCNF || (isLiner && isSalesHOD))) ||
     ((isLiner && currentStage === "4") && isCS) ||
     ((isLiner && isCSHODStage) && isCSHOD) ||
@@ -2003,7 +2004,7 @@ const Approval = () => {
                       {currentStage === "2" ? (stage2.isThisJobsHOD ? "Approve (Sales HOD)" : isCS ? "Verify & Config (CS)" : "Approve / Verify") :
                         currentStage === "3" ? (isForwarding ? "Submit CNF Update" : "Approve CNF Docs") :
                           currentStage === "4" ? "Approve CS Docs" :
-                            currentStage === "5" ? (isForwarding ? "Approve CNF Docs" : "Approve (CS HOD)") :
+                            currentStage === "5" ? (isForwarding ? "Approve (CS HOD)" : "Approve (CS HOD)") :
                               currentStage === "6" ? "Approve (Accounts)" :
                                 currentStage === "7" ? "Close Job" : "Approve / Verify"}
                     </Button>}
