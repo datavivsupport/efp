@@ -368,7 +368,7 @@ const ApprovalDashboard = () => {
             >
               View
             </Button>
-            {canAct && (
+            {/* {canAct && (
               <>
                 <Button
                   type="primary"
@@ -396,7 +396,7 @@ const ApprovalDashboard = () => {
                   Reject
                 </Button>
               </>
-            )}
+            )} */}
             {record.user_has_acted && !isTerminal && (
               <Tag color="blue" style={{ margin: 0 }}>Already Reviewed</Tag>
             )}
