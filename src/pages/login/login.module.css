@@ -320,6 +320,26 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.buttonnew4 {
+  height: 45px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: none;
+  background-color: white;
+  color: #00aea6;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 15px;
+  width: 100%;
+}
+
+.buttonnew4:hover {
+  background: linear-gradient(to right, #003A75, #19D0C6);
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
 
 /* Responsive Design */
 @media (max-width: 1024px) {
