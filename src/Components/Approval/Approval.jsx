@@ -381,7 +381,7 @@ const Approval = () => {
   const isForwardingStage5 = isForwarding && currentStage === '5';
 
   // Unified Stage Sequence (Stage 3=CNF, Stage 5=CSHOD Approval, Stage 6=Accounts)
-  const isCNFStage = (isLiner || isExtended) ? currentStage === "3" : false;
+  const isCNFStage = (isLiner || isExtended) ? currentStage === "3" : (isForwarding ? currentStage === "3" : false);
   const isCSHODStage = (isLiner || isExtended) ? currentStage === "5" : false;
   const isStage2 = currentStage === "2";
   const isStage3 = currentStage === "3";
@@ -390,7 +390,7 @@ const Approval = () => {
   // ─── Stage 2 Role Gates (edit this block to change stage 2 access rules) ───
   const stage2 = {
     isThisJobsHOD : isStage2 && !jobData?.is_hod_approved && jobData?.sales_hod?.toLowerCase().trim() === userFullName?.toLowerCase().trim(),  // current user is the designated HOD for this job (hidden once approved)
-    csCanAct      : isStage2 && isCS && jobData?.is_hod_approved && !jobData?.is_cs_updated, // HOD approved + CS hasn't submitted yet
+    csCanAct      : isStage2 && isCS, // HOD approved, CS can act regardless of is_cs_updated status
     creatorLocked : isCreator && jobData?.status !== "draft",           // creator sees read-only after submitting
   };
   // Approve/Reject buttons hidden when user has no action to take at stage 2
@@ -400,7 +400,7 @@ const Approval = () => {
   );
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const showDocumentUploads = ((!(isStage2 || isStage3) || isMasterMode || isForwardingStage5) && !isCNF) || (isMasterMode && isCNF);
+  const showDocumentUploads = ((!(isStage2 || isStage3) || isMasterMode || isForwardingStage5) && !isCNF) || (isMasterMode && isCNF) || (isCNF && isForwarding && currentStage === "3");
   const showROBOCForCS = isStage2 && isCS && !isAdmin;
   const needsLpoInvoice = currentStage === "4" || currentStage === "4B" || currentStage === "5";
 
@@ -839,7 +839,7 @@ const Approval = () => {
       if (actionType === "Approved") {
         const stage = jobData?.current_stage || "1";
 
-        // CS at stage 2: booking details + RO + BOC are compulsory
+        // CS at stage 2: booking details + RO are compulsory (BOC is optional)
         if (stage === "2" && isCS) {
           const missingBooking = [];
           if (!values.afsys_job_no) missingBooking.push("AFSYS Job No.");
@@ -855,7 +855,6 @@ const Approval = () => {
           if (!values.si_cut_off_time) missingBooking.push("Load List/SI Cut Off Time");
           if (!values.booking_remarks) missingBooking.push("Booking Remarks");
           if (!releaseOrderFiles.length) missingBooking.push("Release Order");
-          if (!bocFiles.length) missingBooking.push("BOC Attachment");
           if (missingBooking.length) {
             message.error(`Please fill/upload required fields: ${missingBooking.join(", ")}`);
             setLoading(false);
@@ -892,6 +891,19 @@ const Approval = () => {
             if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
             if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
             if (!loadListFiles.length) missingCNF.push("Load List");
+            if (missingCNF.length) {
+              message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
+              setLoading(false);
+              actionThrottleRef.current = false;
+              return;
+            }
+          }
+          if (stage === '4' && isCNF) {
+            const missingCNF = [];
+            if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
+            if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
+            if (!loadListFiles.length) missingCNF.push("Load List");
+            if (!edFiles.length) missingCNF.push("ED");
             if (missingCNF.length) {
               message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
               setLoading(false);
@@ -1450,7 +1462,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!stage2.isThisJobsHOD && (
+          {!stage2.isThisJobsHOD && !(currentStage === "4" && isCNF) && (
             <Card
               className={Styles.card}
               bordered
@@ -1660,11 +1672,11 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Haulage Note"
-                            disabled={isCNFUploadLocked || !haulierNoteEnabled}
+                            disabled={isCNFUploadLocked || (!haulierNoteEnabled && currentStage !== "4")}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
-                                : !haulierNoteEnabled
+                                : !haulierNoteEnabled && currentStage !== "4"
                                 ? "Haulier Note uploading is disabled until the requirement is turned on."
                                 : isLiner && !isCNF
                                 ? "CNF is allowd to uplaod it"
@@ -1679,16 +1691,19 @@ const Approval = () => {
                     </Row>
                     <Row gutter={16}>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Pre-Alert">
+                        <Form.Item 
+                          className={Styles.formLabel} 
+                          label="ED"
+                        >
                           <DocUploadField
-                            label="Pre-Alert"
-                            files={preAlertFiles}
-                            setFiles={setPreAlertFiles}
-                            color="cyan"
+                            label="ED"
+                            files={edFiles}
+                            setFiles={setEdFiles}
+                            color="geekblue"
                             onPreview={openPreview}
                             salesInputId={id}
-                            category="booking"
-                            docType="Pre-Alert"
+                            category="financial"
+                            docType="ED"
                             disabled={isCNFUploadLocked}
                             user={user}
                             isAdmin={isAdmin}
@@ -1697,7 +1712,11 @@ const Approval = () => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Load List">
+                        <Form.Item 
+                          className={Styles.formLabel} 
+                          label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                          rules={currentStage === "4" ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
+                        >
                           <DocUploadField
                             label="Load List"
                             files={loadListFiles}
@@ -1707,11 +1726,11 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Load List"
-                            disabled={!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked}
+                            disabled={currentStage === "4" ? (isCNFUploadLocked || !jobData?.is_hod_approved) : (!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked)}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
-                                : !isLLReq
+                                : !isLLReq && currentStage !== "4"
                                 ? "Load List upload is disabled until the requirement is turned on."
                                 : isLiner && jobData?.is_hod_approved && !isCNF
                                 ? "CNF is allowd to uplaod it"
@@ -1794,7 +1813,7 @@ const Approval = () => {
 
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+          {!isCNF && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
@@ -1853,8 +1872,22 @@ const Approval = () => {
                   )}
                   {(documentationFlag || isLiner || isForwarding || isCrossTrade) && (
                     <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="ED">
-                        <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="financial" docType="ED" disabled={isCSUploadLocked} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                      <Form.Item className={Styles.formLabel} label="Pre-Alert">
+                        <DocUploadField
+                          label="Pre-Alert"
+                          files={preAlertFiles}
+                          setFiles={setPreAlertFiles}
+                          color="cyan"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="booking"
+                          docType="Pre-Alert"
+                          disabled={isCSUploadLocked}
+                          restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null}
+                          user={user}
+                          isAdmin={isAdmin}
+                          isMasterMode={isMasterMode}
+                        />
                       </Form.Item>
                     </Col>
                   )}
