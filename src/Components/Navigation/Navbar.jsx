@@ -1,15 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Badge,
   Button,
   Drawer,
   Modal,
   Popover,
   Space,
   Tooltip,
-  List,
-  Empty,
-  Spin,
   message,
 } from "antd";
 import { useNavigate, useLocation } from "react-router";
@@ -28,56 +24,17 @@ const Navigation = () => {
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
   const popoverRef = useRef(null);
   Chart.register(...registerables);
 
-  // Fetch notifications on mount and periodically
-  const fetchNotifications = async () => {
-    try {
-      setLoadingNotifications(true);
-      const res = await apiClient.get("/accounts/notifications/");
-      const data = res.data?.results ?? res.data ?? [];
-      setNotifications(data.slice(0, 10)); // Show last 10
-      const unread = data.filter(n => !n.is_read).length;
-      setNotificationCount(unread);
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
 
-  const markAsRead = async (notificationId) => {
-    try {
-      await apiClient.patch(`/accounts/notifications/${notificationId}/`, { is_read: true });
-      setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
-      setNotificationCount(prev => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error("Failed to mark notification as read:", err);
-    }
-  };
 
-  const handleNotificationClick = (notification) => {
-    if (!notification.is_read) {
-      markAsRead(notification.id);
-    }
-    // Navigate to the relevant page if data contains sales_input_id
-    if (notification.data?.sales_input_id) {
-      navigate(`/approval/${notification.data.sales_input_id}`);
-      setNotificationPopoverOpen(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchNotifications();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchNotifications, 120000);
-    return () => clearInterval(interval);
-  }, []);
+
+
+
+
 
   const tabs = [
     { key: "/dashboard", label: "Dashboard" },
@@ -164,68 +121,7 @@ const Navigation = () => {
 
         {/* Right side */}
         <div className="flex items-center">
-          {/* Notification */}
-          <div className="mr-4">
-            <Popover
-              content={
-                <div style={{ width: 320, maxHeight: 400, overflowY: "auto" }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, padding: "8px 12px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>Notifications</span>
-                    {notificationCount > 0 && (
-                      <Badge count={notificationCount} size="small" style={{ backgroundColor: "#1aa2b7" }} />
-                    )}
-                  </div>
-                  {loadingNotifications ? (
-                    <div style={{ padding: 20, textAlign: "center" }}><Spin size="small" /></div>
-                  ) : notifications.length === 0 ? (
-                    <Empty description="No notifications" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: 20 }} />
-                  ) : (
-                    <List
-                      size="small"
-                      dataSource={notifications}
-                      renderItem={(item) => (
-                        <List.Item
-                          onClick={() => handleNotificationClick(item)}
-                          style={{
-                            cursor: "pointer",
-                            padding: "10px 12px",
-                            backgroundColor: item.is_read ? "#fff" : "#f6ffed",
-                            borderBottom: "1px solid #f0f0f0"
-                          }}
-                        >
-                          <List.Item.Meta
-                            title={<span style={{ fontSize: 13, fontWeight: item.is_read ? 400 : 600 }}>{item.title}</span>}
-                            description={<span style={{ fontSize: 12, color: "#666" }}>{item.body}</span>}
-                          />
-                        </List.Item>
-                      )}
-                    />
-                  )}
-                </div>
-              }
-              trigger="click"
-              placement="bottomRight"
-              open={notificationPopoverOpen}
-              onOpenChange={(open) => {
-                setNotificationPopoverOpen(open);
-                if (open) fetchNotifications();
-              }}
-            >
-              <Badge
-                count={notificationCount}
-                size="medium"
-                style={{
-                  background: "linear-gradient(to right, #003a75, #19d0c6)",
-                  color: "#fff",
-                  fontSize: "10px",
-                }}
-              >
-                <button className={styles.buttonnew}>
-                  <Icon icon="mdi:bell-outline" width="22" height="22" />
-                </button>
-              </Badge>
-            </Popover>
-          </div>
+
 
           {/* User + Logout */}
           <div

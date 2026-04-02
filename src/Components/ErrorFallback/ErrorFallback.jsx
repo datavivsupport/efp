@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router';
 import Styles from './ErrorFallback.module.css';
 import { Icon } from "@iconify/react";
-import { cancelAllRequests, startLogout } from '../../api/apiclient';
-// import apiClient, { cancelAllRequests, finishLogout, startLogout } from "../api/apiClient";
+import apiClient, { cancelAllRequests, finishLogout, startLogout } from '../../api/apiclient';
 
 const ErrorFallback = ({ error, resetErrorBoundary }) => {
   const navigate = useNavigate();
@@ -18,8 +17,8 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => {
       // localStorage.removeItem("draft_modal_shown");
       // localStorage.removeItem("allocation_modal_shown");
       localStorage.removeItem("open_tabs");
+      finishLogout();
       navigate("/login");
-      // finishLogout();
     }
   };
 

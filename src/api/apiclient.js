@@ -184,9 +184,8 @@ apiClient.interceptors.response.use(
     else if (status === 403) {
       showError(
         "Access Restricted",
-        "You don't have permission to view this page."
+        "You don't have permission to perform this action or view this page."
       );
-      window.location.href = "/unauthorized";
     }
     else if (status === 429) {
       showError(
