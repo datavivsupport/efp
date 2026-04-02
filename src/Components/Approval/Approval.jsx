@@ -891,7 +891,6 @@ const Approval = () => {
             const missingCNF = [];
             if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
             if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
-            if (!preAlertFiles.length) missingCNF.push("Pre-Alert");
             if (!loadListFiles.length) missingCNF.push("Load List");
             if (missingCNF.length) {
               message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
