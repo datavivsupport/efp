@@ -140,6 +140,7 @@ html, body, #root {
 .ant-select-selection-placeholder,
 .ant-picker-input input::placeholder,
 .ant-input-number-input::placeholder,
+.ant-select-placeholder,
 textarea.ant-input::placeholder {
-  color: rgba(0, 0, 0, 0.85) !important;
+  color: rgba(168, 167, 167, 0.85) !important;
 }

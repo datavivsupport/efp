@@ -1,9 +1,10 @@
 .ant-table-wrapper .ant-table-thead>tr>th {
   background-color: #1b9cac !important;
   color: #ffffff;
-  text-align: center !important;
+  // text-align: center !important;
   font-weight: 600;
   font-size: 15px;
+  padding: 10px;
   border-bottom: none !important;
 }
 
@@ -11,7 +12,8 @@
 .ant-table-wrapper .ant-table-tbody>tr>td {
   color: #1f2937 !important;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 14px;
+  padding: 10px;
   border-bottom: 1px solid #f1f5f9;
 }
 

@@ -279,6 +279,7 @@ const ApprovalDashboard = () => {
       title: "Customer Name",
       dataIndex: "customer_name",
       key: "customer_name",
+       render: (text) => text || "-"
     },
     {
       title: "Job Type",
@@ -294,6 +295,7 @@ const ApprovalDashboard = () => {
       title: "Carrier Name",
       dataIndex: "carrier_name",
       key: "carrier_name",
+       render: (text) => text || "-"
     },
     {
       title: "Job No (AFSYS)",
@@ -305,6 +307,7 @@ const ApprovalDashboard = () => {
       title: "Booking Ref",
       dataIndex: "booking_ref_no",
       key: "booking_ref_no",
+       render: (text) => text || "-"
     },
     {
       title: "Carrier Name 2",
@@ -352,7 +355,7 @@ const ApprovalDashboard = () => {
         return (
           <div style={{ display: "flex", gap: "8px", justifyContent: "flex-start", alignItems: "center" }}>
             <Button
-              type="default"
+              type="primary"
               size="small"
               icon={<Icon icon="mdi:eye" />}
               onClick={(e) => {
@@ -382,7 +385,7 @@ const ApprovalDashboard = () => {
                   ) : "Approve"}
                 </Button>
                 <Button
-                  danger
+                  type="primary"
                   size="small"
                   icon={<Icon icon="mdi:close-circle" />}
                   onClick={(e) => {
@@ -404,19 +407,19 @@ const ApprovalDashboard = () => {
   ];
 
   return (
-    <div className="main-container" style={{ backgroundColor: "#f8fafc", minHeight: "100vh" }}>
+    <div className="main-container" style={{ minHeight: "100vh" }}>
       {/* Main Content */}
       <main className="px-4 py-6" style={{ maxWidth: "100%" }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <Typography.Title level={4} style={{ margin: 0 }}>Dashboard Overview</Typography.Title>
-        </div>
+        </div> */}
 
         <StatusCards stats={stats} />
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Icon icon="mdi:chart-line" color="#6366f1" />
                 Export Trends (Monthly)
               </h2>
@@ -428,7 +431,7 @@ const ApprovalDashboard = () => {
 
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Icon icon="mdi:chart-pie" color="#10b981" />
                 Status Distribution
               </h2>
@@ -441,7 +444,7 @@ const ApprovalDashboard = () => {
 
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
           <div className="mb-6">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Icon icon="mdi:trophy-outline" color="#3b82f6" />
               Top Carriers Performance
             </h2>
@@ -451,8 +454,8 @@ const ApprovalDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
-          <div className="mb-4 flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100 mb-6">
+          <div className="mb-2 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Icon icon="mdi:file-edit-outline" color="#f59e0b" />
               My Drafts
@@ -461,10 +464,10 @@ const ApprovalDashboard = () => {
           </div>
           <CommonTable
             columns={[
-              { title: "Customer", dataIndex: "customer_name", key: "customer" },
-              { title: "Carrier", dataIndex: "carrier_name", key: "carrier" },
-              { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (t) => t?.toUpperCase() },
-              { title: "Created", dataIndex: "created_at", key: "created", render: (d) => dayjs(d).format("YYYY-MM-DD") },
+              { title: "Customer", dataIndex: "customer_name", key: "customer", render: (text) => text || "-" },
+              { title: "Carrier", dataIndex: "carrier_name", key: "carrier", render: (text) => text || "-" },
+              { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (t) => t?.toUpperCase() || "-" },
+              { title: "Created", dataIndex: "created_at", key: "created", render: (d) => dayjs(d).format("YYYY-MM-DD") || "-" },
               {
                 title: "Actions",
                 key: "actions",
@@ -473,6 +476,7 @@ const ApprovalDashboard = () => {
                   <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                     <Button
                       size="small"
+                      type="primary"
                       icon={<Icon icon="mdi:eye" />}
                       onClick={(e) => {
                         e.preventDefault();
@@ -493,7 +497,7 @@ const ApprovalDashboard = () => {
                     </Button>
                     <Button
                       size="small"
-                      danger
+                      type="primary"
                       icon={<Icon icon="mdi:delete" />}
                       onClick={() => {
                         if (window.confirm("Delete this draft?")) handleDelete(record.id);
@@ -511,9 +515,9 @@ const ApprovalDashboard = () => {
           />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Icon icon="mdi:ship-wheel" color="#2d7a82" />
               Active Shipments & Approvals
             </h2>
