@@ -400,7 +400,7 @@ const Approval = () => {
   );
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const showDocumentUploads = !(isStage2 || isStage3) || isMasterMode || isCNF || isForwardingStage5;
+  const showDocumentUploads = ((!(isStage2 || isStage3) || isMasterMode || isForwardingStage5) && !isCNF) || (isMasterMode && isCNF);
   const showROBOCForCS = isStage2 && isCS && !isAdmin;
   const needsLpoInvoice = currentStage === "4" || currentStage === "4B" || currentStage === "5";
 
