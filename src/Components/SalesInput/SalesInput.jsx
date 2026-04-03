@@ -559,7 +559,7 @@ const SalesInput = () => {
         no_of_containers: Number(row?.no_of_containers) || 0,
         category: row?.category || "",
         placement_time: row?.placement_time
-          ? row.placement_time.format("DD-MM-YYYY HH:mm:ss")
+          ? row.placement_time.format("YYYY-MM-DD HH:mm:ss")
           : null,
         pickup_location: row?.pickup_location || "",
         special_remarks: row?.special_remarks || "",
@@ -622,7 +622,7 @@ const SalesInput = () => {
         : [],
       /* 2026-03-25: ETA fields relocated to Approval Page (Stage 3+) per PRD */
       overseas_agent_name: values.overseas_agent_name || "",
-      export_created_date: values.export_created_date ? values.export_created_date.format("DD-MM-YYYY") : null,
+      export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
       export_number: values.export_number !== "N/A" ? values.export_number : null,
       general_remarks: remarks,
       documents: [
@@ -644,6 +644,7 @@ const SalesInput = () => {
 
       // For OTHERS, we might need to handle document IDs or wait for sequential upload
       // WritableNestedModelSerializer handles nested documents if provided
+
       const response = id
         ? await apiClient.put(`/liner/sales-input/${id}/`, payloadWithUser)
         : await apiClient.post("/liner/sales-input/", payloadWithUser);
@@ -775,8 +776,8 @@ const SalesInput = () => {
                     name="export_created_date"
                   >
                     <DatePicker
-                      format="DD-MM-YYYY"
-                      placeholder="DD-MM-YYYY"
+                      format="YYYY-MM-DD"
+                      placeholder="YYYY-MM-DD"
                       disabled={isReadOnly || true} // Created Date is usually system-managed or locked
                       style={{ width: "100%" }}
                     />
@@ -1513,8 +1514,8 @@ const SalesInput = () => {
                           >
                             <DatePicker
                             showTime={{ defaultValue: dayjs() }}
-                              format="DD-MM-YYYY HH:mm:ss"
-                              placeholder="DD-MM-YYYY HH:mm:ss"
+                              format="YYYY-MM-DD HH:mm:ss"
+                              placeholder="YYYY-MM-DD HH:mm:ss"
                               style={{ width: "100%" }}
                               disabled={isReadOnly}
                             />
