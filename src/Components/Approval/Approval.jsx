@@ -1447,25 +1447,25 @@ const Approval = () => {
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (
-                    <>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="HBL">
-                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
-                          <Select
-                            placeholder="Select CS HOD"
-                            allowClear
-                            showSearch
-                            optionFilterProp="label"
-                            options={csHodOptions}
-                            disabled={isCSUploadLocked || isMasterMode}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </>
+                    <Col xs={24} md={8}>
+                      <Form.Item className={Styles.formLabel} label="HBL">
+                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isLiner && (
+                    <Col xs={24} md={8}>
+                      <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
+                        <Select
+                          placeholder="Select CS HOD"
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                          options={csHodOptions}
+                          disabled={isCSUploadLocked || isMasterMode}
+                        />
+                      </Form.Item>
+                    </Col>
                   )}
                   {facFlag && (
                     <Col xs={24} md={8}>
