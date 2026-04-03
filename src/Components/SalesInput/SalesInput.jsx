@@ -401,7 +401,7 @@ const SalesInput = () => {
 
         setHodOptions(hodData.map((item) => ({
            label: `${item.first_name} ${item.last_name}  |  (${item.email})`,
-           value: `${item.first_name} ${item.last_name}  |  (${item.email})`,
+           value: `${item.first_name} ${item.last_name}`,
         })));
       } catch (err) {
         console.warn("Failed to load HOD selection data (permissions?)", err);
