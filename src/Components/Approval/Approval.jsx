@@ -1,4 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { computeUserRoles } from "./utils/roleUtils";
+import { computeJobContext } from "./utils/jobContextUtils";
+import { computeSectionLocks } from "./utils/sectionLocks";
+import { computeCanApprove } from "./utils/canApprove";
+import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
+import { normalizeBoolean } from "./utils/formUtils";
+import { buildCommonPayload } from "./utils/payloadBuilders";
+import { validateApprovalAction } from "./utils/approvalValidations";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -315,122 +323,49 @@ const Approval = () => {
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
 
-  const userRoles = (user?.roles || []).map(r => (typeof r === 'object' ? r.name : r).toUpperCase());
-  const userDepts = [
-    ...(user?.departments_assigned_names || []),
-    ...(user?.department_names || []),
-    user?.department || ""
-  ].filter(Boolean).map(d => String(d).toUpperCase()).filter(Boolean);
+  const {
+    userRoles, userDepts,
+    isAdmin, isSuperUser,
+    isCS, isCNF, isSales, isAccounts,
+    isHOD, isGM,
+    isSalesExecutive, isSalesHOD, isCNFExecutive, isCSExecutive, isCSHOD,
+    isAccountsTeam, isDocsTeam, isCNFHOD,
+    hasAllowedRole,
+    userFullName,
+  } = computeUserRoles(user);
 
-  const isAdmin = userRoles.some(r => ["admin", "ADMIN", "SUPER ADMIN"].includes(r));
-  const isSuperUser = userRoles.some(r => r.toUpperCase().includes("SUPER USER")) || isAdmin;
-
-  // Refined Role Identification (Strictly departmental, removed generic 'EXECUTIVE/APPROVER' matches)
-  // Refined Role Identification (Strictly departmental, removed generic 'EXECUTIVE/APPROVER' matches)
-  const isCS = userDepts.some(d => d.includes("CUSTOMER SERVICE") || d.includes("DOCUMENTATION") || d.includes("SHIPPING")) ||
-    userRoles.some(r => r.includes("CUSTOMER SERVICE") || r.includes("DOCS"));
-
-  const isCNF = userDepts.some(d => {
-    const du = d.toUpperCase();
-    return du.includes("C&F") || du.includes("CNF") || du.includes("CLEARANCE") || du.includes("FORWARDING") || du.includes("OPERATIONS") || du.includes("LOGISTICS");
-  }) || userRoles.some(r => {
-    const ru = r.toUpperCase();
-    return ru.includes("C&F") || ru.includes("CNF") || ru.includes("CLEARANCE") || ru.includes("FORWARDING") || ru.includes("OPERATIONS") || ru.includes("LOGISTICS");
-  });
-
-  const isSales = userDepts.some(d => d.toUpperCase().includes("SALES")) ||
-    userRoles.some(r => r.toUpperCase().includes("SALES") || r.toUpperCase().includes("CREATOR"));
-
-  const isAccounts = userDepts.some(d => d.toUpperCase().includes("ACCOUNTS") || d.toUpperCase().includes("FINANCE") || d.toUpperCase().includes("PAYABLE")) ||
-    userRoles.some(r => r.toUpperCase().includes("ACCOUNTS") || r.toUpperCase().includes("FINANCE") || r.toUpperCase().includes("PAYABLE"));
-
-  const isHOD = userRoles.some(role => ["HOD", "APPROVER", "MANAGER", "PRINCIPAL"].includes(role.toUpperCase()));
-  const isGM = userRoles.some(role => role.toUpperCase() === "GM");
-
-  // PRD v4.0 Strict Role Definitions
-  const isSalesExecutive = (isSales && !isHOD) || isAdmin;
-  const isSalesHOD = (isSales && isHOD) || isAdmin;
-  const isCNFExecutive = (isCNF && !isHOD) || isAdmin;
-  const isCSExecutive = (isCS && !isHOD) || isAdmin;
-  const isCSHOD = (isCS && isHOD) || isAdmin;
-  const isAccountsTeam = isAccounts || isAdmin;
-  const isDocsTeam = userRoles.some(r => r.includes("DOCS")) || userDepts.some(d => d.includes("DOCS"));
-  const isCNFHOD = isCNF && isHOD;
-  
-  // Strict User-Requested Filter: Only roles with 'EXECUTIVE' or 'HOD' names can approve/reject
-  const hasAllowedRole = userRoles.some(r => 
-    r.includes("EXECUTIVE") || 
-    r.includes("HOD") || 
-    r.includes("APPROVER") || 
-    r.includes("GM") ||
-    r.includes("UPLOADER")
-  ) || isAdmin;
-
-  const currentStage = String(jobData?.current_stage || "1");
-
-  // Creator check — use created_by_user from jobData or fall back to "Sales Created" history entry
-  const creatorUserId = jobData?.created_by_user || approvalHistory.find(h => h.stage === "Sales Created")?.updated_by_user;
-  const isCreator = !!(creatorUserId && creatorUserId === user?.id);
-
-  const jobTypeUpper = (jobData?.job_type || "").toUpperCase();
-  const isLiner = jobTypeUpper.includes("LINER");
-  const isCrossTrade = jobTypeUpper.includes("CROSS_TRADE") || jobTypeUpper.includes("CROSS TRADE");
-  const isForwarding = jobTypeUpper.includes("FORWARDING");
-  const isOthers = jobTypeUpper.includes("OTHERS");
-  const isMasterMode = !id;
-
-  // Extended 9-stage workflow for Cross Trade and Forwarding
-  const isExtended = isCrossTrade || isForwarding;
-
-  const isTerminal = (jobData?.status === "approved" && !isExtended && !isLiner) || jobData?.status === "rejected" || jobData?.status === "REJECTED-CLOSED" || currentStage === "9" || jobData?.status === "Completed" || jobData?.status === "completed";
-  const isAccountsStage = (isLiner || isExtended) ? currentStage === "6" : (isOthers ? currentStage === "7" : false);
-  const isForwardingStage5 = isForwarding && currentStage === '5';
-
-  // Unified Stage Sequence (Stage 3=CNF, Stage 5=CSHOD Approval, Stage 6=Accounts)
-  const isCNFStage = (isLiner || isExtended) ? currentStage === "3" : (isForwarding ? currentStage === "3" : false);
-  const isCSHODStage = (isLiner || isExtended) ? currentStage === "5" : false;
-  const isStage2 = currentStage === "2";
-  const isStage3 = currentStage === "3";
-  const userFullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim();
-
-  // ─── Stage 2 Role Gates (edit this block to change stage 2 access rules) ───
-  const stage2 = {
-    isThisJobsHOD : isStage2 && !jobData?.is_hod_approved && jobData?.sales_hod?.toLowerCase().trim() === userFullName?.toLowerCase().trim(),  // current user is the designated HOD for this job (hidden once approved)
-    csCanAct      : isStage2 && isCS, // HOD approved, CS can act regardless of is_cs_updated status
-    creatorLocked : isCreator && jobData?.status !== "draft",           // creator sees read-only after submitting
+  const roles = {
+    isCS, isAdmin, userFullName,
   };
-  // Approve/Reject buttons hidden when user has no action to take at stage 2
-  const isStage2ButtonsHidden = isStage2 && !isAdmin && (
-    (isCS  && !stage2.csCanAct) ||
-    (!isCS && !stage2.isThisJobsHOD)
-  );
+
+  const {
+    currentStage,
+    isCreator,
+    isLiner, isCrossTrade, isForwarding, isOthers,
+    isMasterMode, isExtended,
+    isTerminal,
+    isStage2, isStage3,
+    isAccountsStage, isForwardingStage5,
+    isCNFStage, isCSHODStage,
+    stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD, isThisJobsCSHOD,
+  } = computeJobContext({ jobData, id, user, approvalHistory, roles });
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const showDocumentUploads = ((!(isStage2 || isStage3) || isMasterMode || isForwardingStage5) && !isCNF) || (isMasterMode && isCNF) || (isCNF && isForwarding && currentStage === "3");
-  const showROBOCForCS = isStage2 && isCS && !isAdmin;
-  const needsLpoInvoice = currentStage === "4" || currentStage === "4B" || currentStage === "5";
-
-  // Sales HOD Restriction for Liner (Attachments & Comments only)
-  const isSalesHODLinerRestricted = isLiner && isSalesHOD && !isAdmin;
-
-  // PRD v4.0 Section Locks — all share the same base guards for clarity
-  const isGlobalHODReadOnly = isHOD && !isAdmin && !isCreator;
-  const baseLocked = isMasterMode || stage2.creatorLocked || isTerminal || (!isAdmin && isForwarding && currentStage === "5"); // stage 5 Forwarding = CS HOD approval only, all fields read-only
-
-  // CNF work is done once load list is uploaded — lock everything for CNF after that
-  const isCNFDone = !isAdmin && isCNF && !!jobData?.is_cnf_loadlist_uploaded;
-
-  const isSalesSectionLocked   = baseLocked || ((!isSalesExecutive && !isCreator && !isAdmin) || (currentStage !== "1" && currentStage !== "2" && currentStage !== "3" && !isAdmin) || isGlobalHODReadOnly);
-  const csBookingEditStage = isStage2 || (isLiner && currentStage === "4"); // Forwarding stage 4: booking is read-only for CS
-  const isBookingSectionLocked = baseLocked || (!isAdmin && (!isCS || !csBookingEditStage));
-  const isCNFSectionLocked     = baseLocked || isCNFDone || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
-  const isAccountsOnlyFieldLocked     = baseLocked || ((!isAccountsTeam && !isAdmin) || (!isAccountsStage && !isAdmin));
-  const isAccountsEditableFieldLocked = (isExtended && isAccountsStage) ? (!isAccountsTeam && !isAdmin) : isAccountsOnlyFieldLocked;
-
-  const isCSUploadLocked       = baseLocked || (!isCS && !isAdmin);
-  const isCNFUploadLocked      = baseLocked || isCNFDone || ((!isCNF && !isAdmin) || (!isCNFStage && !(isLiner && isStage2) && !isAdmin));
-  const isAccountsUploadLocked = isMasterMode || isTerminal || (!isAccountsTeam && !isAdmin) || (currentStage < "5" && !isAdmin);
-  const isRequirementSelectorLocked = (!isCS && !isAdmin && !isMasterMode) || isSalesHODLinerRestricted || (!isMasterMode && parseInt(currentStage) > 2 && !isAdmin);
+  const {
+    baseLocked, isCNFDone, isSalesHODLinerRestricted,
+    csBookingEditStage, isSalesSectionLocked, isBookingSectionLocked,
+    isCNFSectionLocked, isAccountsEditableFieldLocked,
+    isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked, isAccountsUploadLocked,
+    isRequirementSelectorLocked,
+    showDocumentUploads, showROBOCForCS, needsLpoInvoice,
+  } = computeSectionLocks({
+    isAdmin, isCS, isCNF, isSalesExecutive, isCreator,
+    isCSHOD, isAccountsTeam, isHOD, isSalesHOD,
+    currentStage, isMasterMode, isTerminal, isForwarding,
+    isLiner, isExtended, isOthers,
+    isStage2, isCNFStage, isCSHODStage, isAccountsStage,
+    stage2, isCSDoneWaitingHOD, jobData,
+  });
 
   // Reactive visibility using Form.useWatch (handles both initial values and live changes)
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
@@ -442,28 +377,14 @@ const Approval = () => {
   const hblFlagForm = Form.useWatch("hbl", form);
   const documentationFlagForm = Form.useWatch("documentation", form);
 
-  // Helper to normalize Yes/No, true/false strings or boolean values
-  const isTrue = (val, initial) => {
-    const normalize = (v) => {
-      if (v === true || v === "true" || v === "Yes" || v === "yes") return true;
-      if (v === false || v === "false" || v === "No" || v === "no") return false;
-      return null;
-    };
-    const normVal = normalize(val);
-    if (normVal !== null) return normVal;
-    return normalize(initial) === true;
-  };
-
-  const isCompleted = jobData?.status === "Completed" || jobData?.status === "completed" || jobData?.status === "approved";
-
-  const isLLReq = isTrue(isLLReqForm, jobData?.is_load_list_required);
-  const isHNReq = isTrue(isHNReqForm, jobData?.is_haulier_note_required);
-  const isROReq = isTrue(isROReqForm, jobData?.is_release_order_required);
+  const isLLReq = normalizeBoolean(isLLReqForm, jobData?.is_load_list_required);
+  const isHNReq = normalizeBoolean(isHNReqForm, jobData?.is_haulier_note_required);
+  const isROReq = normalizeBoolean(isROReqForm, jobData?.is_release_order_required);
   const releaseOrderRequirementMet =
     isROReq || (!isLiner && !isExtended) || isMasterMode;
   const csStage4UploadLocked = isCS && !isAdmin && currentStage === "4"; // RO/BOC locked for CS at stage 4 (already uploaded at stage 2)
   const releaseOrderDisabled =
-    csStage4UploadLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
+    baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) {
       return isLiner && !isCNF ? "CNF is allowed to upload it" : null;
@@ -474,16 +395,10 @@ const Approval = () => {
     return null;
   })();
   const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
-  const isPaymentReq = isTrue(isLNR_LPO_ReqForm, jobData?.is_lpo_invoice_required) || isTrue(isPaymentReqForm, jobData?.is_payment_processing_required);
-  const facFlag = isTrue(facFlagForm, jobData?.fac);
-  const hblFlag = isTrue(hblFlagForm, jobData?.hbl);
-  const documentationFlag = isTrue(documentationFlagForm, jobData?.documentation);
-
-  // Additional Cross Trade flags
-  const isPayReqForm = Form.useWatch("is_payment_processing_required", form);
-  const isPayDocsReqForm = Form.useWatch("is_payment_docs_required", form);
-  const isPayReq = isTrue(isPayReqForm, jobData?.is_payment_processing_required);
-  const isPayDocsReq = isTrue(isPayDocsReqForm, jobData?.is_payment_docs_required);
+  const isPaymentReq = normalizeBoolean(isLNR_LPO_ReqForm, jobData?.is_lpo_invoice_required) || normalizeBoolean(isPaymentReqForm, jobData?.is_payment_processing_required);
+  const facFlag          = normalizeBoolean(facFlagForm,          jobData?.fac);
+  const hblFlag          = normalizeBoolean(hblFlagForm,          jobData?.hbl);
+  const documentationFlag = normalizeBoolean(documentationFlagForm, jobData?.documentation);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
 
@@ -506,25 +421,14 @@ const Approval = () => {
   const isStoppedCrossTrade = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
   const isHalted = showLinerStopAlert || isStoppedCrossTrade;
 
-  // Department-based visibility logic
-  // Department-based visibility logic
-  // Re-aligned for 7-stage Forwarding Flow:
-  // Stage 1: Sales (Draft) -> Stage 2: Sales HOD -> Stage 3: CS -> Stage 4: CNF -> Stage 5: CS -> Stage 6: CS HOD -> Stage 7: Accounts
-  // Unified 7-Stage Workflow canApprove Logic
-  const canApprove = hasAllowedRole && (isAdmin || (
-    (currentStage === "2" && (isSalesHOD || stage2.isThisJobsHOD || isCS || isCNF)) ||
-    (isForwarding && currentStage === "3" && isCNF && !isCNFDone) ||  // CNF team acts at stage 3 for Forwarding (until load list uploaded)
-    (currentStage === "3" && !isForwarding && (isLiner || isCrossTrade ? isCNFHOD : isCSHOD)) ||
-    (isExtended && !isForwarding && currentStage === "3" && isCNFHOD) ||
-    (isExtended && currentStage === "4" && isCS) ||
-    (isForwarding && currentStage === "5" && isCSHOD) ||  // CS HOD approves at stage 5 for Forwarding
-    (isExtended && !isForwarding && currentStage === "5" && isAccountsTeam) ||
-    ((isLiner && isCNFStage) && (isCNF || (isLiner && isSalesHOD))) ||
-    ((isLiner && currentStage === "4") && isCS) ||
-    ((isLiner && isCSHODStage) && isCSHOD) ||
-    ((isLiner && currentStage === "6") && isAccountsTeam) ||
-    ((isLiner && currentStage === "7") && (isCS || isCNF))
-  ));
+  const canApprove = computeCanApprove({
+    hasAllowedRole, isAdmin, currentStage,
+    isLiner, isCrossTrade, isForwarding, isExtended,
+    isCS, isCNF, isCNFHOD, isCSHOD, isAccountsTeam, isSalesHOD,
+    isCNFDone, isCNFStage, isCSHODStage,
+    isThisJobsCSHOD,
+    stage2,
+  });
   /* ── Fetch Data ── */
   useEffect(() => {
     if (id) {
@@ -558,144 +462,25 @@ const Approval = () => {
         setJobData(data);
 
         // Map to main form
-        form.setFieldsValue({
-          export_number: data.export_number || "N/A",
-          export_created_date: data.export_created_date ? dayjs(data.export_created_date) : null,
-          created_by_name: data.created_by_name || "N/A",
-          carrier_name: data.carrier_name,
-          customer_name: data.customer_name,
-          contact_pic: data.contact_pic,
-          phone_no: data.phone_no || data.email,
-          overseas_agent_name: data.overseas_agent_name,
-          commodity: data.commodities?.map(c => c.name).join(", "),
-          port_of_loading: data.port_of_loading,
-          port_of_discharge: data.port_of_discharge,
-          final_pod: data.final_pod,
-          terms_of_shipment: data.terms_of_shipment,
-          haulier_code: data.haulier_code,
-          special_instructions: data.special_instructions,
-          documentation: data.documentation,
-          transportation: data.transportation,
-          is_lpo_required: data.is_lpo_required,
-          is_invoice_required: data.is_invoice_required,
-          is_release_order_required: data.is_release_order_required,
-          is_payment_processing_required: data.is_payment_processing_required,
-          is_load_list_required: data.is_load_list_required,
-          is_haulier_note_required: data.is_haulier_note_required,
-          is_payment_docs_required: data.is_payment_docs_required,
-          fac: data.fac,
-          hbl: data.hbl,
-          remarks: data.remarks,
-          carrier_remarks: data.carrier_remarks,
-          vessel_voyage_remarks: data.vessel_voyage_remarks,
-          pol_remarks: data.pol_remarks,
-          name_of_executive: data.name_of_executive,
-          pod_remarks: data.pod_remarks,
+        form.setFieldsValue(mapJobToFormValues(data));
 
-          // PRD v3.2 Relocated ETA Fields
-          vsl_initial_eta: data.vsl_initial_eta ? dayjs(data.vsl_initial_eta) : null,
-          vsl_latest_eta: data.vsl_latest_eta ? dayjs(data.vsl_latest_eta) : null,
-          vsl_etd: data.vsl_etd ? dayjs(data.vsl_etd) : null,
-          pod_eta: data.pod_eta ? dayjs(data.pod_eta) : null,
-
-          // PRD v3.2 Restricted Accounts Fields
-          carrier_name_2: data.carrier_name_2,
-          invoice_date: data.invoice_date ? dayjs(data.invoice_date) : null,
-
-          // Container Rows
-          containerRows: data.container_details?.map(c => ({
-            id: c.id,
-            equipment_type: c.equipment_type,
-            quantity: c.quantity,
-            category: c.category,
-            quote: c.quote,
-            cost: c.cost,
-          })) || [{}],
-
-          // Placement Rows
-          placementRows: data.transportation_rows?.map(t => ({
-            id: t.id,
-            equipment_type: t.equipment_type,
-            no_of_containers: t.no_of_containers,
-            category: t.category,
-            placement_time: t.placement_time ? dayjs(t.placement_time) : null,
-            pickup_location: t.pickup_location,
-            special_remarks: t.special_remarks,
-          })) || [{}],
-
-          // Booking Details
-          afsys_job_no: data.approval_details?.afsys_job_no,
-          booking_vessel: data.approval_details?.booking_vessel,
-          booking_voyage: data.approval_details?.booking_voyage,
-          vessel_eta: data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
-          booking_ref_no: data.approval_details?.booking_ref_no,
-          si_cut_off_date: data.approval_details?.si_cut_off_date ? dayjs(data.approval_details.si_cut_off_date) : null,
-          si_cut_off_time: data.approval_details?.si_cut_off_time ? dayjs(data.approval_details.si_cut_off_time, "HH:mm") : null,
-          booking_remarks: data.approval_details?.booking_remarks,
-          cnf_remarks: data.approval_details?.cnf_remarks,
-          account_remarks: data.approval_details?.account_remarks,
-          cs_hod: data.cs_hod,
-        });
-
-        // Map Documents (Properly Partitioned)
+        // Partition documents into typed buckets
         if (data.documents) {
-          const docs = data.documents;
-          // Robust filtering: Try doc_type first, then fallback to common naming patterns if shifted to 'Attachment'
-          const filterBy = (types, keywords) => docs.filter(d => {
-            const dt = d.doc_type?.toUpperCase();
-            const fn = d.file_name?.toUpperCase();
-            if (types.includes(dt)) return true;
-            if (dt === "ATTACHMENT" || dt === "OTHER" || !dt) {
-              return keywords.some(k => fn?.includes(k));
-            }
-            return false;
-          });
-
-          const roList = filterBy(["RELEASE ORDER"], ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"]);
-          const bocList = filterBy(["BOC"], ["BOC_ATTACHMENT", "BOC"]);
-          const hCostList = filterBy(["HAULAGE COST"], ["HAULAGE_COST", "COST_SHEET"]);
-          const llList = filterBy(["LOAD LIST"], ["LOAD_LIST", "LOADLIST"]);
-          const lpoList = filterBy(["LPO"], ["LPO"]);
-          const invList = filterBy(["INVOICE"], ["INVOICE"]);
-          const facList = filterBy(["FAC"], ["FAC"]);
-          const croList = filterBy(["CRO", "CRO UPLOADING"], ["CRO"]);
-          const edList = filterBy(["ED", "ED UPLOADING"], ["ED"]);
-          const hnList = filterBy(["HAULAGE NOTE", "HAULAGE NOTE UPLOADING"], ["HAULAGE_NOTE", "HAULAGENOTE"]);
-          const bankList = filterBy(["BANK SLIP"], ["BANK_SLIP", "BANK SLIP"]);
-          const hblList = filterBy(["HBL"], ["HBL"]);
-          const preAlertList = filterBy(["PRE-ALERT", "PRE ALERT", "PREALERT"], ["PRE_ALERT", "PREALERT"]);
-
-          setReleaseOrderFiles(roList);
-          setBocFiles(bocList);
-          setHaulageCostFiles(hCostList);
-          setLoadListFiles(llList);
-          setLpoFiles(lpoList);
-          setInvoiceFiles(invList);
-          setFacFiles(facList);
-          setCroFiles(croList);
-          setEdFiles(edList);
-          setHaulierNoteFiles(hnList);
-          setBankSlips(bankList);
-          setHblFiles(hblList);
-          setPreAlertFiles(preAlertList);
-
-          const capturedIds = new Set([
-            ...roList.map(d => d.id),
-            ...bocList.map(d => d.id),
-            ...hCostList.map(d => d.id),
-            ...llList.map(d => d.id),
-            ...lpoList.map(d => d.id),
-            ...invList.map(d => d.id),
-            ...facList.map(d => d.id),
-            ...croList.map(d => d.id),
-            ...edList.map(d => d.id),
-            ...hnList.map(d => d.id),
-            ...bankList.map(d => d.id),
-            ...hblList.map(d => d.id),
-            ...preAlertList.map(d => d.id),
-          ]);
-          setAttachments(docs.filter(d => !capturedIds.has(d.id)));
-
+          const buckets = partitionDocuments(data.documents);
+          setReleaseOrderFiles(buckets.releaseOrderFiles);
+          setBocFiles(buckets.bocFiles);
+          setHaulageCostFiles(buckets.haulageCostFiles);
+          setLoadListFiles(buckets.loadListFiles);
+          setLpoFiles(buckets.lpoFiles);
+          setInvoiceFiles(buckets.invoiceFiles);
+          setFacFiles(buckets.facFiles);
+          setCroFiles(buckets.croFiles);
+          setEdFiles(buckets.edFiles);
+          setHaulierNoteFiles(buckets.haulierNoteFiles);
+          setBankSlips(buckets.bankSlips);
+          setHblFiles(buckets.hblFiles);
+          setPreAlertFiles(buckets.preAlertFiles);
+          setAttachments(buckets.attachments);
         }
 
         // Map History (Sort chronologically: Sales Created first)
@@ -704,6 +489,7 @@ const Approval = () => {
 
         // Map Other Charges & General Remarks
         setOtherCharges(data.approval_details?.other_charges || []);
+        setChargeInput(data.approval_details?.other_charges_remarks || "");
         setRemarks(data.general_remarks || []);
       }
     } catch (err) {
@@ -715,124 +501,16 @@ const Approval = () => {
   };
 
   /* ── Handlers ── */
-  const getCommonPayload = (values) => {
-    const allDocs = [
-      ...releaseOrderFiles.map(f => ({ ...f, doc_type: "Release Order", category: "booking" })),
-      ...bocFiles.map(f => ({ ...f, doc_type: "BOC", category: "booking" })),
-      ...haulageCostFiles.map(f => ({ ...f, doc_type: "Haulage Cost", category: "booking" })),
-      ...loadListFiles.map(f => ({ ...f, doc_type: "Load List", category: "booking" })),
-      ...lpoFiles.map(f => ({ ...f, doc_type: "LPO", category: "financial" })),
-      ...invoiceFiles.map(f => ({ ...f, doc_type: "Invoice", category: "financial" })),
-      ...facFiles.map(f => ({ ...f, doc_type: "FAC", category: "financial" })),
-      ...croFiles.map(f => ({ ...f, doc_type: "CRO", category: "financial" })),
-      ...edFiles.map(f => ({ ...f, doc_type: "ED", category: "financial" })),
-      ...haulierNoteFiles.map(f => ({ ...f, doc_type: "Haulage Note", category: "financial" })),
-      ...preAlertFiles.map(f => ({ ...f, doc_type: "Pre-Alert", category: "booking" })),
-      ...bankSlips.map(f => ({ ...f, doc_type: "Bank Slip", category: "financial" })),
-      ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
-      ...hblFiles.map(f => ({ ...f, doc_type: "HBL", category: "financial" })),
-    ];
-
-    return {
-      // ─── RELAXED PAYLOAD FOR TESTING ───────────────────────────────────────────
-      // Sending all fields to allow everyone to edit everything for now.
-      // ────────────────────────────────────────────────────────────────────────────
-      customer_name: values.customer_name,
-      carrier_name: values.carrier_name,
-      contact_pic: values.contact_pic,
-      phone_no: values.phone_no,
-      port_of_loading: values.port_of_loading,
-      port_of_discharge: values.port_of_discharge,
-      final_pod: values.final_pod,
-      terms_of_shipment: values.terms_of_shipment,
-      haulier_code: values.haulier_code,
-      transportation: values.transportation,
-      is_lpo_required: values.is_lpo_required,
-      is_invoice_required: values.is_invoice_required,
-      is_lpo_invoice_required: values.is_lpo_invoice_required,
-      is_release_order_required: values.is_release_order_required,
-      is_payment_processing_required: values.is_payment_processing_required,
-      is_payment_docs_required: values.is_payment_docs_required,
-      is_load_list_required: values.is_load_list_required,
-      is_haulier_note_required: values.is_haulier_note_required,
-      overseas_agent_name: values.overseas_agent_name,
-      name_of_executive: values.name_of_executive,
-      special_instructions: values.special_instructions,
-      fac: values.fac,
-      hbl: values.hbl,
-      cs_hod: values.cs_hod,
-
-      // PRD v3.2 Relocated ETA Fields
-      vsl_initial_eta: values.vsl_initial_eta ? dayjs(values.vsl_initial_eta).format("DD-MM-YYYY") : null,
-      vsl_latest_eta: values.vsl_latest_eta ? dayjs(values.vsl_latest_eta).format("DD-MM-YYYY") : null,
-      vsl_etd: values.vsl_etd ? dayjs(values.vsl_etd).format("DD-MM-YYYY") : null,
-      pod_eta: values.pod_eta ? dayjs(values.pod_eta).format("DD-MM-YYYY") : null,
-
-      // PRD v3.2 Restricted Accounts Fields
-      carrier_name_2: values.carrier_name_2,
-      invoice_date: values.invoice_date ? dayjs(values.invoice_date).format("DD-MM-YYYY") : null,
-
-      commodities: values.commodity !== undefined
-        ? (values.commodity ? values.commodity.split(",").map(c => ({ name: c.trim() })).filter(c => c.name) : [])
-        : undefined,
-      container_details: values.containerRows?.map(r => ({
-        id: r.id,
-        equipment_type: r.equipment_type,
-        quantity: parseInt(r.quantity) || 0,
-        category: r.category,
-        quote: r.quote,
-        cost: parseFloat(r.cost) || 0
-      })),
-
-      transportation_rows: values.placementRows?.map(r => ({
-        id: r.id,
-        equipment_type: r.equipment_type,
-        no_of_containers: parseInt(r.no_of_containers) || 0,
-        category: r.category,
-        placement_time: r.placement_time
-          ? dayjs(r.placement_time).format("DD-MM-YYYY HH:mm:ss")
-          : null,
-        pickup_location: r.pickup_location,
-        special_remarks: r.special_remarks
-      })),
-
-      documents: allDocs.map(d => ({
-        id: d.id,
-        doc_type: d.doc_type,
-        category: d.category,
-        file_url: d.url || d.file_url,
-        file_name: d.name || d.file_name,
-        remarks: d.remarks || "",
-        uploaded_by_user: d.uploaded_by_user // Preserve uploader
-      })),
-      general_remarks: remarks,
-      approval_details: {
-        ...getCommonPayloadApprovalDetails(values),
-        other_charges: otherCharges,
+  const getCommonPayload = (values) =>
+    buildCommonPayload(
+      values,
+      {
+        releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles,
+        lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
+        haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
       },
-
-      // Preserve current status
-      status: jobData?.status || "draft",
-    };
-  };
-
-  const getCommonPayloadApprovalDetails = (values) => {
-    return {
-      afsys_job_no: values.afsys_job_no,
-      booking_vessel: values.booking_vessel,
-      booking_voyage: values.booking_voyage,
-      vessel_eta: values.vessel_eta ? values.vessel_eta.format("DD-MM-YYYY") : null,
-      booking_ref_no: values.booking_ref_no,
-      si_cut_off_date: values.si_cut_off_date ? values.si_cut_off_date.format("DD-MM-YYYY") : null,
-      si_cut_off_time: values.si_cut_off_time ? values.si_cut_off_time.format("HH:mm") : null,
-      booking_remarks: values.booking_remarks,
-      cnf_remarks: values.cnf_remarks,
-      account_remarks: values.account_remarks,
-      is_lpo_invoice_required: values.is_lpo_invoice_required,
-      is_release_order_required: values.is_release_order_required,
-      is_payment_processing_required: values.is_payment_processing_required,
-    };
-  };
+      { remarks, otherCharges, jobData }
+    );
 
   const handleAction = async (actionType, remarksVal = "") => {
     if (actionThrottleRef.current) return;
@@ -843,97 +521,17 @@ const Approval = () => {
 
       // Stage-specific validation for "Approved"
       if (actionType === "Approved") {
-        const stage = jobData?.current_stage || "1";
-
-        // CS at stage 2: booking details + RO are compulsory (BOC is optional)
-        if (stage === "2" && isCS) {
-          const missingBooking = [];
-          if (!values.afsys_job_no) missingBooking.push("AFSYS Job No.");
-          if (!values.booking_vessel) missingBooking.push("Booking Vessel");
-          if (!values.booking_voyage) missingBooking.push("Booking Voyage");
-          if (!values.vessel_eta) missingBooking.push("Vessel ETA Date");
-          if (!values.vsl_initial_eta) missingBooking.push("Initial ETA");
-          if (!values.vsl_latest_eta) missingBooking.push("Latest ETA");
-          if (!values.vsl_etd) missingBooking.push("ETD");
-          if (!values.pod_eta) missingBooking.push("POD ETA");
-          if (!values.booking_ref_no) missingBooking.push("Booking Reference No.");
-          if (!values.si_cut_off_date) missingBooking.push("Load List/SI Cut Off Date");
-          if (!values.si_cut_off_time) missingBooking.push("Load List/SI Cut Off Time");
-          if (!values.booking_remarks) missingBooking.push("Booking Remarks");
-          if (!releaseOrderFiles.length) missingBooking.push("Release Order");
-          if (missingBooking.length) {
-            message.error(`Please fill/upload required fields: ${missingBooking.join(", ")}`);
-            setLoading(false);
-            actionThrottleRef.current = false;
-            return;
-          }
-        }
-
-        if (needsLpoInvoice && isCS) {
-          const missingFinancial = [];
-          if (!lpoFiles.length) missingFinancial.push("LPO");
-          if (!invoiceFiles.length) missingFinancial.push("Invoice");
-          if (!values.cs_hod) missingFinancial.push("CS HOD");
-          if (missingFinancial.length) {
-            message.error(`Required at this stage: ${missingFinancial.join(", ")}`);
-            setLoading(false);
-            actionThrottleRef.current = false;
-            return;
-          }
-        } else if (needsLpoInvoice && (!lpoFiles.length || !invoiceFiles.length)) {
-          message.error("LPO and Invoice are required for Stage 4 and Stage 5");
+        const stage = String(jobData?.current_stage || "1");
+        const validationError = validateApprovalAction(values, {
+          stage, isCS, isCNF, isForwarding, isLiner, needsLpoInvoice,
+          releaseOrderFiles, lpoFiles, invoiceFiles,
+          haulageCostFiles, haulierNoteFiles, loadListFiles, edFiles,
+        });
+        if (validationError) {
+          message.error(validationError);
           setLoading(false);
+          actionThrottleRef.current = false;
           return;
-        }
-
-        if (isForwarding) {
-          if (stage === '3' && !values.afsys_job_no) {
-            message.error("AFSYS Job No. is required for Stage 3");
-            setLoading(false);
-            return;
-          }
-          if (stage === '3' && isCNF) {
-            const missingCNF = [];
-            if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
-            if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
-            if (!loadListFiles.length) missingCNF.push("Load List");
-            if (missingCNF.length) {
-              message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
-              setLoading(false);
-              actionThrottleRef.current = false;
-              return;
-            }
-          }
-          if (stage === '4' && isCNF) {
-            const missingCNF = [];
-            if (!haulageCostFiles.length) missingCNF.push("Haulage Cost Sheet");
-            if (!haulierNoteFiles.length) missingCNF.push("Haulier Note");
-            if (!loadListFiles.length) missingCNF.push("Load List");
-            if (!edFiles.length) missingCNF.push("ED");
-            if (missingCNF.length) {
-              message.error(`Please upload required CNF documents: ${missingCNF.join(", ")}`);
-              setLoading(false);
-              actionThrottleRef.current = false;
-              return;
-            }
-          }
-          /* 2026-03-25: Bank Slip requirement removed per PRD refactoring */
-
-        } else if (isLiner) {
-          if (stage === '3' && !values.afsys_job_no) {
-            message.error("AFSYS Job No. is required for Stage 3");
-            setLoading(false);
-            return;
-          }
-          /* 2026-03-25: Bank Slip requirement removed per PRD refactoring */
-
-        } else {
-          // Legacy / Generic Validations
-          if (stage === '3' && !values.afsys_job_no) {
-            message.error("AFSYS Job No. is required");
-            setLoading(false);
-            return;
-          }
         }
       }
 
@@ -1630,7 +1228,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={csStage4UploadLocked || (isCNFUploadLocked && !isCS)}
+                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS)}
                           restrictionMessage={
                             isCNFUploadLocked && !isCS && isLiner && !isCNF
                               ? "CNF is allowd to uplaod it"
@@ -1710,7 +1308,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="financial"
                             docType="ED"
-                            disabled={isCNFUploadLocked}
+                            disabled={isEDUploadLocked}
                             user={user}
                             isAdmin={isAdmin}
                             isMasterMode={isMasterMode}
@@ -1718,7 +1316,7 @@ const Approval = () => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item 
+                        <Form.Item
                           className={Styles.formLabel} 
                           label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
                           rules={currentStage === "4" ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
@@ -1819,7 +1417,7 @@ const Approval = () => {
 
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {!isCNF && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+          {(!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
@@ -2031,7 +1629,7 @@ const Approval = () => {
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {!isStage2ButtonsHidden && <Button
+                    {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && <Button
                       type="primary"
                       onClick={() => handleAction("Approved")}
                       icon={<Icon icon="mdi:check-circle" />}
@@ -2046,7 +1644,7 @@ const Approval = () => {
                               currentStage === "6" ? "Approve (Accounts)" :
                                 currentStage === "7" ? "Close Job" : "Approve / Verify"}
                     </Button>}
-                    {(isHOD || isAdmin || isGM) && !isStage2ButtonsHidden && (
+                    {(isHOD || isAdmin || isGM) && !isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
                       <Button
                         type="primary"
                         onClick={() => handleAction("Rejected")}
