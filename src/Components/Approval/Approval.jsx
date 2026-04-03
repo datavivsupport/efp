@@ -1065,7 +1065,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!stage2.isThisJobsHOD && !(currentStage === "4" && isCNF) && (
+          {!stage2.isThisJobsHOD && !(currentStage === "4" && isCNF) && !isCreator && (
             <Card
               className={Styles.card}
               bordered
