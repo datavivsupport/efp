@@ -400,8 +400,8 @@ const SalesInput = () => {
         const hodData = hodRes.data?.results ?? hodRes.data ?? [];
 
         setHodOptions(hodData.map((item) => ({
-          label: `${item.first_name} ${item.last_name}`,
-          value: `${item.first_name} ${item.last_name}`
+           label: `${item.first_name} ${item.last_name}  |  (${item.email})`,
+           value: `${item.first_name} ${item.last_name}  |  (${item.email})`,
         })));
       } catch (err) {
         console.warn("Failed to load HOD selection data (permissions?)", err);
