@@ -1333,9 +1333,10 @@ const Approval = () => {
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
-                                : isLLReq && currentStage !== "4"
+                                : !isLLReq && currentStage !== "4"
+                                ? "Load List upload is disabled until the requirement is turned on."
+                                : currentStage === "2" && isCNF
                                 ? "Disabled until Sales & HOD approval is completed."
-                                // ? "Load List upload is disabled until the requirement is turned on."
                                 : isLiner && jobData?.is_hod_approved && !isCNF
                                 ? "CNF is allowd to uplaod it"
                                 : null
