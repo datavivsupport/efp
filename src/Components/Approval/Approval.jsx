@@ -661,7 +661,6 @@ const Approval = () => {
           layout="vertical"
           form={form}
           onFinish={onFinish}
-          disabled={isStage2ButtonsHidden || (isCreator && jobData?.status !== "draft")}
           initialValues={{
             containerRows: [{}],
             placementRows: [{}]
@@ -1688,7 +1687,7 @@ const Approval = () => {
                 marginBottom: "1rem",
               }}
             >
-              {!canApprove && (!isGM || (isOthers && jobData?.status === 'draft')) && !isMasterMode && (!isCS || csBookingEditStage) && (
+              {!canApprove && (!isGM || (isOthers && jobData?.status === 'draft')) && !isMasterMode && (!isCS || csBookingEditStage) && (!isSalesExecutive || !isSalesSectionLocked) && (
                 <>
                   <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
                     {isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3) ? "Submit CS Update" :
