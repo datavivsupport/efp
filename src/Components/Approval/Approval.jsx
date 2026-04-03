@@ -101,10 +101,10 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
         return (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Space>
+              <div style={{ display: "flex"}}>
                 <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
                 {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
-                <Typography.Text ellipsis style={{ maxWidth: 200 }}>
+                <Typography.Text ellipsis style={{ maxWidth: 150 }}>
                   {file.name || file.file_name}
                 </Typography.Text>
                 {file.uploaded_by_user_name && (
@@ -112,7 +112,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
                     ({file.uploaded_by_user_name})
                   </Typography.Text>
                 )}
-              </Space>
+              </div>
               <Space>
                 <Tooltip title="Preview">
                 <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>

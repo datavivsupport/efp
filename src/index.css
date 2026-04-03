@@ -135,26 +135,22 @@ html, body, #root {
 }
 
 .ant-form-item-control-input-content .ant-input-disabled {
-  background-color: #f4f3f345 !important;
-  color: rgba(71, 71, 71, 0.85) !important;
+  color: rgba(33, 33, 33, 0.85) !important;
 }
 
 .ant-picker-disabled,
 .ant-picker .ant-picker-input >input[disabled] {
-  background-color: #f4f3f345 !important;
-  color: rgba(71, 71, 71, 0.85) !important;
+  color: rgba(33, 33, 33, 0.85) !important;
 }
 
 .ant-form-item-control-input-content .ant-input {
-  background-color: #f4f3f345 !important;
-  color: rgba(71, 71, 71, 0.85) !important;
+  color: rgba(33, 33, 33, 0.85) !important;
 }
 
 .ant-form-item-control-input,
- .ant-form-item-control-input-content,
- .ant-select-outlined {
-  background-color: #f4f3f345 !important;
-  color: rgba(71, 71, 71, 0.85) !important;
+.ant-form-item-control-input-content,
+.ant-select-outlined {
+  color: rgba(33, 33, 33, 0.85) !important;
 }
 
 /* Darker placeholder text for all antd inputs */
@@ -165,5 +161,5 @@ html, body, #root {
 .ant-input-number-input::placeholder,
 .ant-select-placeholder,
 textarea.ant-input::placeholder {
-  color: rgba(71, 71, 71, 0.85) !important;
+  color: rgba(33, 33, 33, 0.85) !important;
 }
