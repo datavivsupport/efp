@@ -18,6 +18,7 @@ import {
   Timeline,
   Modal,
   Spin,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -26,6 +27,7 @@ import {
   PaperClipOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import Styles from "./salesinput.module.css";
@@ -51,14 +53,19 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Space>
-              <PaperClipOutlined style={{ color: '#1890ff' }} />
+              <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
+              {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
               <Typography.Text ellipsis style={{ maxWidth: 200 }}>
                 {file.name || file.file_name}
               </Typography.Text>
             </Space>
             <Space>
-              <Button type="link" size="small" onClick={() => onPreview(i)}>Preview</Button>
+              <Tooltip title="Preview">
+                <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
+              </Tooltip>
+              <Tooltip title="Delete">
               {!disabled && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}
+              </Tooltip>
             </Space>
           </div>
           {!disabled && (
@@ -67,7 +74,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               placeholder="Add remarks for this document..."
               value={file.remarks || ""}
               onChange={(e) => onRemarkChange(i, e.target.value)}
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }}
             />
           )}
           {disabled && file.remarks && (
@@ -552,7 +559,7 @@ const SalesInput = () => {
         no_of_containers: Number(row?.no_of_containers) || 0,
         category: row?.category || "",
         placement_time: row?.placement_time
-          ? row.placement_time.format("YYYY-MM-DD HH:mm:ss")
+          ? row.placement_time.format("DD-MM-YYYY HH:mm:ss")
           : null,
         pickup_location: row?.pickup_location || "",
         special_remarks: row?.special_remarks || "",
@@ -615,7 +622,7 @@ const SalesInput = () => {
         : [],
       /* 2026-03-25: ETA fields relocated to Approval Page (Stage 3+) per PRD */
       overseas_agent_name: values.overseas_agent_name || "",
-      export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
+      export_created_date: values.export_created_date ? values.export_created_date.format("DD-MM-YYYY") : null,
       export_number: values.export_number !== "N/A" ? values.export_number : null,
       general_remarks: remarks,
       documents: [
@@ -768,7 +775,8 @@ const SalesInput = () => {
                     name="export_created_date"
                   >
                     <DatePicker
-                      placeholder="YYYY-MM-DD"
+                      format="DD-MM-YYYY"
+                      placeholder="DD-MM-YYYY"
                       disabled={isReadOnly || true} // Created Date is usually system-managed or locked
                       style={{ width: "100%" }}
                     />
@@ -1505,8 +1513,8 @@ const SalesInput = () => {
                           >
                             <DatePicker
                             showTime={{ defaultValue: dayjs() }}
-                              format="YYYY-MM-DD HH:mm:ss"
-                              placeholder="YYYY-MM-DD HH:mm:ss"
+                              format="DD-MM-YYYY HH:mm:ss"
+                              placeholder="DD-MM-YYYY HH:mm:ss"
                               style={{ width: "100%" }}
                               disabled={isReadOnly}
                             />

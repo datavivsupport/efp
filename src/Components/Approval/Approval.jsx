@@ -23,6 +23,7 @@ import {
   Checkbox,
   message,
   Steps,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -93,7 +94,8 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Space>
-                <PaperClipOutlined style={{ color: '#1890ff' }} />
+                <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
+                {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
                 <Typography.Text ellipsis style={{ maxWidth: 200 }}>
                   {file.name || file.file_name}
                 </Typography.Text>
@@ -104,17 +106,21 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
                 )}
               </Space>
               <Space>
-                <Button type="link" size="small" onClick={() => onPreview(i)}>Preview</Button>
+                <Tooltip title="Preview">
+                <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
+                </Tooltip>
+                <Tooltip title="Delete">
                 {canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}
+                </Tooltip>
               </Space>
             </div>
             {canEditFile ? (
               <Input
-                size="small"
+                size="large"
                 placeholder="Remarks..."
                 value={file.remarks || ""}
                 onChange={(e) => onRemarkChange(i, e.target.value)}
-                style={{ fontSize: '11px', marginTop: '2px' }}
+                style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }}
               />
             ) : (
               file.remarks && (
@@ -757,14 +763,14 @@ const Approval = () => {
       cs_hod: values.cs_hod,
 
       // PRD v3.2 Relocated ETA Fields
-      vsl_initial_eta: values.vsl_initial_eta ? dayjs(values.vsl_initial_eta).format("YYYY-MM-DD") : null,
-      vsl_latest_eta: values.vsl_latest_eta ? dayjs(values.vsl_latest_eta).format("YYYY-MM-DD") : null,
-      vsl_etd: values.vsl_etd ? dayjs(values.vsl_etd).format("YYYY-MM-DD") : null,
-      pod_eta: values.pod_eta ? dayjs(values.pod_eta).format("YYYY-MM-DD") : null,
+      vsl_initial_eta: values.vsl_initial_eta ? dayjs(values.vsl_initial_eta).format("DD-MM-YYYY") : null,
+      vsl_latest_eta: values.vsl_latest_eta ? dayjs(values.vsl_latest_eta).format("DD-MM-YYYY") : null,
+      vsl_etd: values.vsl_etd ? dayjs(values.vsl_etd).format("DD-MM-YYYY") : null,
+      pod_eta: values.pod_eta ? dayjs(values.pod_eta).format("DD-MM-YYYY") : null,
 
       // PRD v3.2 Restricted Accounts Fields
       carrier_name_2: values.carrier_name_2,
-      invoice_date: values.invoice_date ? dayjs(values.invoice_date).format("YYYY-MM-DD") : null,
+      invoice_date: values.invoice_date ? dayjs(values.invoice_date).format("DD-MM-YYYY") : null,
 
       commodities: values.commodity !== undefined
         ? (values.commodity ? values.commodity.split(",").map(c => ({ name: c.trim() })).filter(c => c.name) : [])
@@ -784,7 +790,7 @@ const Approval = () => {
         no_of_containers: parseInt(r.no_of_containers) || 0,
         category: r.category,
         placement_time: r.placement_time
-          ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
+          ? dayjs(r.placement_time).format("DD-MM-YYYY HH:mm:ss")
           : null,
         pickup_location: r.pickup_location,
         special_remarks: r.special_remarks
@@ -815,9 +821,9 @@ const Approval = () => {
       afsys_job_no: values.afsys_job_no,
       booking_vessel: values.booking_vessel,
       booking_voyage: values.booking_voyage,
-      vessel_eta: values.vessel_eta ? values.vessel_eta.format("YYYY-MM-DD") : null,
+      vessel_eta: values.vessel_eta ? values.vessel_eta.format("DD-MM-YYYY") : null,
       booking_ref_no: values.booking_ref_no,
-      si_cut_off_date: values.si_cut_off_date ? values.si_cut_off_date.format("YYYY-MM-DD") : null,
+      si_cut_off_date: values.si_cut_off_date ? values.si_cut_off_date.format("DD-MM-YYYY") : null,
       si_cut_off_time: values.si_cut_off_time ? values.si_cut_off_time.format("HH:mm") : null,
       booking_remarks: values.booking_remarks,
       cnf_remarks: values.cnf_remarks,
@@ -1045,7 +1051,7 @@ const Approval = () => {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm") : "N/A"
+      render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A"
     }
   ];
 
@@ -1445,7 +1451,7 @@ const Approval = () => {
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input placeholder="Vol" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="YYYY-MM-DD HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={2}>
@@ -1487,35 +1493,35 @@ const Approval = () => {
                     <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
 
                   {/* PRD v3.2 Relocated ETA Fields */}
                   <Col xs={24} md={6}>
                     <Form.Item label="Initial ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="YYYY-MM-DD" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time" rules={[{ required: isStage2 && isCS, message: "Required" }]}><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
@@ -1778,7 +1784,7 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Invoice Date" name="invoice_date">
-                      <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" disabled={isAccountsEditableFieldLocked} />
+                      <DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
