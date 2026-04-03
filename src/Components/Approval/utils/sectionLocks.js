@@ -71,12 +71,21 @@ export const computeSectionLocks = (ctx) => {
 
   // ── Upload locks ───────────────────────────────────────────────────────────
   const isCSUploadLocked = baseLocked || (!isCS && !isAdmin);
+  // const isCNFUploadLocked =
+  //   baseLocked ||
+  //   isCNFDone ||
+  //   (!isCNF && !isAdmin) ||
+  //   (!isCNFStage && !(isLiner && isStage2) && !isAdmin);
 
   const isCNFUploadLocked =
-    baseLocked ||
-    isCNFDone ||
-    (!isCNF && !isAdmin) ||
-    (!isCNFStage && !(isLiner && isStage2) && !isAdmin);
+  isCNF
+    ? false
+    : (
+        baseLocked ||
+        isCNFDone ||
+        (!isCNF && !isAdmin) ||
+        (!isCNFStage && !(isLiner && isStage2) && !isAdmin)
+      );
 
   // ED is CNF-owned normally, but CS can upload at Forwarding stage 4
   const isEDUploadLocked =
@@ -99,6 +108,7 @@ export const computeSectionLocks = (ctx) => {
   const showDocumentUploads =
     ((!(isStage2 || currentStage === "3") || isMasterMode || (isForwarding && currentStage === "5")) && !isCNF) ||
     (isMasterMode && isCNF) ||
+     isCNF || isCS ||
     (isCNF && isForwarding && currentStage === "3") ||
     (isForwarding && currentStage === "5");  // always visible at Forwarding stage 5
 
