@@ -82,7 +82,6 @@ export const computeJobContext = ({ jobData, id, user, approvalHistory, roles })
   const isThisJobsCSHOD =
     !!jobData?.cs_hod &&
     String(user?.id) === String(jobData?.cs_hod);
-  console.log(user?.id, jobData?.cs_hod, isThisJobsCSHOD);
   // ── Stage 2 gate logic ─────────────────────────────────────────────────────
   // Edit this object to change who can act at stage 2.
   const stage2 = {

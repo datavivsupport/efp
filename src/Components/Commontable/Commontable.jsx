@@ -63,7 +63,7 @@ const TableBodyCell = ({ id, ...props }) => {
 function CommonTable({
   columns,
   data,
-  // loading,
+  loading = false,
   onTableChange = () => {},
   page = 1,
   total = 0,
@@ -76,6 +76,9 @@ function CommonTable({
   const [dragIndex, setDragIndex] = useState({ active: -1, over: -1 });
   const [currentPage, setCurrentPage] = useState(page);
   const [currentPageSize, setCurrentPageSize] = useState(pagesize);
+
+  useEffect(() => { setCurrentPage(page); }, [page]);
+  useEffect(() => { setCurrentPageSize(pagesize); }, [pagesize]);
 
   const topScrollRef = useRef(null);
   const tableWrapperRef = useRef(null);
@@ -183,7 +186,7 @@ function CommonTable({
               <Table
                 columns={cols}
                 dataSource={data}
-                // loading={loading}
+                loading={loading}
                 onRow={onRow}
                 rowClassName={rowClassName}
                 onChange={handleTableChange}
