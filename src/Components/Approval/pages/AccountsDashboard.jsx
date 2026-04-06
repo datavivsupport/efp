@@ -19,8 +19,8 @@ const AccountsDashboard = () => {
   const fetchAccountsJobs = async (p = 1, ps = 10) => {
     setLoading(true);
     try {
-      const res = await apiClient.get("/liner/sales-input/", {
-        params: { status: "submitted", page: p, page_size: ps },
+      const res = await apiClient.get("/liner/sales-input/accounts-pending/", {
+        params: { page: p, page_size: ps },
       });
 
       // Handle both wrapped {status: "success", data: {...}} and direct DRF {...} responses
