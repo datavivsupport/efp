@@ -139,7 +139,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
-  const [bankSlips, setBankSlips] = useState([]);
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
   
@@ -150,13 +149,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   useEffect(() => {
     if (jobData) {
       const docs = partitionDocuments(jobData.documents || []);
-      setBankSlips(docs.bankSlips);
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,
-        invoice_date: jobData.invoice_date ? dayjs(jobData.invoice_date) : null,
         account_remarks: jobData.approval_details?.account_remarks
       });
     }
@@ -200,7 +197,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       const values = await form.validateFields();
       const payload = {
         carrier_name_2: values.carrier_name_2,
-        invoice_date: values.invoice_date ? values.invoice_date.format("YYYY-MM-DD") : null,
         account_remarks: values.account_remarks,
         action: actionType,
         remarks: values.approvalRemarks || "",
@@ -229,7 +225,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     try {
       const payload = {
         carrier_name_2: values.carrier_name_2,
-        invoice_date: values.invoice_date ? values.invoice_date.format("YYYY-MM-DD") : null,
         account_remarks: values.account_remarks,
       };
       await apiClient.patch(`/liner/sales-input/${id}/`, payload);
@@ -295,30 +290,9 @@ const AccountsUpdatePage = ({ jobData, user }) => {
                 <Input disabled={!isAccountsTeam} size="large" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item label="Invoice Date" name="invoice_date">
-                <DatePicker style={{ width: '100%' }} disabled={!isAccountsTeam} size="large" />
-              </Form.Item>
-            </Col>
             <Col span={24}>
               <Form.Item label="Account Remarks" name="account_remarks">
                 <TextArea rows={3} disabled={!isAccountsTeam} />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item label="Bank Slip Upload">
-                <DocUploadField 
-                  label="Bank Slip" 
-                  files={bankSlips} 
-                  setFiles={setBankSlips} 
-                  salesInputId={id} 
-                  docType="Bank Slip" 
-                  category="financial" 
-                  onPreview={openPreview} 
-                  disabled={!isAccountsTeam}
-                  user={user}
-                  isAdmin={isAdmin}
-                />
               </Form.Item>
             </Col>
           </Row>
