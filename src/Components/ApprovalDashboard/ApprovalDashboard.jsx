@@ -45,10 +45,17 @@ const ApprovalDashboard = () => {
 
   const [data, setData] = useState([]);
   const [draftsData, setDraftsData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [draftsLoading, setDraftsLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
-  const [jobTypeFilter, setJobTypeFilter] = useState("FORWARDING");
+  const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [draftPage, setDraftPage] = useState(1);
+  const [draftPageSize, setDraftPageSize] = useState(10);
+  const [draftTotal, setDraftTotal] = useState(0);
 
   const jobTypes = [
     { label: "LINER", icon: "mdi:ship", color: "#17a2b8" },
@@ -57,54 +64,83 @@ const ApprovalDashboard = () => {
     { label: "OTHERS", icon: "mdi:package-variant", color: "#6b7280" },
   ];
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchReports = async (page = 1, size = 10, jobType = null) => {
+    setReportsLoading(true);
     try {
-      // Fetch both draft and non-draft separately for clear dashboard separation
-      const [reportsRes, draftsRes] = await Promise.all([
-        apiClient.get("/liner/sales-input/reports/"),
-        apiClient.get("/liner/sales-input/draft/"),
-      ]);
-
+      const params = { page, page_size: size };
+      if (jobType) params.job_type = jobType;
+      const reportsRes = await apiClient.get("/liner/sales-input/reports/", { params });
       if (reportsRes.data?.status === "success") {
-        const results = reportsRes.data.data.results || reportsRes.data.data;
+        const responseData = reportsRes.data.data;
+        const results = responseData.results || responseData;
+        const count = responseData.count ?? results.length;
+        setTotalRecords(count);
         setData(results.map(item => ({
           ...item,
           key: item.id.toString(),
           commodities_display: item.commodities?.map(c => c.name).join(", ") || "-",
           contact_details: item.phone_no || "-",
         })));
-
         setStats(prev => ({
           ...prev,
           approved: results.filter(i => i.status === 'approved').length,
           pending: results.filter(i => i.status === 'submitted').length,
           rejected: results.filter(i => i.status === 'rejected').length,
-          total: results.length
+          total: count
         }));
       }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
 
+  const fetchDrafts = async (page = 1, size = 10) => {
+    setDraftsLoading(true);
+    try {
+      const draftsRes = await apiClient.get("/liner/sales-input/draft/", { params: { page, page_size: size } });
       if (draftsRes.data?.status === "success") {
-        const results = draftsRes.data.data.results || draftsRes.data.data;
+        const responseData = draftsRes.data.data;
+        const results = responseData.results || responseData;
+        const count = responseData.count ?? results.length;
+        setDraftTotal(count);
         setDraftsData(results.map(item => ({
           ...item,
           key: item.id.toString(),
         })));
         setStats(prev => ({
           ...prev,
-          overdue: results.length, // Using overdue slot for drafts count in UI
+          overdue: count,
         }));
       }
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error("Error fetching drafts:", error);
     } finally {
-      setLoading(false);
+      setDraftsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDashboardData();
+useEffect(() => {
+    fetchReports(1, pageSize, jobTypeFilter);
+    fetchDrafts(1, draftPageSize);
   }, []);
+
+  const handleTableChange = (pagination) => {
+    const newPage = pagination.current;
+    const newSize = pagination.pageSize;
+    setCurrentPage(newPage);
+    setPageSize(newSize);
+    fetchReports(newPage, newSize, jobTypeFilter);
+  };
+
+  const handleDraftTableChange = (pagination) => {
+    const newPage = pagination.current;
+    const newSize = pagination.pageSize;
+    setDraftPage(newPage);
+    setDraftPageSize(newSize);
+    fetchDrafts(newPage, newSize);
+  };
 
   const handleApprove = async (id) => {
     try {
@@ -114,11 +150,11 @@ const ApprovalDashboard = () => {
       } else {
         message.error(res.data?.message || "Approval failed");
       }
-      fetchDashboardData();
+      fetchReports(currentPage, pageSize, jobTypeFilter);
     } catch (error) {
       const errMsg = error.response?.data?.message || "Failed to approve";
       message.error(errMsg);
-      fetchDashboardData(); // Also refresh so button visibility updates
+      fetchReports(currentPage, pageSize, jobTypeFilter);
     }
   };
 
@@ -130,11 +166,11 @@ const ApprovalDashboard = () => {
       } else {
         message.error(res.data?.message || "Rejection failed");
       }
-      fetchDashboardData();
+      fetchReports(currentPage, pageSize, jobTypeFilter);
     } catch (error) {
       const errMsg = error.response?.data?.message || "Failed to reject";
       message.error(errMsg);
-      fetchDashboardData(); // Refresh so button visibility updates
+      fetchReports(currentPage, pageSize, jobTypeFilter);
     }
   };
 
@@ -142,7 +178,7 @@ const ApprovalDashboard = () => {
     try {
       await apiClient.delete(`/liner/sales-input/${id}/`);
       message.success("Draft Deleted Successfully");
-      fetchDashboardData();
+      fetchDrafts(draftPage, draftPageSize);
     } catch (error) {
       console.error("Delete Error:", error);
       message.error("Failed to delete draft");
@@ -153,7 +189,9 @@ const ApprovalDashboard = () => {
     try {
       await apiClient.post(`/liner/sales-input/${id}/submit/`);
       message.success("Sales Input Submitted Successfully");
-      fetchDashboardData();
+      // Refresh both: draft moved to reports
+      fetchDrafts(draftPage, draftPageSize);
+      fetchReports(currentPage, pageSize, jobTypeFilter);
     } catch (error) {
       console.error("Submit Error:", error);
       message.error("Failed to submit draft");
@@ -390,7 +428,14 @@ const ApprovalDashboard = () => {
                   icon={<Icon icon="mdi:close-circle" />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm("Reject this sales input?")) handleReject(record.id);
+                    Modal.confirm({
+                      title: "Reject Sales Input",
+                      content: "Are you sure you want to reject this sales input?",
+                      okText: "Reject",
+                      okType: "danger",
+                      cancelText: "Cancel",
+                      onOk: () => handleReject(record.id),
+                    });
                   }}
                 >
                   Reject
@@ -460,7 +505,7 @@ const ApprovalDashboard = () => {
               <Icon icon="mdi:file-edit-outline" color="#f59e0b" />
               My Drafts
             </h2>
-            <Tag color="orange">{draftsData.length} Drafts</Tag>
+            <Tag color="orange">{draftTotal} Drafts</Tag>
           </div>
           <CommonTable
             columns={[
@@ -486,21 +531,36 @@ const ApprovalDashboard = () => {
                     >
                       View
                     </Button>
-                    <Button
+                    {/* <Button
                       size="small"
                       type="primary"
                       icon={<Icon icon="mdi:send" />}
-                      onClick={() => handleSubmitDraft(record.id)}
+                      onClick={() => {
+                        Modal.confirm({
+                          title: "Submit Draft",
+                          content: "Are you sure you want to submit this draft for approval?",
+                          okText: "Submit",
+                          cancelText: "Cancel",
+                          onOk: () => handleSubmitDraft(record.id),
+                        });
+                      }}
                       style={{ backgroundColor: '#6366f1' }}
                     >
                       Submit
-                    </Button>
+                    </Button> */}
                     <Button
                       size="small"
                       type="primary"
                       icon={<Icon icon="mdi:delete" />}
                       onClick={() => {
-                        if (window.confirm("Delete this draft?")) handleDelete(record.id);
+                        Modal.confirm({
+                          title: "Delete Draft",
+                          content: "Are you sure you want to delete this draft? This action cannot be undone.",
+                          okText: "Delete",
+                          okType: "danger",
+                          cancelText: "Cancel",
+                          onOk: () => handleDelete(record.id),
+                        });
                       }}
                     >
                       Delete
@@ -510,8 +570,12 @@ const ApprovalDashboard = () => {
               }
             ]}
             data={draftsData}
-            loading={loading}
-            yescomp={false}
+            loading={draftsLoading}
+            yescomp={true}
+            page={draftPage}
+            total={draftTotal}
+            pagesize={draftPageSize}
+            onTableChange={handleDraftTableChange}
           />
         </div>
 
@@ -522,12 +586,16 @@ const ApprovalDashboard = () => {
               Active Shipments & Approvals
             </h2>
             <Select
-              placeholder="Filter by Job Type"
-              allowClear
               style={{ width: 180 }}
-              value={jobTypeFilter}
-              onChange={(value) => setJobTypeFilter(value)}
+              value={jobTypeFilter || "all"}
+              onChange={(value) => {
+                const newFilter = value === "all" ? "" : value;
+                setJobTypeFilter(newFilter);
+                setCurrentPage(1);
+                fetchReports(1, pageSize, newFilter);
+              }}
               options={[
+                { label: "ALL", value: "all" },
                 { label: "LINER", value: "LINER" },
                 { label: "FORWARDING", value: "FORWARDING" },
                 { label: "CROSS TRADE", value: "CROSS TRADE" },
@@ -537,12 +605,13 @@ const ApprovalDashboard = () => {
           </div>
           <CommonTable
             columns={columns}
-            data={jobTypeFilter ? data.filter(i => i.job_type === jobTypeFilter) : data}
-            loading={loading}
+            data={data}
+            loading={reportsLoading}
             yescomp={true}
-            page={1}
-            total={data.length}
-            pagesize={10}
+            page={currentPage}
+            total={totalRecords}
+            pagesize={pageSize}
+            onTableChange={handleTableChange}
           />
         </div>
       </main>

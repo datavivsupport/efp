@@ -384,7 +384,7 @@ const Approval = () => {
     isROReq || (!isLiner && !isExtended) || isMasterMode;
   const csStage4UploadLocked = isCS && !isAdmin && currentStage === "4"; // RO/BOC locked for CS at stage 4 (already uploaded at stage 2)
   const releaseOrderDisabled =
-    baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS);
+    baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || isCNF;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) {
       return isLiner && !isCNF ? "CNF is allowed to upload it" : null;
@@ -1065,7 +1065,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!stage2.isThisJobsHOD && !(currentStage === "4" && isCNF) && (
+          {!stage2.isThisJobsHOD &&  !isCreator && (
             <Card
               className={Styles.card}
               bordered
@@ -1227,7 +1227,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS)}
+                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || isCNF}
                           restrictionMessage={
                             isCNFUploadLocked && !isCS && isLiner && !isCNF
                               ? "CNF is allowd to uplaod it"
@@ -1335,6 +1335,8 @@ const Approval = () => {
                                 ? null
                                 : !isLLReq && currentStage !== "4"
                                 ? "Load List upload is disabled until the requirement is turned on."
+                                : currentStage === "2" && isCNF
+                                ? "Disabled until Sales & HOD approval is completed."
                                 : isLiner && jobData?.is_hod_approved && !isCNF
                                 ? "CNF is allowd to uplaod it"
                                 : null
@@ -1416,7 +1418,7 @@ const Approval = () => {
 
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {(!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+          {(!["2","3"].includes(currentStage) && isCS) && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
             <Card
               className={Styles.card}
               bordered
@@ -1446,25 +1448,25 @@ const Approval = () => {
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (
-                    <>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="HBL">
-                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
-                          <Select
-                            placeholder="Select CS HOD"
-                            allowClear
-                            showSearch
-                            optionFilterProp="label"
-                            options={csHodOptions}
-                            disabled={isCSUploadLocked || isMasterMode}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </>
+                    <Col xs={24} md={8}>
+                      <Form.Item className={Styles.formLabel} label="HBL">
+                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isLiner && (
+                    <Col xs={24} md={8}>
+                      <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
+                        <Select
+                          placeholder="Select CS HOD"
+                          allowClear
+                          showSearch
+                          optionFilterProp="label"
+                          options={csHodOptions}
+                          disabled={isCSUploadLocked || isMasterMode}
+                        />
+                      </Form.Item>
+                    </Col>
                   )}
                   {facFlag && (
                     <Col xs={24} md={8}>

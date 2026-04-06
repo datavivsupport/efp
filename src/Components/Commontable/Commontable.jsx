@@ -63,8 +63,8 @@ const TableBodyCell = ({ id, ...props }) => {
 function CommonTable({
   columns,
   data,
-  //   loading,
-  onTableChange = () => { },
+  loading = false,
+  onTableChange = () => {},
   page = 1,
   total = 0,
   pagesize = 10,
@@ -74,6 +74,11 @@ function CommonTable({
 }) {
   const [cols, setCols] = useState([]);
   const [dragIndex, setDragIndex] = useState({ active: -1, over: -1 });
+  const [currentPage, setCurrentPage] = useState(page);
+  const [currentPageSize, setCurrentPageSize] = useState(pagesize);
+
+  useEffect(() => { setCurrentPage(page); }, [page]);
+  useEffect(() => { setCurrentPageSize(pagesize); }, [pagesize]);
 
   const topScrollRef = useRef(null);
   const tableWrapperRef = useRef(null);
@@ -91,9 +96,7 @@ function CommonTable({
     });
   }, [columns]);
 
-  useEffect(() => {
-    setCols(buildColumns);
-  }, [buildColumns]);
+  useEffect(() => setCols(buildColumns), [buildColumns]);
 
   useEffect(() => {
     const topScroll = topScrollRef.current;
@@ -107,27 +110,15 @@ function CommonTable({
     const syncWidth = () => {
       const scrollWidth = tableContent.scrollWidth;
       const topScrollContent = topScroll.querySelector(".top-scroll-content");
-      if (topScrollContent) {
-        topScrollContent.style.width = `${scrollWidth}px`;
-      }
+      if (topScrollContent) topScrollContent.style.width = `${scrollWidth}px`;
     };
 
     syncWidth();
-
     const resizeObserver = new ResizeObserver(syncWidth);
     resizeObserver.observe(tableContent);
 
-    const handleTopScroll = () => {
-      if (tableContent && topScroll) {
-        tableContent.scrollLeft = topScroll.scrollLeft;
-      }
-    };
-
-    const handleTableScroll = () => {
-      if (tableContent && topScroll) {
-        topScroll.scrollLeft = tableContent.scrollLeft;
-      }
-    };
+    const handleTopScroll = () => { tableContent.scrollLeft = topScroll.scrollLeft; };
+    const handleTableScroll = () => { topScroll.scrollLeft = tableContent.scrollLeft; };
 
     topScroll.addEventListener("scroll", handleTopScroll);
     tableContent.addEventListener("scroll", handleTableScroll);
@@ -141,24 +132,14 @@ function CommonTable({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 1 } }));
 
-  const onDragEnd = (event) => {
-    const { active, over } = event;
+  const onDragEnd = ({ active, over }) => {
     setDragIndex({ active: -1, over: -1 });
-
     if (!over || active.id === over.id) return;
 
-    const activeId = active.id;
-    const overId = over.id;
-
     setCols((prev) => {
-      const previousIndex = prev.findIndex((c) => c.key === activeId);
-      const newIndex = prev.findIndex((c) => c.key === overId);
-
-      if (previousIndex === -1 || newIndex === -1) {
-        console.warn("Invalid drag indices:", { previousIndex, newIndex });
-        return prev;
-      }
-
+      const previousIndex = prev.findIndex((c) => c.key === active.id);
+      const newIndex = prev.findIndex((c) => c.key === over.id);
+      if (previousIndex === -1 || newIndex === -1) return prev;
       return arrayMove(prev, previousIndex, newIndex);
     });
   };
@@ -166,13 +147,19 @@ function CommonTable({
   const onDragOver = (event) => {
     setDragIndex({
       active: event.active.id,
-      over: (event.over?.id) ?? -1,
+      over: event.over?.id ?? -1,
     });
   };
 
+  const handleTableChange = (pagination, filters, sorter) => {
+    setCurrentPage(pagination.current);
+    setCurrentPageSize(pagination.pageSize);
+    onTableChange(pagination, filters, sorter);
+  };
+
   const paginationConfig = yescomp
-    ? { current: page, pageSize: pagesize, total, showSizeChanger: true }
-    : { current: page, total, showSizeChanger: false };
+    ? { current: currentPage, pageSize: currentPageSize, total, showSizeChanger: true }
+    : { current: currentPage, total, showSizeChanger: false };
 
   const sortableItems = useMemo(() => cols.map((c) => String(c.key)), [cols]);
 
@@ -181,9 +168,9 @@ function CommonTable({
       <div
         ref={topScrollRef}
         className="top-scrollbar"
-        style={{ overflowX: "auto", overflowY: "hidden", marginBottom: "4px" }}
+        style={{ overflowX: "auto", overflowY: "hidden", marginBottom: 4 }}
       >
-        <div className="top-scroll-content" style={{ height: "1px" }} />
+        <div className="top-scroll-content" style={{ height: 1 }} />
       </div>
 
       <div ref={tableWrapperRef}>
@@ -199,10 +186,10 @@ function CommonTable({
               <Table
                 columns={cols}
                 dataSource={data}
-                // loading={loading}
+                loading={loading}
                 onRow={onRow}
                 rowClassName={rowClassName}
-                onChange={onTableChange}
+                onChange={handleTableChange}
                 pagination={{
                   ...paginationConfig,
                   position: ["topRight"],
@@ -232,3 +219,5 @@ function CommonTable({
 }
 
 export default CommonTable;
+
+
