@@ -1418,7 +1418,6 @@ const Approval = () => {
 
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {console.log({currentStage, isCS,isMasterMode})}
           {(!["2","3"].includes(currentStage) && isCS) && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
             <Card
               className={Styles.card}
