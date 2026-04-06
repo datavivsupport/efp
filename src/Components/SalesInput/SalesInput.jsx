@@ -871,8 +871,8 @@ const SalesInput = () => {
                     name="export_created_date"
                   >
                     <DatePicker
-                      format="YYYY-MM-DD"
-                      placeholder="YYYY-MM-DD"
+                      format="DD-MM-YYYY"
+                      placeholder="DD-MM-YYYY"
                       disabled={isReadOnly || true} // Created Date is usually system-managed or locked
                       style={{ width: "100%" }}
                     />
@@ -1609,8 +1609,8 @@ const SalesInput = () => {
                           >
                             <DatePicker
                             showTime={{ defaultValue: dayjs() }}
-                              format="YYYY-MM-DD HH:mm:ss"
-                              placeholder="YYYY-MM-DD HH:mm:ss"
+                              format="DD-MM-YYYY HH:mm:ss"
+                              placeholder="DD-MM-YYYY HH:mm:ss"
                               style={{ width: "100%" }}
                               disabled={isReadOnly}
                             />
