@@ -16,6 +16,7 @@ import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
 import { useSelector } from "react-redux";
 import apiClient from "../../api/apiclient";
+import { computeUserRoles } from "../Approval/utils/roleUtils";
 
 const Navigation = () => {
   const user = useSelector((state) => state.auth.user);
@@ -28,18 +29,13 @@ const Navigation = () => {
   const popoverRef = useRef(null);
   Chart.register(...registerables);
 
-
-
-
-
-
-
-
+  const { isAccountsTeam, isAdmin } = computeUserRoles(user);
 
   const tabs = [
     { key: "/dashboard", label: "Overview" },
     { key: "/sales-input", label: "Sales Input" },
     { key: "/approval", label: "Approval" },
+    ...(isAccountsTeam || isAdmin ? [{ key: "/accounts-dashboard", label: "Accounts" }] : []),
     { key: "/export-report", label: "Report" },
   ];
 
