@@ -93,6 +93,7 @@ const DocUploadField = ({
   label,
   files,
   setFiles,
+  setPendingFiles,
   color = "purple",
   onPreview,
   salesInputId,
@@ -121,8 +122,37 @@ const DocUploadField = ({
       currentId = await onAutoSave();
     }
 
+    // if (!currentId && !isMasterMode) {
+    //   message.warning("Save the draft first before uploading documents");
+    //   console.log({file})
+    //   return false;
+    // }
+
     if (!currentId && !isMasterMode) {
-      message.warning("Save the draft first before uploading documents");
+
+      // ✅ Store file temporarily in memory
+      setPendingFiles((prev) => [
+        ...prev,
+        {
+          file,
+          doc_type: docType,
+          category: category
+        }
+      ]);
+
+      // optional UI update
+      setFiles((prev) => [
+        ...prev,
+        {
+          id: `temp-${Date.now()}`,
+          name: file.name,
+          file_name: file.name,
+          doc_type: docType,
+          remarks: "",
+          isTemp: true
+        }
+      ]);
+
       return false;
     }
 
@@ -265,6 +295,7 @@ const SalesInput = () => {
   const submittingRef = useRef(false);
   const [hodOptions, setHodOptions] = useState([]);
   const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
+  const [pendingFiles, setPendingFiles] = useState([]);
 
   // Specialized Job Type Logic
   const jobType = Form.useWatch("job_type", form);
@@ -539,6 +570,21 @@ const SalesInput = () => {
     }
   }, [id, user, form, typeParam]);
 
+  const uploadFileToServer = async (file, currentId, doc_type, category) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("doc_type", doc_type);
+  formData.append("category", category);
+
+  const response = await apiClient.post(
+    `/liner/sales-input/${currentId}/upload-document/`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+
+  return response.data;
+};
+
   const onFinish = async (values, statusValue = "submitted") => {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -625,7 +671,18 @@ const SalesInput = () => {
       export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
       export_number: values.export_number !== "N/A" ? values.export_number : null,
       general_remarks: remarks,
-      documents: [
+      // documents: [
+      //   ...attachments.map(d => ({
+      //     id: d.id,
+      //     doc_type: d.doc_type || "Attachment",
+      //     file_url: d.url || d.file_url,
+      //     file_name: d.name || d.file_name,
+      //     remarks: d.remarks || ""
+      //   }))
+      // ]
+    };
+    if(pendingFiles.length === 0){
+      payload["documents"] = [
         ...attachments.map(d => ({
           id: d.id,
           doc_type: d.doc_type || "Attachment",
@@ -634,7 +691,8 @@ const SalesInput = () => {
           remarks: d.remarks || ""
         }))
       ]
-    };
+    }
+
 
     try {
       const payloadWithUser = {
@@ -652,6 +710,43 @@ const SalesInput = () => {
       if (response.status === 201 || response.status === 200) {
         // Redirection as requested by user
         message.success(`Form ${statusValue === 'draft' ? "Saved" : "Submitted"} Successfully`);
+        if (response?.data?.id && pendingFiles.length > 0) {
+          for (const item of pendingFiles) {
+            try {
+              const data = await uploadFileToServer(
+                item.file,
+                response?.data?.id,
+                item.doc_type,
+                item.category
+              );
+
+              if (data.status === "success") {
+                const uploadedDoc = data.data;
+
+                setFiles((prev) =>
+                  prev.map((f) =>
+                    f.name === item.file.name && f.isTemp
+                      ? {
+                          id: uploadedDoc.id,
+                          name: uploadedDoc.file_name,
+                          url: uploadedDoc.file_url,
+                          file_name: uploadedDoc.file_name,
+                          file_url: uploadedDoc.file_url,
+                          doc_type: item.doc_type,
+                          remarks: ""
+                        }
+                      : f
+                  )
+                );
+              }
+            } catch (err) {
+              console.error("Pending upload failed:", err);
+            }
+          }
+
+          // ✅ clear temp files
+          setPendingFiles([]);
+        }
         navigate("/dashboard");
       }
     } catch (error) {
@@ -1697,6 +1792,7 @@ const SalesInput = () => {
                       label="Attachment"
                       files={attachments.filter(d => d.doc_type === "Attachment")}
                       setFiles={setAttachments}
+                      setPendingFiles={setPendingFiles}
                       color="blue"
                       onPreview={openPreview}
                       salesInputId={id}
