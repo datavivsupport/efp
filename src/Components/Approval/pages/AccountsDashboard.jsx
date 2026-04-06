@@ -96,8 +96,13 @@ const AccountsDashboard = () => {
           type="primary" 
           size="small" 
           onClick={(e) => {
-            e.stopPropagation();
+            if(record.current_stage !== "6") {
+              window.open(`/approval?id=${record.id}`, "_blank");
+              e.stopPropagation();
+              return;
+            }
             window.open(`/approval/${record.id}/accounts`, "_blank");
+            e.stopPropagation();
           }}
         >
           Open Accounts
@@ -128,7 +133,15 @@ const AccountsDashboard = () => {
               fetchAccountsJobs(pagination.current, pagination.pageSize);
             }}
             onRow={(record) => ({
-              onClick: () => navigate(`/approval/${record.id}/accounts`),
+              onClick: () => {
+                 if(record.current_stage !== "6") {
+                   window.open(`/approval?id=${record.id}`, "_blank");
+                   e.stopPropagation();
+              return;
+            }
+            window.open(`/approval/${record.id}/accounts`, "_blank");
+            e.stopPropagation();
+              },
               style: { cursor: "pointer" },
             })}
           />
