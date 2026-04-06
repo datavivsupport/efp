@@ -159,7 +159,7 @@ const ExportReport = () => {
             <CommonTable
               columns={[
                 { title: "Export No", dataIndex: "export_number", key: "export_number", render: (v) => <span style={{ fontWeight: 600, color: '#0d9488' }}>{v || "N/A (Draft)"}</span> },
-                { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).format("YYYY-MM-DD") : "-" },
+                { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "-" },
                 { title: "Created By", dataIndex: "created_by_name", key: "created_by_name", render: (v) => v || "-" },
                 { title: "Carrier", dataIndex: "carrier_name", key: "carrier_name", render: (text) => text || "-" },
                 { title: "Customer", dataIndex: "customer_name", key: "customer_name", render: (text) => text || "-" },
