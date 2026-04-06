@@ -140,6 +140,7 @@ const DocUploadField = ({
         }
       ]);
 
+      const tempUrl = URL.createObjectURL(file);
       // optional UI update
       setFiles((prev) => [
         ...prev,
@@ -149,7 +150,10 @@ const DocUploadField = ({
           file_name: file.name,
           doc_type: docType,
           remarks: "",
-          isTemp: true
+          isTemp: true,
+          url: tempUrl,       // ✅ add this
+          file_url: tempUrl,   // optional, if your preview uses file_url
+          mimeType: file.type
         }
       ]);
 
@@ -187,7 +191,7 @@ const DocUploadField = ({
       }
     } catch (err) {
       console.error(err);
-      message.error("Upload failed. please check your connection.");
+      // message.error("Upload failed. please check your connection.");
     }
     return false;
   };
@@ -324,9 +328,32 @@ const SalesInput = () => {
   const [newRemark, setNewRemark] = useState("");
   const [attachments, setAttachments] = useState([]);
 
+  // const openPreview = (fileList, index = 0) => {
+  //   const urls = fileList.map((f) => f.url || f.file_url);
+  //   setPreviewUrls(urls);
+  //   setPreviewIndex(index);
+  //   setPreviewVisible(true);
+  // };
   const openPreview = (fileList, index = 0) => {
-    const urls = fileList.map((f) => f.url || f.file_url);
-    setPreviewUrls(urls);
+    const filesWithMime = fileList.map((file) => {
+      let mimeType = file.mimeType || file.type; // check different keys
+
+      if (!mimeType) {
+        // fallback: guess mimeType from extension if possible
+        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+        if (ext === "pdf") mimeType = "application/pdf";
+        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        else mimeType = "other";
+      }
+
+      return {
+        ...file,
+        mimeType,
+      };
+  });
+
+    setPreviewUrls(filesWithMime);
     setPreviewIndex(index);
     setPreviewVisible(true);
   };
@@ -360,6 +387,12 @@ const SalesInput = () => {
   const isHNReq = isHNReqForm === true || isHNReqForm === "true";
 
   const isHalted = (isLiner || isForwarding) && (isLLReqForm === false || isHNReqForm === false);
+
+  useEffect(() => {
+    return () => {
+      attachments.forEach(f => f.isTemp && f.url && URL.revokeObjectURL(f.url));
+    }
+  }, [attachments]);
 
   // const addEquipmentRow = () => {
   //   setEquipmentRows([
@@ -1855,7 +1888,7 @@ const SalesInput = () => {
       </Form>
 
       {/* ════════ PREVIEW MODAL ════════ */}
-      <Modal
+      {/* <Modal
         open={previewVisible}
         footer={null}
         title={"Document Preview"}
@@ -1866,9 +1899,35 @@ const SalesInput = () => {
         destroyOnClose
       >
         {previewVisible && previewUrls.length > 0 && (
-          <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
+          // <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
+          <MultiFileViewer files={previewFiles} defaultIndex={previewIndex} />
         )}
-      </Modal>
+      </Modal> */}
+      <Modal
+        open={previewVisible}
+        footer={null}
+        title="Document Preview"
+        onCancel={() => setPreviewVisible(false)}
+        width="90%"
+        style={{ top: 20 }}
+        bodyStyle={{ height: "87vh", padding: 0 }}
+        destroyOnClose
+      >
+        {previewVisible && previewUrls.length > 0 && (
+          <MultiFileViewer
+            files={previewUrls.map((item) => {
+              const url = typeof item === "string" ? item : item.url || item.file_url || "";
+              const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+              return {
+                url,
+                name,
+                mimeType: item?.mimeType, // set if known
+              };
+            })}
+            defaultIndex={previewIndex || 0}
+          />
+        )}
+    </Modal>
     </div>
   );
 };

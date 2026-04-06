@@ -405,11 +405,36 @@ const Approval = () => {
   // Always show sections as per user request to ensure accessibility
   const showPlacement = true;
 
-  const openPreview = (filesArray, localIdx) => {
-    const urls = filesArray.map((f) => f.url || f.file_url).filter(Boolean);
-    if (!urls.length) return;
-    setPreviewUrls(urls);
-    setPreviewIndex(Math.max(0, Math.min(localIdx, urls.length - 1)));
+  // const openPreview = (filesArray, localIdx) => {
+  //   console.log({filesArray})
+  //   const urls = filesArray.map((f) => f.url || f.file_url).filter(Boolean);
+  //   if (!urls.length) return;
+  //   setPreviewUrls(urls);
+  //   setPreviewIndex(Math.max(0, Math.min(localIdx, urls.length - 1)));
+  //   setPreviewVisible(true);
+  // };
+
+  const openPreview = (fileList, index = 0) => {
+    const filesWithMime = fileList.map((file) => {
+      let mimeType = file.mimeType || file.type; // check different keys
+
+      if (!mimeType) {
+        // fallback: guess mimeType from extension if possible
+        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+        if (ext === "pdf") mimeType = "application/pdf";
+        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        else mimeType = "other";
+      }
+
+      return {
+        ...file,
+        mimeType,
+      };
+    });
+
+    setPreviewUrls(filesWithMime);
+    setPreviewIndex(index);
     setPreviewVisible(true);
   };
 
@@ -1725,9 +1750,23 @@ const Approval = () => {
             styles={{ body: { height: "87vh", padding: 0 } }}
             destroyOnClose
           >
-            {previewVisible && previewUrls.length > 0 && (
+            {/* {previewVisible && previewUrls.length > 0 && (
               <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
-            )}
+            )} */}
+            {previewVisible && previewUrls.length > 0 && (
+                <MultiFileViewer
+                  files={previewUrls.map((item) => {
+                    const url = typeof item === "string" ? item : item.url || item.file_url || "";
+                    const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+                    return {
+                      url,
+                      name,
+                      mimeType: item?.mimeType, // set if known
+                    };
+                  })}
+                  defaultIndex={previewIndex || 0}
+                />
+              )}
           </Modal>
         </Form>
       </Spin >
