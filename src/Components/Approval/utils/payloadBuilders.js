@@ -29,7 +29,7 @@ export const buildApprovalDetails = (values) => ({
  *
  * @param {object} values        - Antd form values
  * @param {object} fileState     - all document file arrays
- * @param {object} extraState    - remarks, otherCharges, jobData
+ * @param {object} extraState    - remarks, otherCharges, jobData, includeApprovalDetails
  */
 export const buildCommonPayload = (values, fileState, extraState) => {
   const {
@@ -49,7 +49,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     hblFiles = [],
   } = fileState;
 
-  const { remarks = [], otherCharges = [], jobData } = extraState;
+  const { remarks = [], otherCharges = [], jobData, includeApprovalDetails = true } = extraState;
 
   const allDocs = [
     ...releaseOrderFiles.map((f) => ({ ...f, doc_type: "Release Order", category: "booking" })),
@@ -155,10 +155,12 @@ export const buildCommonPayload = (values, fileState, extraState) => {
 
     general_remarks: remarks,
 
-    approval_details: {
-      ...buildApprovalDetails(values),
-      other_charges: otherCharges,
-    },
+    ...(includeApprovalDetails && {
+      approval_details: {
+        ...buildApprovalDetails(values),
+        other_charges: otherCharges,
+      },
+    }),
 
     status: jobData?.status || "draft",
   };
