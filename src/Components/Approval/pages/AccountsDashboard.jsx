@@ -97,7 +97,7 @@ const AccountsDashboard = () => {
           size="small" 
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/approval/${record.id}/accounts`);
+            window.open(`/approval/${record.id}/accounts`, "_blank");
           }}
         >
           Open Accounts
