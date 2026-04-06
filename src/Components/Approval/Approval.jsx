@@ -357,7 +357,7 @@ const Approval = () => {
     isCNFSectionLocked, isAccountsEditableFieldLocked,
     isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked, isAccountsUploadLocked,
     isRequirementSelectorLocked,
-    showDocumentUploads, showROBOCForCS, needsLpoInvoice,
+    showDocumentUploads, hideDocumentsAtStage2, disableDocumentsAtStage4, showROBOCForCS, needsLpoInvoice,
   } = computeSectionLocks({
     isAdmin, isCS, isCNF, isSalesExecutive, isCreator,
     isCSHOD, isAccountsTeam, isHOD, isSalesHOD,
@@ -726,7 +726,7 @@ const Approval = () => {
                     <Input placeholder="Booking Ref" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col> */}
-                <Col xs={24} md={6}>
+                {/* <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Status">
                     <Tag
                       color={STATUS_COLOR[jobData?.status] || STATUS_COLOR[jobData?.status?.toLowerCase()] || "default"}
@@ -735,7 +735,7 @@ const Approval = () => {
                       {(jobData?.status || "Draft").toUpperCase()}
                     </Tag>
                   </Form.Item>
-                </Col>
+                </Col> */}
 
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
@@ -1243,7 +1243,7 @@ const Approval = () => {
                   </Row>
                 )}
 
-                {showDocumentUploads && (
+                {showDocumentUploads && !hideDocumentsAtStage2 && (
                   <>
                     <Row gutter={16}>
                       <Col xs={24} md={6}>
@@ -1257,7 +1257,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Haulage Cost"
-                            disabled={isCNFUploadLocked}
+                            disabled={isCNFUploadLocked || disableDocumentsAtStage4}
                             restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
                             user={user}
                             isAdmin={isAdmin}
@@ -1276,7 +1276,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Haulage Note"
-                            disabled={isCNFUploadLocked || (!haulierNoteEnabled && currentStage !== "4")}
+                            disabled={isCNFUploadLocked || (!haulierNoteEnabled && currentStage !== "4") || disableDocumentsAtStage4}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
@@ -1308,7 +1308,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="financial"
                             docType="ED"
-                            disabled={isEDUploadLocked}
+                            disabled={isEDUploadLocked || disableDocumentsAtStage4}
                             user={user}
                             isAdmin={isAdmin}
                             isMasterMode={isMasterMode}
@@ -1330,7 +1330,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Load List"
-                            disabled={currentStage === "4" ? (isCNFUploadLocked || !jobData?.is_hod_approved) : (!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked)}
+                            disabled={currentStage === "4" ? (isCNFUploadLocked || !jobData?.is_hod_approved || disableDocumentsAtStage4) : (!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked)}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
@@ -1352,7 +1352,7 @@ const Approval = () => {
                     <Row gutter={16}>
                       <Col xs={24} md={24}>
                         <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
-                          <TextArea disabled={isCNFUploadLocked} />
+                          <TextArea disabled={isCNFUploadLocked || disableDocumentsAtStage4} />
                         </Form.Item>
                       </Col>
                     </Row>
