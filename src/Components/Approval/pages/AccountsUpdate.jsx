@@ -10,7 +10,7 @@ import apiClient from "../../../api/apiclient";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
-// import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
+import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
@@ -391,12 +391,10 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 };
 
 const AccountsUpdate = () => (
-  <>
-  {({ jobData, user }) => <AccountsUpdatePage jobData={jobData} user={user} />}
-  </>
-  // <ProtectedApprovalRoute routeKey="accounts">
-  //   {({ jobData, user }) => <AccountsUpdatePage jobData={jobData} user={user} />}
-  // </ProtectedApprovalRoute>
+  // <AccountsUpdatePage jobData={jobData} user={user} />
+  <ProtectedApprovalRoute routeKey="accounts">
+    {({ jobData, user }) => <AccountsUpdatePage jobData={jobData} user={user} />}
+  </ProtectedApprovalRoute>
 );
 
 export default AccountsUpdate;
