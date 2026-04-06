@@ -391,9 +391,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 };
 
 const AccountsUpdate = () => (
-  <ProtectedApprovalRoute routeKey="accounts">
-    {({ jobData, user }) => <AccountsUpdatePage jobData={jobData} user={user} />}
-  </ProtectedApprovalRoute>
+  // <ProtectedApprovalRoute routeKey="accounts">
+  //   {({ jobData, user }) => 
+    <AccountsUpdatePage jobData={jobData} user={user} />
+// }
+  // </ProtectedApprovalRoute>
 );
 
 export default AccountsUpdate;
