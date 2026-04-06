@@ -484,8 +484,9 @@ const Approval = () => {
         }
 
         // Map History (Sort chronologically: Sales Created first)
-        const sortedHistory = (data.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        setApprovalHistory(sortedHistory);
+        // const sortedHistory = (data.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        // setApprovalHistory(sortedHistory);
+        setApprovalHistory(data.approval_history || []);
 
         // Map Other Charges & General Remarks
         setOtherCharges(data.approval_details?.other_charges || []);
