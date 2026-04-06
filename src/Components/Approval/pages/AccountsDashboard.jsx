@@ -19,8 +19,8 @@ const AccountsDashboard = () => {
   const fetchAccountsJobs = async (p = 1, ps = 10) => {
     setLoading(true);
     try {
-      const res = await apiClient.get("/liner/sales-input/", {
-        params: { status: "submitted", page: p, page_size: ps },
+      const res = await apiClient.get("/liner/sales-input/accounts-pending/", {
+        params: { page: p, page_size: ps },
       });
 
       // Handle both wrapped {status: "success", data: {...}} and direct DRF {...} responses
@@ -96,8 +96,13 @@ const AccountsDashboard = () => {
           type="primary" 
           size="small" 
           onClick={(e) => {
+            if(record.current_stage !== "6") {
+              window.open(`/approval?id=${record.id}`, "_blank");
+              e.stopPropagation();
+              return;
+            }
+            window.open(`/approval/${record.id}/accounts`, "_blank");
             e.stopPropagation();
-            navigate(`/approval/${record.id}/accounts`);
           }}
         >
           Open Accounts
@@ -128,7 +133,15 @@ const AccountsDashboard = () => {
               fetchAccountsJobs(pagination.current, pagination.pageSize);
             }}
             onRow={(record) => ({
-              onClick: () => navigate(`/approval/${record.id}/accounts`),
+              onClick: () => {
+                 if(record.current_stage !== "6") {
+                   window.open(`/approval?id=${record.id}`, "_blank");
+                   e.stopPropagation();
+              return;
+            }
+            window.open(`/approval/${record.id}/accounts`, "_blank");
+            e.stopPropagation();
+              },
               style: { cursor: "pointer" },
             })}
           />
