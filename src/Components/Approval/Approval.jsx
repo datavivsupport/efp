@@ -444,7 +444,7 @@ const Approval = () => {
         const data = res.data?.results ?? res.data ?? [];
         setCsHodOptions(data.map(item => ({
           value: item.id,
-          label: `${item.get_full_name}  |  (${item.email})` || `${item.first_name} ${item.last_name}  |  (${item.email})`
+          label: `${item.first_name} ${item.last_name}  |  (${item.email})`
         })));
       } catch (err) {
         console.error("Failed to fetch CS HOD options:", err);
