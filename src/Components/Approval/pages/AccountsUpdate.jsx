@@ -164,9 +164,33 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 
   const { isAccountsTeam, isAdmin } = computeUserRoles(user);
 
-  const openPreview = (files, idx) => {
-    setPreviewUrls(files.map(f => f.url || f.file_url));
-    setPreviewIndex(idx);
+  // const openPreview = (files, idx) => {
+  //   setPreviewUrls(files.map(f => f.url || f.file_url));
+  //   setPreviewIndex(idx);
+  //   setPreviewVisible(true);
+  // };
+
+  const openPreview = (fileList, index = 0) => {
+    const filesWithMime = fileList.map((file) => {
+      let mimeType = file.mimeType || file.type; // check different keys
+
+      if (!mimeType) {
+        // fallback: guess mimeType from extension if possible
+        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+        if (ext === "pdf") mimeType = "application/pdf";
+        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        else mimeType = "other";
+      }
+
+      return {
+        ...file,
+        mimeType,
+      };
+    });
+
+    setPreviewUrls(filesWithMime);
+    setPreviewIndex(index);
     setPreviewVisible(true);
   };
 
@@ -384,7 +408,21 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       </Spin>
 
       <Modal open={previewVisible} footer={null} title="Attachments" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnClose>
-        {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+        {/* {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />} */}
+        {previewVisible && previewUrls.length > 0 && (
+            <MultiFileViewer
+              files={previewUrls.map((item) => {
+                const url = typeof item === "string" ? item : item.url || item.file_url || "";
+                const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+                return {
+                  url,
+                  name,
+                  mimeType: item?.mimeType, // set if known
+                };
+              })}
+              defaultIndex={previewIndex || 0}
+            />
+          )}
       </Modal>
     </div>
   );
