@@ -1282,7 +1282,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Haulage Cost"
-                            disabled={isCNFUploadLocked || disableDocumentsAtStage4}
+                            disabled={true}
                             restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
                             user={user}
                             isAdmin={isAdmin}
@@ -1301,7 +1301,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Haulage Note"
-                            disabled={isCNFUploadLocked || (!haulierNoteEnabled && currentStage !== "4") || disableDocumentsAtStage4}
+                            disabled={true}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
@@ -1333,7 +1333,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="financial"
                             docType="ED"
-                            disabled={isEDUploadLocked || disableDocumentsAtStage4}
+                            disabled={true}
                             user={user}
                             isAdmin={isAdmin}
                             isMasterMode={isMasterMode}
@@ -1355,7 +1355,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Load List"
-                            disabled={currentStage === "4" ? (isCNFUploadLocked || !jobData?.is_hod_approved || disableDocumentsAtStage4) : (!isLLReq || (!jobData?.is_hod_approved) || isCNFUploadLocked)}
+                            disabled={true}
                             restrictionMessage={
                               isCNFUploadLocked
                                 ? null
@@ -1377,7 +1377,7 @@ const Approval = () => {
                     <Row gutter={16}>
                       <Col xs={24} md={24}>
                         <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
-                          <TextArea disabled={isCNFUploadLocked || disableDocumentsAtStage4} />
+                          <TextArea disabled={true} />
                         </Form.Item>
                       </Col>
                     </Row>
@@ -1407,21 +1407,21 @@ const Approval = () => {
                       <Input placeholder="Enter Carrier Name" disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={12}>
+                  {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Invoice Date" name="invoice_date">
                       <DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
-                  </Col>
+                  </Col> */}
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Accounts Remarks" name="account_remarks">
                       <TextArea autoSize={{ minRows: 1 }} disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={12}>
+                  {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Bank Slip Attachment">
                       <DocUploadField label="Bank Slip" files={bankSlips} setFiles={setBankSlips} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="Bank Slip" disabled={isAccountsEditableFieldLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                     </Form.Item>
-                  </Col>
+                  </Col> */}
                 </Row>
               </div>
             </Card>
@@ -1576,15 +1576,15 @@ const Approval = () => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
 
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea
+                  {/* <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text> */}
+                  {/* <TextArea
                     value={newRemark}
                     onChange={(e) => setNewRemark(e.target.value)}
                     placeholder="Enter your remarks here…"
                     autoSize={{ minRows: 3 }}
                     style={{ marginBottom: 12 }}
-                  />
-                  <Button
+                  /> */}
+                  {/* <Button
                     type="primary"
                     onClick={() => {
                       if (newRemark.trim()) {
@@ -1600,7 +1600,7 @@ const Approval = () => {
                     icon={<PlusOutlined />}
                   >
                     Add Remark
-                  </Button>
+                  </Button> */}
                 </Col>
 
                 <Col xs={24} md={12}>

@@ -340,11 +340,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}>
+                {/* <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Status">
                     <Tag color={STATUS_COLOR[initialJob?.status] || STATUS_COLOR[initialJob?.status?.toLowerCase()] || "cyan"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{(initialJob?.status || "DRAFT").toUpperCase()}</Tag>
                   </Form.Item>
-                </Col>
+                </Col> */}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact Details" name="phone_no"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input disabled variant="filled" /></Form.Item></Col>

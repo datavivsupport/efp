@@ -382,11 +382,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}><Input placeholder="Customer Name" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 {!isOthers && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input placeholder="Carrier Name" disabled={isSalesSectionLocked} /></Form.Item></Col>}
-                <Col xs={24} md={6}>
+                {/* <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Status">
                     <Tag color={STATUS_COLOR[jobData?.status] || STATUS_COLOR[jobData?.status?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{(jobData?.status || "Draft").toUpperCase()}</Tag>
                   </Form.Item>
-                </Col>
+                </Col> */}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input placeholder="Contact PIC" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact Details" name="phone_no"><Input placeholder="Phone / Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled={isSalesSectionLocked} /></Form.Item></Col>

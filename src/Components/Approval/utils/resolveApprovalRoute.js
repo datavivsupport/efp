@@ -34,10 +34,9 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
 
   // Stage 4 — CS documents
-  if (currentStage === "4" && roles.isCS) {
+  if ((currentStage === "4"|| currentStage === "7") && roles.isCS) {
     return `/approval/${id}/cs-documents`;
   }
-  console.log(user?.id, jobData?.cs_hod);
   // Stage 5 — Assigned CS HOD (ID match)
   if (
     currentStage === "5" && String(user?.id) === String(jobData?.cs_hod)

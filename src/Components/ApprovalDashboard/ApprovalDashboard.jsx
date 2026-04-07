@@ -405,6 +405,7 @@ useEffect(() => {
                 if (record.status === "draft") {
                   url = `${window.location.origin}/sales-input?id=${record.id}`;
                 } else {
+                  console.log(record)
                   const path = resolveApprovalRoute(record, user);
                   url = path ? `${window.location.origin}${path}` : `${window.location.origin}/approval?id=${record.id}`;
                 }
