@@ -112,6 +112,12 @@ export const computeSectionLocks = (ctx) => {
     (isCNF && isForwarding && currentStage === "3") ||
     (isForwarding && currentStage === "5");  // always visible at Forwarding stage 5
 
+  // Hide haulage cost, haulier note, ED, load list, remarks at CS stage 2
+  const hideDocumentsAtStage2 = isCS && isStage2;
+
+  // Disable these fields at CS stage 4
+  const disableDocumentsAtStage4 = isCS && currentStage === "4";
+
   const showROBOCForCS = isStage2 && isCS && !isAdmin;
 
   const needsLpoInvoice =
@@ -134,6 +140,8 @@ export const computeSectionLocks = (ctx) => {
     isAccountsUploadLocked,
     isRequirementSelectorLocked,
     showDocumentUploads,
+    hideDocumentsAtStage2,
+    disableDocumentsAtStage4,
     showROBOCForCS,
     needsLpoInvoice,
   };

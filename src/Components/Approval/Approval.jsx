@@ -527,7 +527,7 @@ const Approval = () => {
   };
 
   /* ── Handlers ── */
-  const getCommonPayload = (values) =>
+  const getCommonPayload = (values, includeApprovalDetails = true) =>
     buildCommonPayload(
       values,
       {
@@ -535,7 +535,7 @@ const Approval = () => {
         lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
         haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
       },
-      { remarks, otherCharges, jobData }
+      { remarks, otherCharges, jobData, includeApprovalDetails }
     );
 
   const handleAction = async (actionType, remarksVal = "") => {
@@ -562,7 +562,7 @@ const Approval = () => {
       }
 
       const payload = {
-        ...getCommonPayload(values),
+        ...getCommonPayload(values, !isHOD),
         action: actionType,
         remarks: remarksVal || form.getFieldValue("approvalRemarks"),
       };
