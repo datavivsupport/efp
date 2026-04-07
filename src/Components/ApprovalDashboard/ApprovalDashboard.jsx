@@ -10,6 +10,8 @@ import { Icon } from "@iconify/react";
 import apiClient from "../../api/apiclient";
 import dayjs from "dayjs";
 
+import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
+
 const ApprovalDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -399,8 +401,13 @@ useEffect(() => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const page = record.status === "draft" ? "sales-input" : "approval";
-                const url = `${window.location.origin}/${page}?id=${record.id}`;
+                let url = "";
+                if (record.status === "draft") {
+                  url = `${window.location.origin}/sales-input?id=${record.id}`;
+                } else {
+                  const path = resolveApprovalRoute(record, user);
+                  url = path ? `${window.location.origin}${path}` : `${window.location.origin}/approval?id=${record.id}`;
+                }
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
             >

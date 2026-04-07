@@ -687,6 +687,7 @@ const Approval = () => {
           layout="vertical"
           form={form}
           onFinish={onFinish}
+          disabled
           initialValues={{
             containerRows: [{}],
             placementRows: [{}]
@@ -1605,7 +1606,7 @@ const Approval = () => {
 
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
                 </Col>
               </Row>
             </div>
@@ -1634,57 +1635,7 @@ const Approval = () => {
                 scroll={{ x: 'max-content' }}
               />
 
-              {/* Action Box */}
-              {jobData?.status !== "draft" && !isTerminal && canApprove && (
-                <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks & Actions</Typography.Text>
-                  <Form.Item name="approvalRemarks">
-                    <TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} />
-                  </Form.Item>
-
-                  {isLiner && currentStage === '5' && isCSHOD && (
-                    <div style={{ marginBottom: 16, padding: '12px', border: '1px solid #ffe7ba', borderRadius: 8, backgroundColor: '#fffbe6' }}>
-                      <Typography.Text strong style={{ display: 'block', marginBottom: 8, color: '#d46b08' }}>
-                        LPO / INVOICE SELECTION (Stage 5 Decision)
-                      </Typography.Text>
-                      <Form.Item name="lpo_invoice_selection" rules={[{ required: true, message: 'Please select YES to proceed or NO to stop flow.' }]}>
-                        <Radio.Group>
-                          <Radio value="YES">YES (Proceed with missing docs)</Radio>
-                          <Radio value="NO">NO (STOP - Wait for all docs)</Radio>
-                        </Radio.Group>
-                      </Form.Item>
-                    </div>
-                  )}
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && <Button
-                      type="primary"
-                      onClick={() => handleAction("Approved")}
-                      icon={<Icon icon="mdi:check-circle" />}
-                      loading={loading}
-                      disabled={isHalted}
-                      style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
-                    >
-                      {currentStage === "2" ? (stage2.isThisJobsHOD ? "Approve (Sales HOD)" : isCS ? "Verify & Config (CS)" : "Approve / Verify") :
-                        currentStage === "3" ? (isForwarding ? "Submit CNF Update" : "Approve CNF Docs") :
-                          currentStage === "4" ? "Approve CS Docs" :
-                            currentStage === "5" ? (isForwarding ? "Approve (CS HOD)" : "Approve (CS HOD)") :
-                              currentStage === "6" ? "Approve (Accounts)" :
-                                currentStage === "7" ? "Close Job" : "Approve / Verify"}
-                    </Button>}
-                    {(isHOD || isAdmin || isGM) && !isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
-                      <Button
-                        type="primary"
-                        onClick={() => handleAction("Rejected")}
-                        icon={<Icon icon="mdi:close-circle" />}
-                        loading={loading}
-                        style={{ borderRadius: 8, height: 40, padding: "0 24px" }}
-                      >
-                        Reject
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* Action Box - Disabled */}
             </div>
           </Card>
 
@@ -1703,42 +1654,7 @@ const Approval = () => {
             />
           )}
 
-          {((!isHOD && !isGM) || canApprove || isOthers) && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 12,
-                flexWrap: "wrap",
-                width: "100%",
-                marginTop: "1.5rem",
-                marginBottom: "1rem",
-              }}
-            >
-              {!canApprove && (!isGM || (isOthers && jobData?.status === 'draft')) && !isMasterMode && (!isCS || csBookingEditStage) && (!isSalesExecutive || !isSalesSectionLocked) && (
-                <>
-                  <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
-                    {isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3) ? "Submit CS Update" :
-                      isLiner && isCNF && parseInt(currentStage) === 2 ? "Submit CNF Update" : "Submit"}
-                  </Button>
-                  {jobData?.status === "draft" && (
-                    <Button
-                      type="primary"
-                      style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-                      icon={<Icon icon="mdi:send" />}
-                      onClick={() => handleAction("Submit")}
-                    >
-                      Submit Job
-                    </Button>
-                  )}
-                </>
-              )}
-
-              {!id && <Button type="primary" icon={<Icon icon="tabler:refresh" />} onClick={handleReset} disabled={(isOthers && jobData?.status !== 'draft') || isMasterMode}>
-                Reset Form
-              </Button>}
-            </div>
-          )}
+          {/* Bottom buttons - Disabled */}
           {/* ════════ PREVIEW MODAL ════════ */}
           <Modal
             open={previewVisible}

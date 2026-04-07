@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import apiClient from "../../api/apiclient";
 import dayjs from "dayjs";
 import { Spin, Empty, message, Tag, Select, Input, Button } from "antd";
 import CommonTable from "../Commontable/Commontable";
 import { Icon } from "@iconify/react";
+import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
 
 const { Option } = Select;
 
 const ExportReport = () => {
   const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -182,7 +185,16 @@ const ExportReport = () => {
               pagesize={pageSize}
               onTableChange={handleTableChange}
               onRow={(record) => ({
-                onClick: () => window.open(`${window.location.origin}/approval?id=${record.id}`, "_blank", "noopener,noreferrer"),
+                onClick: () => {
+                  let url = "";
+                  if (record.status === "draft") {
+                    url = `${window.location.origin}/sales-input?id=${record.id}`;
+                  } else {
+                    const path = resolveApprovalRoute(record, user);
+                    url = path ? `${window.location.origin}${path}` : `${window.location.origin}/approval?id=${record.id}`;
+                  }
+                  window.open(url, "_blank", "noopener,noreferrer");
+                },
                 style: { cursor: "pointer" },
               })}
             />

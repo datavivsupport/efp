@@ -17,11 +17,11 @@ const ApprovalDashboard = lazy(
   () => import("./Components/ApprovalDashboard/ApprovalDashboard.jsx"),
 );
 const Approval = lazy(() => import("./Components/Approval/Approval.jsx"));
-// const CsUpdate       = lazy(() => import("./Components/Approval/pages/CsUpdate.jsx"));
-// const HodReview      = lazy(() => import("./Components/Approval/pages/HodReview.jsx"));
-// const CnfUpdate      = lazy(() => import("./Components/Approval/pages/CnfUpdate.jsx"));
-// const CsDocuments    = lazy(() => import("./Components/Approval/pages/CsDocuments.jsx"));
-// const CsHodApproval  = lazy(() => import("./Components/Approval/pages/CsHodApproval.jsx"));
+const CsUpdate       = lazy(() => import("./Components/Approval/pages/CsUpdate.jsx"));
+const HodReview      = lazy(() => import("./Components/Approval/pages/HodReview.jsx"));
+const CnfUpdate      = lazy(() => import("./Components/Approval/pages/CnfUpdate.jsx"));
+const CsDocuments    = lazy(() => import("./Components/Approval/pages/CsDocuments.jsx"));
+const CsHodApproval  = lazy(() => import("./Components/Approval/pages/CsHodApproval.jsx"));
 const AccountsUpdate = lazy(() => import("./Components/Approval/pages/AccountsUpdate.jsx"));
 const AccountsDashboard = lazy(() => import("./Components/Approval/pages/AccountsDashboard.jsx"));
 const SalesInput = lazy(() => import("./Components/SalesInput/SalesInput.jsx"));
@@ -52,11 +52,11 @@ const router = createBrowserRouter([
       { index: true, element: <ApprovalDashboard /> },
       { path: "dashboard", element: <ApprovalDashboard /> },
       { path: "approval", element: <Approval /> },
-      // { path: "approval/:id/cs-update",       element: <CsUpdate /> },
-      // { path: "approval/:id/hod-review",      element: <HodReview /> },
-      // { path: "approval/:id/cnf-update",      element: <CnfUpdate /> },
-      // { path: "approval/:id/cs-documents",    element: <CsDocuments /> },
-      // { path: "approval/:id/cs-hod-approval", element: <CsHodApproval /> },
+      { path: "approval/:id/cs-update",       element: <CsUpdate /> },
+      { path: "approval/:id/hod-review",      element: <HodReview /> },
+      { path: "approval/:id/cnf-update",      element: <CnfUpdate /> },
+      { path: "approval/:id/cs-documents",    element: <CsDocuments /> },
+      { path: "approval/:id/cs-hod-approval", element: <CsHodApproval /> },
       { path: "approval/:id/accounts",        element: <AccountsUpdate /> },
       { path: "accounts-dashboard",           element: <AccountsDashboard /> },
       { path: "sales-input", element: <SalesInput /> },
