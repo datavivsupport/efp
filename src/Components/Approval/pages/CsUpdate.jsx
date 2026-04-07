@@ -300,7 +300,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values) =>
-    buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData });
+    buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData, includeApprovalDetails: true });
 
   const handleAction = async (actionType, remarksVal = "") => {
     if (actionThrottleRef.current) return;

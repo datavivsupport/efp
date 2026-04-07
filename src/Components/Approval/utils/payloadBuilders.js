@@ -49,7 +49,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     hblFiles = [],
   } = fileState;
 
-  const { remarks = [], otherCharges = [], jobData, includeApprovalDetails = true } = extraState;
+  const { remarks = [], otherCharges = [], jobData, includeApprovalDetails = false } = extraState;
 
   const allDocs = [
     ...releaseOrderFiles.map((f) => ({ ...f, doc_type: "Release Order", category: "booking" })),

@@ -45,7 +45,7 @@ export const computeUserRoles = (user) => {
   const isAccounts = matchesKeywords(userDepts, DEPT_CONFIG.ACCOUNTS) || matchesKeywords(userRoles, DEPT_CONFIG.ACCOUNTS);
 
   const isHOD = userRoles.some((r) =>
-    ["HOD", "APPROVER", "MANAGER", "PRINCIPAL"].includes(r)
+    ["HOD", "APPROVER", "MANAGER", "PRINCIPAL"].includes(r) || r.includes("HOD")
   );
 
   const isGM = userRoles.some((r) => r === "GM");
