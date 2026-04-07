@@ -14,6 +14,7 @@ import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
+import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -146,11 +147,20 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     approvalStatus: true,
   });
 
-  const [haulageCostFiles, setHaulageCostFiles] = useState([]);
-  const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
-  const [loadListFiles, setLoadListFiles]       = useState([]);
-  const [edFiles, setEdFiles]                   = useState([]);
-  const [attachments, setAttachments]           = useState([]);
+  const [releaseOrderFiles, setReleaseOrderFiles] = useState([]);
+  const [bocFiles, setBocFiles]                   = useState([]);
+  const [haulageCostFiles, setHaulageCostFiles]   = useState([]);
+  const [haulierNoteFiles, setHaulierNoteFiles]   = useState([]);
+  const [loadListFiles, setLoadListFiles]         = useState([]);
+  const [lpoFiles, setLpoFiles]                   = useState([]);
+  const [invoiceFiles, setInvoiceFiles]           = useState([]);
+  const [facFiles, setFacFiles]                   = useState([]);
+  const [croFiles, setCroFiles]                   = useState([]);
+  const [edFiles, setEdFiles]                     = useState([]);
+  const [hblFiles, setHblFiles]                   = useState([]);
+  const [preAlertFiles, setPreAlertFiles]         = useState([]);
+  const [bankSlips, setBankSlips]                 = useState([]);
+  const [attachments, setAttachments]             = useState([]);
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
@@ -174,10 +184,19 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     
     if (initialJob.documents) {
       const docs = partitionDocuments(initialJob.documents);
+      setReleaseOrderFiles(docs.releaseOrderFiles);
+      setBocFiles(docs.bocFiles);
       setHaulageCostFiles(docs.haulageCostFiles);
       setHaulierNoteFiles(docs.haulierNoteFiles);
       setLoadListFiles(docs.loadListFiles);
+      setLpoFiles(docs.lpoFiles);
+      setInvoiceFiles(docs.invoiceFiles);
+      setFacFiles(docs.facFiles);
+      setCroFiles(docs.croFiles);
       setEdFiles(docs.edFiles);
+      setHblFiles(docs.hblFiles);
+      setPreAlertFiles(docs.preAlertFiles);
+      setBankSlips(docs.bankSlips);
       setAttachments(docs.attachments);
     }
     
@@ -199,23 +218,31 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   }, [initialJob, form, ad]);
 
   const openPreview = (filesArray, idx) => {
-    const urls = filesArray.map((f) => f.url || f.file_url).filter(Boolean);
-    if (!urls.length) return;
-    setPreviewUrls(urls);
-    setPreviewIndex(Math.max(0, Math.min(idx, urls.length - 1)));
+    const filesWithMime = filesArray.map((file) => {
+      let mimeType = file.mimeType || file.type;
+      if (!mimeType) {
+        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+        if (ext === "pdf") mimeType = "application/pdf";
+        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        else mimeType = "other";
+      }
+      return { ...file, mimeType };
+    });
+    if (!filesWithMime.length) return;
+    setPreviewUrls(filesWithMime);
+    setPreviewIndex(Math.max(0, Math.min(idx, filesWithMime.length - 1)));
     setPreviewVisible(true);
   };
 
   const handleAction = async (action) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
-    const cnfRemarks = form.getFieldValue("cnf_remarks");
-    const haulierCode = form.getFieldValue("haulier_code");
 
-    if (!approvalRemarks?.trim()) {
-      message.warning("Please enter remarks before proceeding.");
-      return;
-    }
+    // if (!approvalRemarks?.trim()) {
+    //   message.warning("Please enter remarks before proceeding.");
+    //   return;
+    // }
 
     // Stage 3 requires mandatory docs
     if (action === "Approved" && isStage3) {
@@ -232,29 +259,15 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      const docMapper = (arr, docType) =>
-        arr.map((f) => ({
-          id: f.id,
-          doc_type: docType,
-          category: "booking",
-          file_url: f.url || f.file_url,
-          file_name: f.file_name || f.name,
-          remarks: f.remarks || "",
-        }));
-
+      const values = await form.validateFields();
       const payload = {
+        ...buildCommonPayload(
+          values,
+          { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles },
+          { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: true }
+        ),
         action,
         remarks: approvalRemarks,
-        cnf_remarks: cnfRemarks,
-        haulier_code: haulierCode,
-        general_remarks: remarks,
-        documents: [
-          ...docMapper(haulageCostFiles, "Haulage Cost"),
-          ...docMapper(haulierNoteFiles, "Haulage Note"),
-          ...docMapper(loadListFiles,    "Load List"),
-          ...docMapper(edFiles,          "ED"),
-          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" }))
-        ],
       };
 
       const endpoint = action === "Approved"
@@ -589,7 +602,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
       {/* ── Preview Modal ── */}
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
-        {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+        {previewVisible && previewUrls.length > 0 && (
+          <MultiFileViewer
+            files={previewUrls.map((item) => {
+              const url = typeof item === "string" ? item : item.url || item.file_url || "";
+              const name = url.split("/").pop() || "unknown";
+              return { url, name, mimeType: item?.mimeType };
+            })}
+            defaultIndex={previewIndex || 0}
+          />
+        )}
       </Modal>
     </div>
   );

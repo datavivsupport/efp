@@ -29,10 +29,17 @@ const getFileCategory = (file) => {
 const getFileName = (file) => {
   if (!file) return "File";
   const url = file.url || file.file_url || "";
+  if (file.name || file.file_name) return file.name || file.file_name;
+  
   try {
-    return decodeURIComponent(new URL(url).pathname.split("/").pop()) || file.name || "File";
+    // If it's a full URL
+    if (url.startsWith("http")) {
+      return decodeURIComponent(new URL(url).pathname.split("/").pop()) || "File";
+    }
+    // If it's just a path or relative URL
+    return decodeURIComponent(url.split("?")[0].split("/").pop()) || "File";
   } catch {
-    return file.name || "File";
+    return "File";
   }
 };
 
@@ -49,12 +56,19 @@ const PdfPane = ({ fileUrl }) => {
 };
 
 // Main multi-file viewer
-const MultiFileViewer = ({ files = [], defaultIndex = 0 }) => {
+const MultiFileViewer = ({ files = [], urls = [], defaultIndex = 0 }) => {
+  // Support both 'files' (array of objects) and 'urls' (array of strings)
+  const effectiveFiles = useMemo(() => {
+    if (files && files.length > 0) return files;
+    if (urls && urls.length > 0) return urls.map(u => (typeof u === "string" ? { url: u } : u));
+    return [];
+  }, [files, urls]);
+
   const [selectedIndex, setSelectedIndex] = useState(defaultIndex);
 
-  useEffect(() => setSelectedIndex(defaultIndex), [defaultIndex, files]);
+  useEffect(() => setSelectedIndex(defaultIndex), [defaultIndex, effectiveFiles]);
 
-  const selectedFile = files[selectedIndex];
+  const selectedFile = effectiveFiles[selectedIndex];
   if (!selectedFile) return null;
 
   const fileUrl = selectedFile.url || selectedFile.file_url;
@@ -81,7 +95,7 @@ const MultiFileViewer = ({ files = [], defaultIndex = 0 }) => {
           Attachments
         </h3>
 
-        {files.map((f, i) => {
+        {effectiveFiles.map((f, i) => {
           const active = i === selectedIndex;
           const cat = getFileCategory(f);
           const emoji = cat === "pdf" ? "📄" : cat === "image" ? "🖼️" : "📎";
@@ -121,7 +135,7 @@ const MultiFileViewer = ({ files = [], defaultIndex = 0 }) => {
           );
         })}
 
-        {files.length === 0 && <p style={{ color: "#6b7280", fontSize: 12, margin: "8px 4px" }}>No files attached.</p>}
+        {effectiveFiles.length === 0 && <p style={{ color: "#6b7280", fontSize: 12, margin: "8px 4px" }}>No files attached.</p>}
       </div>
 
       {/* Preview Pane */}

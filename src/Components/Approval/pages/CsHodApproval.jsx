@@ -177,28 +177,63 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     });
   }, [initialJob, form, ad]);
 
-  const openPreview = (filesArray, idx) => {
-    const urls = filesArray.map((f) => f.url || f.file_url).filter(Boolean);
-    if (!urls.length) return;
-    setPreviewUrls(urls);
-    setPreviewIndex(Math.max(0, Math.min(idx, urls.length - 1)));
+  const openPreview = (filesArray, idx = 0) => {
+    const filesWithMime = (filesArray || []).map((file) => {
+      let mimeType = file.mimeType || file.type;
+      if (!mimeType) {
+        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+        if (ext === "pdf") mimeType = "application/pdf";
+        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+        else mimeType = "other";
+      }
+      return { ...file, mimeType };
+    });
+    if (!filesWithMime.length) return;
+    setPreviewUrls(filesWithMime);
+    setPreviewIndex(Math.max(0, Math.min(idx, filesWithMime.length - 1)));
     setPreviewVisible(true);
   };
 
   const handleAction = async (action) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
-    if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
+    // if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
 
     throttle.current = true;
     setLoading(true);
     try {
       const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
-      const payload = { 
-        action, 
+      const dm = (arr, docType, category) =>
+        (arr || []).map(f => ({
+          id: f.id,
+          doc_type: docType,
+          category,
+          file_url: f.url || f.file_url,
+          file_name: f.name || f.file_name,
+          remarks: f.remarks || "",
+          uploaded_by_user: f.uploaded_by_user,
+        }));
+      const payload = {
+        action,
         remarks: approvalRemarks,
         general_remarks: remarks,
-        documents: attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" }))
+        documents: [
+          ...dm(docs.releaseOrderFiles, "Release Order", "booking"),
+          ...dm(docs.bocFiles, "BOC", "booking"),
+          ...dm(docs.haulageCostFiles, "Haulage Cost", "booking"),
+          ...dm(docs.haulierNoteFiles, "Haulage Note", "booking"),
+          ...dm(docs.loadListFiles, "Load List", "booking"),
+          ...dm(docs.lpoFiles, "LPO", "financial"),
+          ...dm(docs.invoiceFiles, "Invoice", "financial"),
+          ...dm(docs.hblFiles, "HBL", "financial"),
+          ...dm(docs.facFiles, "FAC", "financial"),
+          ...dm(docs.edFiles, "ED", "financial"),
+          ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
+          ...dm(docs.bankSlips, "Bank Slip", "financial"),
+          ...dm(docs.croFiles, "CRO", "financial"),
+          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+        ],
       };
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
@@ -408,7 +443,16 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
         </Form>
       </Spin>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
-        {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+        {previewVisible && previewUrls.length > 0 && (
+          <MultiFileViewer
+            files={previewUrls.map((item) => {
+              const url = typeof item === "string" ? item : item.url || item.file_url || "";
+              const name = url.split("/").pop() || "unknown";
+              return { url, name, mimeType: item?.mimeType };
+            })}
+            defaultIndex={previewIndex || 0}
+          />
+        )}
       </Modal>
     </div>
   );

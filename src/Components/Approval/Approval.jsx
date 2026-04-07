@@ -687,7 +687,6 @@ const Approval = () => {
           layout="vertical"
           form={form}
           onFinish={onFinish}
-          disabled
           initialValues={{
             containerRows: [{}],
             placementRows: [{}]

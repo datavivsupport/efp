@@ -220,7 +220,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const approvalRemarks = form.getFieldValue("approvalRemarks");
     const csHodValue = form.getFieldValue("cs_hod");
 
-    if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
+    // if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
 
     if (action === "Approved") {
       const missing = [];
@@ -242,10 +242,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         cs_hod: csHodValue,
         general_remarks: remarks,
         documents: [
+          ...docMapper(releaseOrderFiles, "Release Order", "booking"),
+          ...docMapper(bocFiles, "BOC", "booking"),
+          ...docMapper(haulageCostFiles, "Haulage Cost", "booking"),
+          ...docMapper(haulierNoteFiles, "Haulage Note", "booking"),
+          ...docMapper(loadListFiles, "Load List", "booking"),
           ...docMapper(lpoFiles, "LPO", "financial"),
           ...docMapper(invoiceFiles, "Invoice", "financial"),
           ...docMapper(hblFiles, "HBL", "financial"),
           ...docMapper(facFiles, "FAC", "financial"),
+          ...docMapper(edFiles, "ED", "financial"),
           ...docMapper(preAlertFiles, "PRE-ALERT", "financial"),
           ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" }))
         ],
