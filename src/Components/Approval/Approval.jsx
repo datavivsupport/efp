@@ -468,7 +468,7 @@ const Approval = () => {
         const res = await apiClient.get("/accounts/liner/admin/users/hods/");
         const data = res.data?.results ?? res.data ?? [];
         setCsHodOptions(data.map(item => ({
-          value: item.id,
+          value: String(item.id),
           label: `${item.first_name} ${item.last_name}  |  (${item.email})`
         })));
       } catch (err) {
@@ -1224,7 +1224,7 @@ const Approval = () => {
                 {(showDocumentUploads || showROBOCForCS) && (
                   <Row gutter={16}>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Release Order(s)">
+                      <Form.Item className={Styles.formLabel} label="Release Order(s)" name="release_order" rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                         <DocUploadField
                           label="Release Order"
                           files={releaseOrderFiles}
