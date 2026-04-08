@@ -9,12 +9,9 @@ export const buildApprovalDetails = (values) => ({
   booking_voyage: values.booking_voyage,
   vessel_eta: values.vessel_eta ? values.vessel_eta.format("YYYY-MM-DD") : null,
   booking_ref_no: values.booking_ref_no,
-  si_cut_off_date: values.si_cut_off_date
-    ? values.si_cut_off_date.format("YYYY-MM-DD")
-    : null,
-  si_cut_off_time: values.si_cut_off_time
-    ? values.si_cut_off_time.format("HH:mm")
-    : null,
+  ll_cut_off_datetime: values.ll_cut_off_datetime ? values.ll_cut_off_datetime.format("YYYY-MM-DD HH:mm") : null,
+  si_cut_off_date: values.si_cut_off_date ? values.si_cut_off_date.format("YYYY-MM-DD") : null,
+  si_cut_off_time: values.si_cut_off_date ? values.si_cut_off_date.format("HH:mm") : null,
   booking_remarks: values.booking_remarks,
   cnf_remarks: values.cnf_remarks,
   account_remarks:       values.account_remarks,
@@ -128,7 +125,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
       quantity: parseInt(r.quantity) || 0,
       category: r.category,
       quote: r.quote,
-      cost: parseFloat(r.cost) || 0,
+      cost: r.cost,
     })),
 
     transportation_rows: values.placementRows?.map((r) => ({

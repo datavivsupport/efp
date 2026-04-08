@@ -212,8 +212,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_voyage: ad.booking_voyage,
       booking_ref_no: ad.booking_ref_no,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
-      si_cut_off_date: ad.si_cut_off_date ? dayjs(ad.si_cut_off_date) : null,
-      si_cut_off_time: ad.si_cut_off_time ? dayjs(ad.si_cut_off_time, "HH:mm") : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime) : null,
+      si_cut_off_date: (() => {
+        const d = ad.si_cut_off_date;
+        const t = ad.si_cut_off_time;
+        if (!d) return null;
+        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+      })(),
     });
   }, [initialJob, form, ad]);
 
@@ -462,8 +467,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
 
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Date" name="si_cut_off_date"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time"><Input disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>

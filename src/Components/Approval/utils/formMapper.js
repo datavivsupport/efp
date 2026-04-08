@@ -75,8 +75,13 @@ export const mapJobToFormValues = (data) => ({
   booking_voyage:  data.approval_details?.booking_voyage,
   vessel_eta:      data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
   booking_ref_no:  data.approval_details?.booking_ref_no,
-  si_cut_off_date: data.approval_details?.si_cut_off_date ? dayjs(data.approval_details.si_cut_off_date) : null,
-  si_cut_off_time: data.approval_details?.si_cut_off_time ? dayjs(data.approval_details.si_cut_off_time, "HH:mm") : null,
+  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs(data.approval_details.ll_cut_off_datetime) : null,
+  si_cut_off_date: (() => {
+    const d = data.approval_details?.si_cut_off_date;
+    const t = data.approval_details?.si_cut_off_time;
+    if (!d) return null;
+    return t ? dayjs(`${d} ${t}`) : dayjs(d);
+  })(),
   booking_remarks: data.approval_details?.booking_remarks,
   cnf_remarks:     data.approval_details?.cnf_remarks,
   account_remarks: data.approval_details?.account_remarks,

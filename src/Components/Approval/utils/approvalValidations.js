@@ -34,8 +34,8 @@ export const validateApprovalAction = (values, ctx) => {
     if (!values.vsl_etd)            missing.push("ETD");
     if (!values.pod_eta)            missing.push("POD ETA");
     if (!values.booking_ref_no)     missing.push("Booking Reference No.");
-    if (!values.si_cut_off_date)    missing.push("Load List/SI Cut Off Date");
-    if (!values.si_cut_off_time)    missing.push("Load List/SI Cut Off Time");
+    if (!values.ll_cut_off_datetime) missing.push("Load List Cut-Off Date & Time");
+    if (!values.si_cut_off_date)    missing.push("SI Cut-Off Date & Time");
     if (!releaseOrderFiles.length)  missing.push("Release Order");
     if (missing.length) {
       return `Please fill/upload required fields: ${missing.join(", ")}`;
