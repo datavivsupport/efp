@@ -143,7 +143,15 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [otherCharges, setOtherCharges]         = useState([]);
   const [attachments, setAttachments]           = useState([]);
   const [docs, setDocs]                         = useState({});
+  const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
+
+  useEffect(() => {
+    apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
+      const data = res.data?.results ?? res.data ?? [];
+      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}` })));
+    }).catch(() => {});
+  }, []);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const history = [...(initialJob?.approval_history || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -299,6 +307,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
+                {(() => {
+                  const execDocs = (initialJob?.documents || []).filter(d => d.uploaded_by_user_name === initialJob?.name_of_executive);
+                  return execDocs.length > 0 ? (
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                  ) : null;
+                })()}
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
@@ -343,6 +357,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod"><Select disabled options={csHodOptions} optionFilterProp="label" /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>

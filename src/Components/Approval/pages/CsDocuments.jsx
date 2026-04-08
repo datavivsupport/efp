@@ -196,7 +196,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
-      cs_hod: initialJob.cs_hod,
+      cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
@@ -322,6 +322,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
+                {(() => {
+                  const execDocs = (initialJob?.documents || []).filter(d => d.uploaded_by_user_name === initialJob?.name_of_executive);
+                  return execDocs.length > 0 ? (
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                  ) : null;
+                })()}
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>

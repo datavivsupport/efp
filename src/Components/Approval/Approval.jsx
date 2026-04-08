@@ -1025,6 +1025,12 @@ const Approval = () => {
                       <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
+                  {(() => {
+                    const execDocs = (jobData?.documents || []).filter(d => d.uploaded_by_user_name === jobData?.name_of_executive);
+                    return execDocs.length > 0 ? (
+                      <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    ) : null;
+                  })()}
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
