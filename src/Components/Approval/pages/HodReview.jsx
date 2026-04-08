@@ -405,8 +405,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                           <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type" rules={[{ required: true }]}><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><Input placeholder="Quote" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><Input placeholder="Cost" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled={isSalesSectionLocked} rows={1} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled={isSalesSectionLocked} rows={1} /></Form.Item></Col>
                           <Col xs={24} md={1}><Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} /></Col>
                           <Col xs={24} md={1}>{!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}</Col>
                         </Row>

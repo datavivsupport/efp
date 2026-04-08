@@ -905,12 +905,12 @@ const Approval = () => {
                           </Col>
                           <Col xs={24} md={4}>
                             <Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote">
-                              <Input placeholder="Quote" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                              <TextArea placeholder="Quote" disabled={isSalesSectionLocked} rows={1} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} md={4}>
                             <Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost">
-                              <Input placeholder="Cost" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                              <TextArea placeholder="Cost" disabled={isSalesSectionLocked} rows={1} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} md={1}>

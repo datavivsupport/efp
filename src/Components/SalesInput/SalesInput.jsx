@@ -1292,7 +1292,7 @@ const SalesInput = () => {
                               name={[name, "quote"]}
                               label="Quote"
                             >
-                              <Input placeholder="Quote" disabled={isReadOnly} />
+                              <TextArea placeholder="Quote" disabled={isReadOnly} rows={1} />
                             </Form.Item>
                           </Col>
 
@@ -1303,7 +1303,7 @@ const SalesInput = () => {
                               name={[name, "cost"]}
                               label="Cost"
                             >
-                              <Input placeholder="Cost" disabled={isReadOnly} />
+                              <TextArea placeholder="Cost" disabled={isReadOnly} rows={1} />
                             </Form.Item>
                           </Col>
 

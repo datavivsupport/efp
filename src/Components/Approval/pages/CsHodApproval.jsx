@@ -274,8 +274,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input disabled variant="filled" /></Form.Item></Col>
                     <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><Input disabled variant="filled" /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><Input disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea disabled variant="filled" rows={1} /></Form.Item></Col>
+                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea disabled variant="filled" rows={1} /></Form.Item></Col>
                   </Row>
                 ))}
               </Form.List>

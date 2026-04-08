@@ -74,7 +74,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const fetchData = async (search = "", nextPage = 1) => {
     setLoading(true);
     try {
-      let fetchUrl = `${url}?page=${nextPage}&page_size=${pageSize}&${orderingParam}=${labelKey}&is_active=true`;
+      let fetchUrl = `${url}?page=${nextPage}&page_size=${pageSize}&is_active=true`;
 
       if (search) fetchUrl += `&${searchParam}=${search}`;
 
@@ -87,14 +87,14 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       const totalCount = resp.data.count || 0;
 
       if (nextPage === 1) {
-        const merged = selectedOption
-          ? [
-              selectedOption,
-              ...results.filter(
-                (r: DataItem) => r[valueKey] !== selectedOption[valueKey],
-              ),
-            ]
-          : results;
+        const selectedInResults = selectedOption
+          ? results.some((r: DataItem) => r[valueKey] === selectedOption[valueKey])
+          : false;
+
+        const merged =
+          selectedOption && !selectedInResults
+            ? [selectedOption, ...results]
+            : results;
 
         setData(merged);
       } else {
