@@ -36,7 +36,6 @@ export const validateApprovalAction = (values, ctx) => {
     if (!values.booking_ref_no)     missing.push("Booking Reference No.");
     if (!values.si_cut_off_date)    missing.push("Load List/SI Cut Off Date");
     if (!values.si_cut_off_time)    missing.push("Load List/SI Cut Off Time");
-    if (!values.booking_remarks)    missing.push("Booking Remarks");
     if (!releaseOrderFiles.length)  missing.push("Release Order");
     if (missing.length) {
       return `Please fill/upload required fields: ${missing.join(", ")}`;

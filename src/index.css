@@ -153,6 +153,11 @@ html, body, #root {
   color: rgba(33, 33, 33, 0.85) !important;
 }
 
+/* Allow vertical resize on all antd textareas even when autoSize is used */
+textarea.ant-input {
+  resize: vertical !important;
+}
+
 /* Darker placeholder text for all antd inputs */
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder,

@@ -905,12 +905,12 @@ const Approval = () => {
                           </Col>
                           <Col xs={24} md={4}>
                             <Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote">
-                              <TextArea placeholder="Quote" disabled={isSalesSectionLocked} rows={1} />
+                              <TextArea placeholder="Quote" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} md={4}>
                             <Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost">
-                              <TextArea placeholder="Cost" disabled={isSalesSectionLocked} rows={1} />
+                              <TextArea placeholder="Cost" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
                           <Col xs={24} md={1}>
@@ -1017,12 +1017,12 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
-                      <TextArea placeholder="Enter any special instructions…" rows={3} disabled={isSalesSectionLocked} />
+                      <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Remarks" name="remarks">
-                      <TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} />
+                      <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1076,7 +1076,7 @@ const Approval = () => {
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><Input placeholder="Remarks" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
                           <Col xs={24} md={2}>
                             <Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} />
                           </Col>
@@ -1150,7 +1150,7 @@ const Approval = () => {
                     <Form.Item className={Styles.formLabel} label="Load List/SI Cut Off Time" name="si_cut_off_time" rules={[{ required: isStage2 && isCS, message: "Required" }]}><TimePicker style={{ width: "100%" }} format="HH:mm" disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks" rules={[{ required: isStage2 && isCS, message: "Required" }]}><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea rows={1} disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
 
                   {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
@@ -1414,7 +1414,7 @@ const Approval = () => {
                   </Col> */}
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Accounts Remarks" name="account_remarks">
-                      <TextArea autoSize={{ minRows: 1 }} disabled={isAccountsEditableFieldLocked} />
+                      <TextArea rows={1} disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
                   </Col>
                   {/* <Col xs={24} md={12}>

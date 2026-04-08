@@ -1292,7 +1292,7 @@ const SalesInput = () => {
                               name={[name, "quote"]}
                               label="Quote"
                             >
-                              <TextArea placeholder="Quote" disabled={isReadOnly} rows={1} />
+                              <TextArea placeholder="Quote" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1303,7 +1303,7 @@ const SalesInput = () => {
                               name={[name, "cost"]}
                               label="Cost"
                             >
-                              <TextArea placeholder="Cost" disabled={isReadOnly} rows={1} />
+                              <TextArea placeholder="Cost" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1668,7 +1668,7 @@ const SalesInput = () => {
                             name={[name, "special_remarks"]}
                             label="Special Remarks"
                           >
-                            <Input placeholder="CFS Stuffing, WA" disabled={isReadOnly} />
+                            <TextArea placeholder="CFS Stuffing, WA" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                           </Form.Item>
                         </Col>
 
