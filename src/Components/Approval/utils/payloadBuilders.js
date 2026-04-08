@@ -94,18 +94,18 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     hbl: values.hbl,
     cs_hod: values.cs_hod,
 
-    vsl_initial_eta: values.vsl_initial_eta
-      ? dayjs(values.vsl_initial_eta).format("YYYY-MM-DD")
-      : undefined,
-    vsl_latest_eta: values.vsl_latest_eta
-      ? dayjs(values.vsl_latest_eta).format("YYYY-MM-DD")
-      : undefined,
-    vsl_etd: values.vsl_etd
-      ? dayjs(values.vsl_etd).format("YYYY-MM-DD")
-      : undefined,
-    pod_eta: values.pod_eta
-      ? dayjs(values.pod_eta).format("YYYY-MM-DD")
-      : undefined,
+    ...(values.vsl_initial_eta && {
+      vsl_initial_eta: dayjs(values.vsl_initial_eta).format("YYYY-MM-DD"),
+    }),
+    ...(values.vsl_latest_eta && {
+      vsl_latest_eta: dayjs(values.vsl_latest_eta).format("YYYY-MM-DD"),
+    }),
+    ...(values.vsl_etd && {
+      vsl_etd: dayjs(values.vsl_etd).format("YYYY-MM-DD"),
+    }),
+    ...(values.pod_eta && {
+      pod_eta: dayjs(values.pod_eta).format("YYYY-MM-DD"),
+    }),
 
     carrier_name_2: values.carrier_name_2,
     invoice_date: values.invoice_date
