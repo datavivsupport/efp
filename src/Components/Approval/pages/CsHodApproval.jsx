@@ -174,7 +174,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
-      cs_hod: initialJob.cs_hod,
+      cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
@@ -424,11 +424,33 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
             <div style={{ display: open.documents ? "block" : "none" }}>
               <Row gutter={[24, 16]}>
-                <Col xs={24} md={8}><Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>LPO</Typography.Text><FileChipList files={docs.lpoFiles} onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
-                <Col xs={24} md={8}><Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>INVOICE</Typography.Text><FileChipList files={docs.invoiceFiles} onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
-                <Col xs={24} md={8}><Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>HBL</Typography.Text><FileChipList files={docs.hblFiles} onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
-                <Col xs={24} md={8}><Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>FAC</Typography.Text><FileChipList files={docs.facFiles} onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
-                <Col xs={24} md={8}><Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>Pre-Alert</Typography.Text><FileChipList files={docs.preAlertFiles} onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
+                <Col xs={24} md={8}>
+                  <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
+                  <Form.Item name="cs_hod" noStyle>
+                    <Select disabled options={csHodOptions} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
+                  </Form.Item>
+                </Col>
+                {[
+                  { label: 'LPO',       files: docs.lpoFiles },
+                  { label: 'INVOICE',   files: docs.invoiceFiles },
+                  { label: 'HBL',       files: docs.hblFiles },
+                  { label: 'FAC',       files: docs.facFiles },
+                  { label: 'Pre-Alert', files: docs.preAlertFiles },
+                ].map(({ label, files }) => (
+                  <Col key={label} xs={24} md={8}>
+                    <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
+                    {files?.length > 0
+                      ? <FileChipList files={files} onPreview={openPreview} user={user} isAdmin={isAdmin} />
+                      : <div style={{ marginTop: 8 }}>
+                          <Upload disabled showUploadList={false}>
+                            <Button size="small" icon={<UploadOutlined />} disabled style={{ fontSize: 12, color: '#bfbfbf', borderColor: '#d9d9d9' }}>
+                              No documents
+                            </Button>
+                          </Upload>
+                        </div>
+                    }
+                  </Col>
+                ))}
               </Row>
             </div>
           </Card>
