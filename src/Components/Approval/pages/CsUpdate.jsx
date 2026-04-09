@@ -307,7 +307,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
-      const values = await form.validateFields();
+      const values = actionType === "Rejected" ? form.getFieldsValue() : await form.validateFields();
       if (actionType === "Approved") {
         const validationError = validateApprovalAction(values, {
           stage: "2", isCS: true, isCNF: false, isForwarding, isLiner, needsLpoInvoice,
@@ -653,16 +653,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               <Table dataSource={approvalHistory} columns={approvalColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               {!isTerminal && canApprove && (
                 <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks & Actions</Typography.Text>
+                  <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
                   <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
-                  
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
-                      <Button type="primary" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 40, padding: "0 24px" }}>
-                        Verify & Config (CS)
-                      </Button>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
@@ -676,11 +668,36 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             />
           )}
 
+          {/* ════════ APPROVER BUTTONS ════════ */}
+          {!isTerminal && canApprove && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
+              {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
+                <>
+                  <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
+                    Verify & Config (CS)
+                  </Button>
+                  <Button danger size="large" onClick={() => handleAction("Rejected")} icon={<Icon icon="mdi:close-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                    Reject
+                  </Button>
+                </>
+              )}
+              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
           {/* ════════ BOTTOM BUTTONS ════════ */}
           {!canApprove && !isMasterMode && (!isSalesSectionLocked) && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", width: "100%", marginTop: "1.5rem", marginBottom: "1rem" }}>
-              <Button type="primary" htmlType="submit" icon={<Icon icon="mdi:content-save" />}>
-                Submit CS Update
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
+              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Save Draft
+              </Button>
+              <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Submit
+              </Button>
+              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Cancel
               </Button>
             </div>
           )}

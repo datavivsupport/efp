@@ -284,7 +284,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
-      const values = await form.validateFields();
+      const values = actionType === "Rejected" ? form.getFieldsValue() : await form.validateFields();
       if (actionType === "Approved") {
         const validationError = validateApprovalAction(values, {
           stage: "2", isCS: false, isCNF: false, isForwarding, isLiner, needsLpoInvoice,
@@ -550,7 +550,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           {!isTerminal && canApprove && (
-            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px' }}>
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
               <Button
                 type="primary"
                 size="large"
@@ -573,14 +573,28 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               >
                 Reject
               </Button>
+              <Button
+                size="large"
+                onClick={() => navigate("/")}
+                icon={<Icon icon="mdi:close" />}
+                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+              >
+                Cancel
+              </Button>
             </div>
           )}
 
           {/* BOTTOM BUTTON FOR CS UPDATE */}
           {!canApprove && !isMasterMode && (!isSalesSectionLocked) && (
-            <div style={{ display: "flex", justifyContent: "center", width: "100%", marginTop: "24px", marginBottom: "40px" }}>
-              <Button type="primary" htmlType="submit" size="large" icon={<Icon icon="mdi:content-save" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
-                Submit CS Update
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, width: "100%", marginTop: "24px", paddingBottom: "40px", flexWrap: "wrap" }}>
+              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+                Save Draft
+              </Button>
+              <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+                Submit
+              </Button>
+              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+                Cancel
               </Button>
             </div>
           )}

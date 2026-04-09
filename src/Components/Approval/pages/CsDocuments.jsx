@@ -51,20 +51,24 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
+      const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
-      const canEditFile = !disabled && (isAdmin || isOwner);
+      const canEditFile = !disabled && (isAdmin || isOwner || isPending);
       return (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px"}}>
-              <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474' }} />
               <Typography.Text ellipsis style={{ maxWidth: 150 }}>{file.name || file.file_name}</Typography.Text>
-              {file.uploaded_by_user_name && (
-                <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
-              )}
+              {isPending
+                ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>queued</Tag>
+                : file.uploaded_by_user_name && (
+                  <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
+                )
+              }
             </div>
             <Space>
-              <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>
+              {!isPending && <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>}
               <Tooltip title="Delete">{canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
             </Space>
           </div>
@@ -82,40 +86,58 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
-  const handleBeforeUpload = async (file) => {
-    if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("doc_type", docType);
-    formData.append("category", category);
-    try {
-      const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
-      if (res.data.status === "success") {
-        const d = res.data.data;
-        setFiles((prev) => [...prev, { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
-        message.success(`${file.name} uploaded`);
-      } else { message.error(res.data.message || "Upload failed"); }
-    } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
+
+  // Store locally — actual upload happens on Save/Approve
+  const handleBeforeUpload = (file) => {
+    setFiles((prev) => [...prev, {
+      pending: true,
+      _localFile: file,
+      name: file.name,
+      file_name: file.name,
+      doc_type: docType,
+      category,
+      remarks: "",
+      uploaded_by_user: user?.id,
+      uploaded_by_user_name: user?.get_full_name || user?.first_name || "Me",
+    }]);
+    message.info(`${file.name} queued — will upload on Save / Approve`);
     return false;
   };
+
   const handleRemarkChange = (index, value) => {
     if (!files?.[index]) return;
-    const docId = files[index].id;
-    setFiles((prev) => prev.map((f) => (f.id === docId ? { ...f, remarks: value } : f)));
-    if (salesInputId && docId) {
+    const file = files[index];
+    setFiles((prev) => prev.map((f, j) => (j === index ? { ...f, remarks: value } : f)));
+    if (salesInputId && file.id && !file.pending) {
       if (debounceTimerField.current) clearTimeout(debounceTimerField.current);
       debounceTimerField.current = setTimeout(async () => {
-        try { await apiClient.patch(`/liner/sales-input/${salesInputId}/update-document-remarks/`, { doc_id: docId, remarks: value }); } catch (err) { console.error("Failed to sync remarks:", err); }
+        try { await apiClient.patch(`/liner/sales-input/${salesInputId}/update-document-remarks/`, { doc_id: file.id, remarks: value }); } catch (err) { console.error("Failed to sync remarks:", err); }
       }, 800);
     }
   };
+
   return (
     <div>
       <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
         <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
       </Upload>
       {files.length > 0 && (
-        <FileChipList files={files} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} user={user} isAdmin={isAdmin} disabled={disabled} />
+        <FileChipList
+          files={files}
+          onRemove={(i) => {
+            const f = files[i];
+            if (f?.id && !f.pending) {
+              setFiles((p) => p.filter((ff) => ff.id !== f.id));
+            } else {
+              setFiles((p) => p.filter((_, j) => j !== i));
+            }
+          }}
+          onPreview={(i) => onPreview(files, i)}
+          onRemarkChange={handleRemarkChange}
+          user={user}
+          isAdmin={isAdmin}
+          disabled={disabled}
+        />
       )}
     </div>
   );
@@ -220,12 +242,66 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setPreviewVisible(true);
   };
 
+  /* ── Upload all pending (queued) files before save/approve/reject ── */
+  const uploadAllPending = async () => {
+    const uploadOne = async (file) => {
+      const formData = new FormData();
+      formData.append("file", file._localFile);
+      formData.append("doc_type", file.doc_type);
+      formData.append("category", file.category);
+      const res = await apiClient.post(`/liner/sales-input/${id}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      if (res.data.status === "success") {
+        const d = res.data.data;
+        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
+      }
+      throw new Error(res.data.message || "Upload failed");
+    };
+
+    const resolve = async (arr) =>
+      Promise.all(arr.map((f) => (f.pending ? uploadOne(f) : Promise.resolve(f))));
+
+    const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newFac, newEd, newPreAlert, newHN, newAttach] =
+      await Promise.all([
+        resolve(releaseOrderFiles), resolve(bocFiles),    resolve(haulageCostFiles),
+        resolve(loadListFiles),     resolve(lpoFiles),    resolve(invoiceFiles),
+        resolve(hblFiles),          resolve(facFiles),    resolve(edFiles),
+        resolve(preAlertFiles),     resolve(haulierNoteFiles), resolve(attachments),
+      ]);
+
+    setReleaseOrderFiles(newRO); setBocFiles(newBoc);    setHaulageCostFiles(newHaulage);
+    setLoadListFiles(newLL);     setLpoFiles(newLpo);    setInvoiceFiles(newInv);
+    setHblFiles(newHbl);         setFacFiles(newFac);    setEdFiles(newEd);
+    setPreAlertFiles(newPreAlert); setHaulierNoteFiles(newHN); setAttachments(newAttach);
+
+    return { releaseOrderFiles: newRO, bocFiles: newBoc, haulageCostFiles: newHaulage,
+             loadListFiles: newLL, lpoFiles: newLpo, invoiceFiles: newInv,
+             hblFiles: newHbl, facFiles: newFac, edFiles: newEd,
+             preAlertFiles: newPreAlert, haulierNoteFiles: newHN, attachments: newAttach };
+  };
+
+  const buildDocPayload = (d) => {
+    const dm = (arr, docType, category) =>
+      (arr || []).map((f) => ({ id: f.id, doc_type: docType, category, file_url: f.url || f.file_url, file_name: f.file_name || f.name, remarks: f.remarks || "" }));
+    return [
+      ...dm(d.releaseOrderFiles, "Release Order", "booking"),
+      ...dm(d.bocFiles, "BOC", "booking"),
+      ...dm(d.haulageCostFiles, "Haulage Cost", "booking"),
+      ...dm(d.haulierNoteFiles, "Haulage Note", "booking"),
+      ...dm(d.loadListFiles, "Load List", "booking"),
+      ...dm(d.lpoFiles, "LPO", "financial"),
+      ...dm(d.invoiceFiles, "Invoice", "financial"),
+      ...dm(d.hblFiles, "HBL", "financial"),
+      ...dm(d.facFiles, "FAC", "financial"),
+      ...dm(d.edFiles, "ED", "financial"),
+      ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
+      ...(d.attachments || []).map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+    ];
+  };
+
   const handleAction = async (action) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
     const csHodValue = form.getFieldValue("cs_hod");
-
-    // if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
 
     if (action === "Approved") {
       const missing = [];
@@ -238,28 +314,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      const docMapper = (arr, docType, category) =>
-        arr.map((f) => ({ id: f.id, doc_type: docType, category, file_url: f.url || f.file_url, file_name: f.file_name || f.name, remarks: f.remarks || "" }));
+      const resolved = action === "Rejected"
+        ? { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, hblFiles, facFiles, edFiles, preAlertFiles, haulierNoteFiles, attachments }
+        : await uploadAllPending();
 
       const payload = {
         action,
         remarks: approvalRemarks,
         cs_hod: csHodValue,
         general_remarks: remarks,
-        documents: [
-          ...docMapper(releaseOrderFiles, "Release Order", "booking"),
-          ...docMapper(bocFiles, "BOC", "booking"),
-          ...docMapper(haulageCostFiles, "Haulage Cost", "booking"),
-          ...docMapper(haulierNoteFiles, "Haulage Note", "booking"),
-          ...docMapper(loadListFiles, "Load List", "booking"),
-          ...docMapper(lpoFiles, "LPO", "financial"),
-          ...docMapper(invoiceFiles, "Invoice", "financial"),
-          ...docMapper(hblFiles, "HBL", "financial"),
-          ...docMapper(facFiles, "FAC", "financial"),
-          ...docMapper(edFiles, "ED", "financial"),
-          ...docMapper(preAlertFiles, "PRE-ALERT", "financial"),
-          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" }))
-        ],
+        documents: buildDocPayload(resolved),
       };
 
       const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
@@ -270,11 +334,36 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     finally { throttle.current = false; setLoading(false); }
   };
 
+  const handleSave = async () => {
+    if (throttle.current) return;
+    throttle.current = true;
+    setLoading(true);
+    try {
+      const resolved = await uploadAllPending();
+      const payload = {
+        general_remarks: remarks,
+        cs_hod: form.getFieldValue("cs_hod"),
+        documents: buildDocPayload(resolved),
+      };
+      const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
+      if (res.data.status === "success" || res.status === 200 || res.status === 201) {
+        message.success(res.data.message || "Saved successfully");
+      } else {
+        message.error(res.data.message || "Save failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Save failed");
+    } finally {
+      throttle.current = false;
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
-          
+
           {/* EXPORT DETAILS */}
           <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}>
             <div style={{ display: open.export ? "block" : "none" }}>
@@ -450,7 +539,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px' }}>
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
+            <Button
+              size="large"
+              onClick={handleSave}
+              icon={<Icon icon="mdi:content-save-outline" />}
+              loading={loading}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Save
+            </Button>
             <Button
               type="primary"
               size="large"
@@ -470,6 +568,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Reject
+            </Button>
+            <Button
+              size="large"
+              onClick={() => navigate("/")}
+              icon={<Icon icon="mdi:close" />}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Cancel
             </Button>
           </div>
         </Form>

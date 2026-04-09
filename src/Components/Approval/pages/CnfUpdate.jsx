@@ -52,20 +52,24 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
+      const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
-      const canEditFile = !disabled && (isAdmin || isOwner);
+      const canEditFile = !disabled && (isAdmin || isOwner || isPending);
       return (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex" }}>
-              <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
+            <div style={{ display: "flex", alignItems: 'center', gap: 4 }}>
+              <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474' }} />
               <Typography.Text ellipsis style={{ maxWidth: 150 }}>{file.name || file.file_name}</Typography.Text>
-              {file.uploaded_by_user_name && (
-                <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
-              )}
+              {isPending
+                ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>queued</Tag>
+                : file.uploaded_by_user_name && (
+                  <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
+                )
+              }
             </div>
             <Space>
-              <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>
+              {!isPending && <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>}
               <Tooltip title="Delete">{canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
             </Space>
           </div>
@@ -81,36 +85,40 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── Upload field wrapper ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, onPreview: onPreviewFromDocUpload, user, isAdmin, disabled = false, restrictionMessage = null }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null }) => {
   const debounceTimerField = useRef(null);
-  const handleBeforeUpload = async (file) => {
+
+  // Store file locally — actual upload happens on Save/Submit
+  const handleBeforeUpload = (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
-    if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("doc_type", docType);
-    formData.append("category", category);
-    try {
-      const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
-      if (res.data.status === "success") {
-        const d = res.data.data;
-        setFiles((prev) => [...prev, { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
-        message.success(`${file.name} uploaded`);
-      } else { message.error(res.data.message || "Upload failed"); }
-    } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
+    setFiles((prev) => [...prev, {
+      pending: true,
+      _localFile: file,
+      name: file.name,
+      file_name: file.name,
+      doc_type: docType,
+      category,
+      remarks: "",
+      uploaded_by_user: user?.id,
+      uploaded_by_user_name: user?.get_full_name || user?.first_name || "Me",
+    }]);
+    message.info(`${file.name} queued — will upload on Save / Submit`);
     return false;
   };
+
   const handleRemarkChange = (index, value) => {
     if (!files?.[index]) return;
-    const docId = files[index].id;
-    setFiles((prev) => prev.map((f) => (f.id === docId ? { ...f, remarks: value } : f)));
-    if (salesInputId && docId) {
+    const file = files[index];
+    // For pending files just update state; for uploaded files also debounce-sync
+    setFiles((prev) => prev.map((f, j) => (j === index ? { ...f, remarks: value } : f)));
+    if (salesInputId && file.id && !file.pending) {
       if (debounceTimerField.current) clearTimeout(debounceTimerField.current);
       debounceTimerField.current = setTimeout(async () => {
-        try { await apiClient.patch(`/liner/sales-input/${salesInputId}/update-document-remarks/`, { doc_id: docId, remarks: value }); } catch (err) { console.error("Failed to sync remarks:", err); }
+        try { await apiClient.patch(`/liner/sales-input/${salesInputId}/update-document-remarks/`, { doc_id: file.id, remarks: value }); } catch (err) { console.error("Failed to sync remarks:", err); }
       }, 800);
     }
   };
+
   return (
     <div>
       <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
@@ -118,7 +126,23 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       </Upload>
       {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
       {files.length > 0 && (
-        <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
+        <FileChipList
+          files={files}
+          color={color}
+          onRemove={(i) => {
+            const f = files[i];
+            if (f?.id && !f.pending) {
+              setFiles((p) => p.filter((ff) => ff.id !== f.id));
+            } else {
+              setFiles((p) => p.filter((_, j) => j !== i));
+            }
+          }}
+          onPreview={(i) => onPreview(files, i)}
+          onRemarkChange={handleRemarkChange}
+          disabled={disabled}
+          user={user}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );
@@ -240,14 +264,54 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setPreviewVisible(true);
   };
 
+  /* ── Upload all pending (queued) files before save/approve/reject ── */
+  const uploadAllPending = async () => {
+    const uploadOne = async (file) => {
+      const formData = new FormData();
+      formData.append("file", file._localFile);
+      formData.append("doc_type", file.doc_type);
+      formData.append("category", file.category);
+      const res = await apiClient.post(`/liner/sales-input/${id}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      if (res.data.status === "success") {
+        const d = res.data.data;
+        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
+      }
+      throw new Error(res.data.message || "Upload failed");
+    };
+
+    const resolve = async (arr) =>
+      Promise.all(arr.map((f) => (f.pending ? uploadOne(f) : Promise.resolve(f))));
+
+    const [
+      newRO, newBoc, newHaulage, newLL, newLpo, newInv, newFac,
+      newCro, newEd, newHN, newPreAlert, newBankSlips, newAttach, newHbl,
+    ] = await Promise.all([
+      resolve(releaseOrderFiles), resolve(bocFiles), resolve(haulageCostFiles),
+      resolve(loadListFiles),     resolve(lpoFiles),  resolve(invoiceFiles),
+      resolve(facFiles),          resolve(croFiles),  resolve(edFiles),
+      resolve(haulierNoteFiles),  resolve(preAlertFiles), resolve(bankSlips),
+      resolve(attachments),       resolve(hblFiles),
+    ]);
+
+    // Sync state so chips update
+    setReleaseOrderFiles(newRO); setBocFiles(newBoc); setHaulageCostFiles(newHaulage);
+    setLoadListFiles(newLL);     setLpoFiles(newLpo); setInvoiceFiles(newInv);
+    setFacFiles(newFac);         setCroFiles(newCro); setEdFiles(newEd);
+    setHaulierNoteFiles(newHN);  setPreAlertFiles(newPreAlert); setBankSlips(newBankSlips);
+    setAttachments(newAttach);   setHblFiles(newHbl);
+
+    return {
+      releaseOrderFiles: newRO, bocFiles: newBoc, haulageCostFiles: newHaulage,
+      loadListFiles: newLL,     lpoFiles: newLpo,  invoiceFiles: newInv,
+      facFiles: newFac,         croFiles: newCro,  edFiles: newEd,
+      haulierNoteFiles: newHN,  preAlertFiles: newPreAlert, bankSlips: newBankSlips,
+      attachments: newAttach,   hblFiles: newHbl,
+    };
+  };
+
   const handleAction = async (action) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
-
-    // if (!approvalRemarks?.trim()) {
-    //   message.warning("Please enter remarks before proceeding.");
-    //   return;
-    // }
 
     // Stage 3 requires mandatory docs
     if (action === "Approved" && isStage3) {
@@ -264,11 +328,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      const values = await form.validateFields();
+      const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
+      const resolvedDocs = await uploadAllPending();
       const payload = {
         ...buildCommonPayload(
           values,
-          { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles },
+          resolvedDocs,
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: true }
         ),
         action,
@@ -288,6 +353,21 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
     } catch (err) {
       message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      throttle.current = false;
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (throttle.current) return;
+    throttle.current = true;
+    setLoading(true);
+    try {
+      await uploadAllPending();
+      message.success("Documents uploaded successfully");
+    } catch (err) {
+      message.error(err.response?.data?.message || "Upload failed");
     } finally {
       throttle.current = false;
       setLoading(false);
@@ -577,7 +657,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px' }}>
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
             {isStage3 && (
               <>
                 <Button
@@ -607,6 +687,23 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 Actions will be available once the job reaches Stage 3 (CNF Update).
               </Typography.Text>
             )}
+            <Button
+              size="large"
+              onClick={handleSave}
+              icon={<Icon icon="mdi:content-save-outline" />}
+              loading={loading}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
+            >
+              Save
+            </Button>
+            <Button
+              size="large"
+              onClick={() => navigate("/")}
+              icon={<Icon icon="mdi:close" />}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Cancel
+            </Button>
           </div>
         </Form>
       </Spin>

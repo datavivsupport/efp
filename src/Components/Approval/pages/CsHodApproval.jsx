@@ -255,6 +255,54 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     finally { throttle.current = false; setLoading(false); }
   };
 
+  const handleSave = async () => {
+    if (throttle.current) return;
+    throttle.current = true;
+    setLoading(true);
+    try {
+      const dm = (arr, docType, category) =>
+        (arr || []).map(f => ({
+          id: f.id,
+          doc_type: docType,
+          category,
+          file_url: f.url || f.file_url,
+          file_name: f.name || f.file_name,
+          remarks: f.remarks || "",
+          uploaded_by_user: f.uploaded_by_user,
+        }));
+      const payload = {
+        general_remarks: remarks,
+        documents: [
+          ...dm(docs.releaseOrderFiles, "Release Order", "booking"),
+          ...dm(docs.bocFiles, "BOC", "booking"),
+          ...dm(docs.haulageCostFiles, "Haulage Cost", "booking"),
+          ...dm(docs.haulierNoteFiles, "Haulage Note", "booking"),
+          ...dm(docs.loadListFiles, "Load List", "booking"),
+          ...dm(docs.lpoFiles, "LPO", "financial"),
+          ...dm(docs.invoiceFiles, "Invoice", "financial"),
+          ...dm(docs.hblFiles, "HBL", "financial"),
+          ...dm(docs.facFiles, "FAC", "financial"),
+          ...dm(docs.edFiles, "ED", "financial"),
+          ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
+          ...dm(docs.bankSlips, "Bank Slip", "financial"),
+          ...dm(docs.croFiles, "CRO", "financial"),
+          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+        ],
+      };
+      const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
+      if (res.data.status === "success" || res.status === 200 || res.status === 201) {
+        message.success(res.data.message || "Saved successfully");
+      } else {
+        message.error(res.data.message || "Save failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Save failed");
+    } finally {
+      throttle.current = false;
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
@@ -438,7 +486,16 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px' }}>
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
+            <Button
+              size="large"
+              onClick={handleSave}
+              icon={<Icon icon="mdi:content-save-outline" />}
+              loading={loading}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Save
+            </Button>
             <Button
               type="primary"
               size="large"
@@ -458,6 +515,14 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Reject
+            </Button>
+            <Button
+              size="large"
+              onClick={() => navigate("/")}
+              icon={<Icon icon="mdi:close" />}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Cancel
             </Button>
           </div>
         </Form>
