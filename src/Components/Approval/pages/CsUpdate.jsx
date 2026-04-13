@@ -676,9 +676,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
                     Verify & Config (CS)
                   </Button>
-                  <Button danger size="large" onClick={() => handleAction("Rejected")} icon={<Icon icon="mdi:close-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
-                    Reject
-                  </Button>
                 </>
               )}
               <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>

@@ -323,6 +323,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         remarks: approvalRemarks,
         cs_hod: csHodValue,
         general_remarks: remarks,
+        booking_vessel: form.getFieldValue("booking_vessel"),
+        booking_voyage: form.getFieldValue("booking_voyage"),
+        booking_ref_no: form.getFieldValue("booking_ref_no"),
+        booking_remarks: form.getFieldValue("booking_remarks"),
+        vsl_initial_eta: form.getFieldValue("vsl_initial_eta") ? form.getFieldValue("vsl_initial_eta").format("YYYY-MM-DD") : null,
+        vsl_latest_eta: form.getFieldValue("vsl_latest_eta") ? form.getFieldValue("vsl_latest_eta").format("YYYY-MM-DD") : null,
+        vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
+        pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(resolved),
       };
 
@@ -343,6 +351,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const payload = {
         general_remarks: remarks,
         cs_hod: form.getFieldValue("cs_hod"),
+        booking_vessel: form.getFieldValue("booking_vessel"),
+        booking_voyage: form.getFieldValue("booking_voyage"),
+        booking_ref_no: form.getFieldValue("booking_ref_no"),
+        booking_remarks: form.getFieldValue("booking_remarks"),
+        vsl_initial_eta: form.getFieldValue("vsl_initial_eta") ? form.getFieldValue("vsl_initial_eta").format("YYYY-MM-DD") : null,
+        vsl_latest_eta: form.getFieldValue("vsl_latest_eta") ? form.getFieldValue("vsl_latest_eta").format("YYYY-MM-DD") : null,
+        vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
+        pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(resolved),
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
@@ -455,8 +471,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
@@ -558,16 +574,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
             >
               Submit Documents & Approve
-            </Button>
-            <Button
-              danger
-              size="large"
-              onClick={() => handleAction("Rejected")}
-              icon={<Icon icon="mdi:close-circle" />}
-              loading={loading}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-            >
-              Reject
             </Button>
             <Button
               size="large"
