@@ -674,7 +674,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
                 <>
                   <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
-                    Verify & Config (CS)
+                    Verify & Confirm (CS)
                   </Button>
                 </>
               )}

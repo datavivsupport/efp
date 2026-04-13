@@ -293,6 +293,7 @@ const Approval = () => {
     otherDetails: true,
     placement: true,
     booking: true,
+    cnfDocuments: true,
     bankAccounts: false,
     documents: true,
     attachments: true,
@@ -366,6 +367,9 @@ const Approval = () => {
     isStage2, isCNFStage, isCSHODStage, isAccountsStage,
     stage2, isCSDoneWaitingHOD, jobData,
   });
+
+  // Disable ALL uploads if user doesn't have allowed role
+  const disableAllUploads = !hasAllowedRole;
 
   // Reactive visibility using Form.useWatch (handles both initial values and live changes)
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
@@ -835,24 +839,24 @@ const Approval = () => {
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                      <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner || disableAllUploads} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                      <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                      <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1240,7 +1244,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="Release Order"
-                          disabled={releaseOrderDisabled}
+                          disabled={releaseOrderDisabled || disableAllUploads}
                           restrictionMessage={releaseOrderRestrictionMessage}
                           isMasterMode={isMasterMode}
                           user={user}
@@ -1259,7 +1263,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || isCNF}
+                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || isCNF || disableAllUploads}
                           restrictionMessage={
                             isCNFUploadLocked && !isCS && isLiner && !isCNF
                               ? "CNF is allowd to uplaod it"
@@ -1276,119 +1280,135 @@ const Approval = () => {
 
                 {showDocumentUploads && !hideDocumentsAtStage2 && (
                   <>
-                    <Row gutter={16}>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
-                          <DocUploadField
-                            label="Haulage Cost"
-                            files={haulageCostFiles}
-                            setFiles={setHaulageCostFiles}
-                            color="orange"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="booking"
-                            docType="Haulage Cost"
-                            disabled={true}
-                            restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
-                            user={user}
-                            isAdmin={isAdmin}
-                            isMasterMode={isMasterMode}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Haulier Note">
-                          <DocUploadField
-                            label="Haulier Note"
-                            files={haulierNoteFiles}
-                            setFiles={setHaulierNoteFiles}
-                            color="geekblue"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="booking"
-                            docType="Haulage Note"
-                            disabled={true}
-                            restrictionMessage={
-                              isCNFUploadLocked
-                                ? null
-                                : !haulierNoteEnabled && currentStage !== "4"
-                                ? "Haulier Note uploading is disabled until the requirement is turned on."
-                                : isLiner && !isCNF
-                                ? "CNF is allowd to uplaod it"
-                                : null
-                            }
-                            user={user}
-                            isAdmin={isAdmin}
-                            isMasterMode={isMasterMode}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={16}>
-                      <Col xs={24} md={6}>
-                        <Form.Item 
-                          className={Styles.formLabel} 
-                          label="ED"
-                        >
-                          <DocUploadField
-                            label="ED"
-                            files={edFiles}
-                            setFiles={setEdFiles}
-                            color="geekblue"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="financial"
-                            docType="ED"
-                            disabled={true}
-                            user={user}
-                            isAdmin={isAdmin}
-                            isMasterMode={isMasterMode}
-                          />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={6}>
-                        <Form.Item
-                          className={Styles.formLabel} 
-                          label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
-                          rules={currentStage === "4" ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
-                        >
-                          <DocUploadField
-                            label="Load List"
-                            files={loadListFiles}
-                            setFiles={setLoadListFiles}
-                            color="gold"
-                            onPreview={openPreview}
-                            salesInputId={id}
-                            category="booking"
-                            docType="Load List"
-                            disabled={true}
-                            restrictionMessage={
-                              isCNFUploadLocked
-                                ? null
-                                : !isLLReq && currentStage !== "4"
-                                ? "Load List upload is disabled until the requirement is turned on."
-                                : currentStage === "2" && isCNF
-                                ? "Disabled until Sales & HOD approval is completed."
-                                : isLiner && jobData?.is_hod_approved && !isCNF
-                                ? "CNF is allowd to uplaod it"
-                                : null
-                            }
-                            isMasterMode={isMasterMode}
-                            user={user}
-                            isAdmin={isAdmin}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                    <Row gutter={16}>
-                      <Col xs={24} md={24}>
-                        <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
-                          <TextArea disabled={true} />
-                        </Form.Item>
-                      </Col>
-                    </Row>
                   </>
                 )}
+              </div>
+            </Card>
+          )}
+
+          {showDocumentUploads && !hideDocumentsAtStage2 && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <CardHeader
+                  icon="mdi:file-document-multiple-outline"
+                  title="CNF DOCUMENTS & REMARKS"
+                  open={open.cnfDocuments}
+                  onToggle={() => toggle("cnfDocuments")}
+                />
+              }
+            >
+              <div style={{ display: open.cnfDocuments ? "block" : "none" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
+                      <DocUploadField
+                        label="Haulage Cost"
+                        files={haulageCostFiles}
+                        setFiles={setHaulageCostFiles}
+                        color="orange"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="booking"
+                        docType="Haulage Cost"
+                        disabled={true || disableAllUploads}
+                        restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
+                        user={user}
+                        isAdmin={isAdmin}
+                        isMasterMode={isMasterMode}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Haulier Note">
+                      <DocUploadField
+                        label="Haulier Note"
+                        files={haulierNoteFiles}
+                        setFiles={setHaulierNoteFiles}
+                        color="geekblue"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="booking"
+                        docType="Haulage Note"
+                        disabled={true || disableAllUploads}
+                        restrictionMessage={
+                          isCNFUploadLocked
+                            ? null
+                            : !haulierNoteEnabled && currentStage !== "4"
+                            ? "Haulier Note uploading is disabled until the requirement is turned on."
+                            : isLiner && !isCNF
+                            ? "CNF is allowd to uplaod it"
+                            : null
+                        }
+                        user={user}
+                        isAdmin={isAdmin}
+                        isMasterMode={isMasterMode}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item 
+                      className={Styles.formLabel} 
+                      label="ED"
+                    >
+                      <DocUploadField
+                        label="ED"
+                        files={edFiles}
+                        setFiles={setEdFiles}
+                        color="geekblue"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="financial"
+                        docType="ED"
+                        disabled={true || disableAllUploads}
+                        user={user}
+                        isAdmin={isAdmin}
+                        isMasterMode={isMasterMode}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={6}>
+                    <Form.Item
+                      className={Styles.formLabel} 
+                      label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      rules={currentStage === "4" ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
+                    >
+                      <DocUploadField
+                        label="Load List"
+                        files={loadListFiles}
+                        setFiles={setLoadListFiles}
+                        color="gold"
+                        onPreview={openPreview}
+                        salesInputId={id}
+                        category="booking"
+                        docType="Load List"
+                        disabled={true || disableAllUploads}
+                        restrictionMessage={
+                          isCNFUploadLocked
+                            ? null
+                            : !isLLReq && currentStage !== "4"
+                            ? "Load List upload is disabled until the requirement is turned on."
+                            : currentStage === "2" && isCNF
+                            ? "Disabled until Sales & HOD approval is completed."
+                            : isLiner && jobData?.is_hod_approved && !isCNF
+                            ? "CNF is allowd to uplaod it"
+                            : null
+                        }
+                        isMasterMode={isMasterMode}
+                        user={user}
+                        isAdmin={isAdmin}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col xs={24} md={24}>
+                    <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
+                      <TextArea disabled={true} />
+                    </Form.Item>
+                  </Col>
+                </Row>
               </div>
             </Card>
           )}
@@ -1425,7 +1445,7 @@ const Approval = () => {
                   </Col>
                   {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Bank Slip Attachment">
-                      <DocUploadField label="Bank Slip" files={bankSlips} setFiles={setBankSlips} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="Bank Slip" disabled={isAccountsEditableFieldLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                      <DocUploadField label="Bank Slip" files={bankSlips} setFiles={setBankSlips} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="Bank Slip" disabled={isAccountsEditableFieldLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                     </Form.Item>
                   </Col> */}
                 </Row>
@@ -1469,12 +1489,12 @@ const Approval = () => {
                     <>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                     </>
@@ -1482,7 +1502,7 @@ const Approval = () => {
                   {!isLiner && (isMasterMode || hblFlag) && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="HBL">
-                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                       </Form.Item>
                     </Col>
                   )}
@@ -1503,7 +1523,7 @@ const Approval = () => {
                   {facFlag && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="FAC">
-                        <DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked || disableAllUploads} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                       </Form.Item>
                     </Col>
                   )}
@@ -1519,7 +1539,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="Pre-Alert"
-                          disabled={isCSUploadLocked}
+                          disabled={isCSUploadLocked || disableAllUploads}
                           restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null}
                           user={user}
                           isAdmin={isAdmin}
@@ -1611,7 +1631,7 @@ const Approval = () => {
 
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true || disableAllUploads} />
                 </Col>
               </Row>
             </div>
