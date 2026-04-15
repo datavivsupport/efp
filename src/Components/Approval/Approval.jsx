@@ -1101,7 +1101,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!stage2.isThisJobsHOD &&  !isCreator && (
+          {!stage2.isThisJobsHOD && !isCreator && !isOthers && (
             <Card
               className={Styles.card}
               bordered
@@ -1286,7 +1286,7 @@ const Approval = () => {
             </Card>
           )}
 
-          {showDocumentUploads && !hideDocumentsAtStage2 && (
+          {showDocumentUploads && !hideDocumentsAtStage2 && !isOthers && (
             <Card
               className={Styles.card}
               bordered

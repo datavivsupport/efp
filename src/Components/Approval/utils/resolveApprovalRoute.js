@@ -14,6 +14,11 @@ export const resolveApprovalRoute = (jobData, user) => {
   const currentStage = String(jobData?.current_stage || "1");
   const roles        = computeUserRoles(user);
 
+  // OTHERS job type — always use the main approval page (no sub-routes)
+  if (jobData?.job_type?.toUpperCase() === "OTHERS") {
+    return null;
+  }
+
   // Stage 2 — CS (only if not yet updated)
   if (currentStage === "2" && roles.isCS && !jobData?.is_cs_updated) {
     return `/approval/${id}/cs-update`;

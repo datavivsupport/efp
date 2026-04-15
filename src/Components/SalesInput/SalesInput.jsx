@@ -981,7 +981,7 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                        <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="others" docType="FREIGHT MANIFEST" disabled={isReadOnly} />
+                        <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="blue" onPreview={openPreview} salesInputId={id} category="others" docType="FREIGHT MANIFEST" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
@@ -990,6 +990,7 @@ const SalesInput = () => {
                           label="Load List"
                           files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")}
                           setFiles={setAttachments}
+                          setPendingFiles={setPendingFiles}
                           color="gold"
                           onPreview={openPreview}
                           salesInputId={id}
@@ -1005,12 +1006,12 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                        <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="others" docType="TDR/SAILING REPORT" disabled={isReadOnly} />
+                        <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="green" onPreview={openPreview} salesInputId={id} category="others" docType="TDR/SAILING REPORT" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                        <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isReadOnly} />
+                        <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                   </Row>
