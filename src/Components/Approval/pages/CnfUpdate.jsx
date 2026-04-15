@@ -316,7 +316,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     // Stage 3 requires mandatory docs
     if (action === "Approved" && isStage3) {
       const missing = [];
-      if (!haulageCostFiles.length) missing.push("Haulage Cost Sheet");
       if (!haulierNoteFiles.length) missing.push("Haulier Note");
       if (!loadListFiles.length)    missing.push("Load List");
       if (missing.length) {
@@ -574,7 +573,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               )}
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Haulage Cost Sheet {isStage3 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                  <Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}>
                     <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} />
                   </Form.Item>
                 </Col>

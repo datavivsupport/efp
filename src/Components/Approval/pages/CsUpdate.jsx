@@ -104,6 +104,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── DocUploadField ── */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
   const debounceTimerField = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
@@ -112,6 +113,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     formData.append('file', file);
     formData.append('doc_type', docType);
     formData.append('category', category);
+    setUploading(true);
     try {
       const response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.status === "success") {
@@ -120,6 +122,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         message.success(`${file.name} uploaded successfully to S3`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
+    finally { setUploading(false); }
     return false;
   };
   const handleRemarkChange = (index, value) => {
@@ -134,15 +137,17 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     }
   };
   return (
-    <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-      </Upload>
-      {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
-      {files.length > 0 && (
-        <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
-      )}
-    </div>
+    <Spin spinning={uploading} size="small">
+      <div>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+        </Upload>
+        {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
+        {files.length > 0 && (
+          <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
+        )}
+      </div>
+    </Spin>
   );
 };
 
@@ -209,12 +214,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isRequirementSelectorLocked,
     showDocumentUploads, showROBOCForCS, needsLpoInvoice,
   } = computeSectionLocks({
-    isAdmin, isCS: true, isCNF: false, isSalesExecutive: false, isCreator,
+    isAdmin, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
     currentStage: "2", isMasterMode, isTerminal, isForwarding,
     isLiner, isExtended, isOthers,
     isStage2: true, isCNFStage: false, isCSHODStage: false, isAccountsStage: false,
-    stage2, isCSDoneWaitingHOD, jobData,
+    stage2: { ...stage2, creatorLocked: false }, isCSDoneWaitingHOD, jobData,
   });
 
   /* ── Form watches ── */
@@ -522,8 +527,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!isCreator && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:anchor" title="BOOKING DETAILS" open={open.booking} onToggle={() => toggle("booking")} />}>
+          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:anchor" title="BOOKING DETAILS" open={open.booking} onToggle={() => toggle("booking")} />}>
               <div style={{ display: open.booking ? "block" : "none" }}>
                 <Row gutter={16}>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: true, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item></Col>
@@ -582,7 +586,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 )}
               </div>
             </Card>
-          )}
 
           {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
           {/* {showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (

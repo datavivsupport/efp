@@ -62,7 +62,6 @@ export const validateApprovalAction = (values, ctx) => {
     }
     if (stage === "3" && isCNF) {
       const missing = [];
-      if (!haulageCostFiles.length) missing.push("Haulage Cost Sheet");
       if (!haulierNoteFiles.length) missing.push("Haulier Note");
       if (!loadListFiles.length)    missing.push("Load List");
       if (missing.length) {
@@ -71,7 +70,6 @@ export const validateApprovalAction = (values, ctx) => {
     }
     if (stage === "4" && isCNF) {
       const missing = [];
-      if (!haulageCostFiles.length) missing.push("Haulage Cost Sheet");
       if (!haulierNoteFiles.length) missing.push("Haulier Note");
       if (!loadListFiles.length)    missing.push("Load List");
       if (missing.length) {
