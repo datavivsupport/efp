@@ -103,6 +103,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── DocUploadField ── */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
   const debounceTimerField = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
@@ -111,6 +112,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     formData.append('file', file);
     formData.append('doc_type', docType);
     formData.append('category', category);
+    setUploading(true);
     try {
       const response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.status === "success") {
@@ -119,6 +121,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         message.success(`${file.name} uploaded successfully to S3`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
+    finally { setUploading(false); }
     return false;
   };
   const handleRemarkChange = (index, value) => {
@@ -133,15 +136,17 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     }
   };
   return (
-    <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-      </Upload>
-      {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
-      {files.length > 0 && (
-        <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
-      )}
-    </div>
+    <Spin spinning={uploading} size="small">
+      <div>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+        </Upload>
+        {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
+        {files.length > 0 && (
+          <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
+        )}
+      </div>
+    </Spin>
   );
 };
 

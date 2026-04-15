@@ -82,12 +82,14 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
+  const [uploading, setUploading] = useState(false);
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("doc_type", docType);
     formData.append("category", category);
+    setUploading(true);
     try {
       const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.status === "success") {
@@ -96,6 +98,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
         message.success(`${file.name} uploaded`);
       } else { message.error(res.data.message || "Upload failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
+    finally { setUploading(false); }
     return false;
   };
   const handleRemarkChange = (index, value) => {
@@ -110,14 +113,16 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
     }
   };
   return (
-    <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-      </Upload>
-      {files.length > 0 && (
-        <FileChipList files={files} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} user={user} isAdmin={isAdmin} disabled={disabled} />
-      )}
-    </div>
+    <Spin spinning={uploading} size="small">
+      <div>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+        </Upload>
+        {files.length > 0 && (
+          <FileChipList files={files} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} user={user} isAdmin={isAdmin} disabled={disabled} />
+        )}
+      </div>
+    </Spin>
   );
 };
 
