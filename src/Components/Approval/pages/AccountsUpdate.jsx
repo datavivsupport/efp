@@ -141,6 +141,10 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
+  const [hblFiles, setHblFiles] = useState([]);
+  const [facFiles, setFacFiles] = useState([]);
+  const [preAlertFiles, setPreAlertFiles] = useState([]);
+  const [edFiles, setEdFiles] = useState([]);
   
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -151,6 +155,10 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       const docs = partitionDocuments(jobData.documents || []);
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
+      setHblFiles(docs.hblFiles);
+      setFacFiles(docs.facFiles);
+      setPreAlertFiles(docs.preAlertFiles);
+      setEdFiles(docs.edFiles);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,
@@ -299,19 +307,46 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
             <Typography.Title level={5}>Documentation (View Only)</Typography.Title>
-            <Row gutter={24}>
-              <Col span={12}>
-                <Typography.Text strong>LPO</Typography.Text>
-                <div style={{ marginTop: 8 }}>
-                  <FileListView files={lpoFiles} onPreview={openPreview} />
-                </div>
-              </Col>
-              <Col span={12}>
-                <Typography.Text strong>Invoice</Typography.Text>
-                <div style={{ marginTop: 8 }}>
-                  <FileListView files={invoiceFiles} onPreview={openPreview} />
-                </div>
-              </Col>
+            <Row gutter={[24, 16]}>
+              {lpoFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>LPO</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={lpoFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {invoiceFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>Invoice</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {hblFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>HBL</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={hblFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {facFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>FAC</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={facFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {preAlertFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>Pre-Alert</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={preAlertFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {edFiles.length > 0 && (
+                <Col span={12}>
+                  <Typography.Text strong>ED</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={edFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
+              {!lpoFiles.length && !invoiceFiles.length && !hblFiles.length && !facFiles.length && !preAlertFiles.length && !edFiles.length && (
+                <Col span={24}><Typography.Text type="secondary" italic>No documents available.</Typography.Text></Col>
+              )}
             </Row>
           </div>
 
