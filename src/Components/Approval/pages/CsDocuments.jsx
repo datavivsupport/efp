@@ -61,7 +61,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474' }} />
               <Typography.Text ellipsis style={{ maxWidth: 150 }}>{file.name || file.file_name}</Typography.Text>
               {isPending
-                ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>queued</Tag>
+                ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>uploading...</Tag>
                 : file.uploaded_by_user_name && (
                   <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
                 )
@@ -87,11 +87,11 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
 
-  // Store locally — actual upload happens on Save/Approve
-  const handleBeforeUpload = (file) => {
+  const handleBeforeUpload = async (file) => {
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
-      _localFile: file,
+      _tempId: tempId,
       name: file.name,
       file_name: file.name,
       doc_type: docType,
@@ -100,7 +100,30 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       uploaded_by_user: user?.id,
       uploaded_by_user_name: user?.get_full_name || user?.first_name || "Me",
     }]);
-    message.info(`${file.name} queued — will upload on Save / Approve`);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("doc_type", docType);
+      formData.append("category", category);
+      const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      if (res.data.status === "success") {
+        const d = res.data.data;
+        setFiles((prev) => prev.map((f) => f._tempId === tempId ? {
+          id: d.id, name: d.file_name, file_name: d.file_name,
+          url: d.file_url, file_url: d.file_url,
+          doc_type: docType, category, remarks: "",
+          uploaded_by_user: user?.id,
+          uploaded_by_user_name: d.uploaded_by_user_name || "Me",
+        } : f));
+        message.success(`${file.name} uploaded successfully`);
+      } else {
+        setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
+        message.error(res.data.message || "Upload failed");
+      }
+    } catch (err) {
+      setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
+      message.error(`Failed to upload ${file.name}`);
+    }
     return false;
   };
 
@@ -150,6 +173,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [form] = Form.useForm();
 
   const isAdmin = user?.is_superuser || user?.user_type === "admin";
+  const currentStage = String(initialJob?.current_stage || "4");
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -498,7 +522,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" disabled={currentStage === "7"} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="FAC" className={Styles.formLabel}><DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} salesInputId={id} docType="FAC" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
