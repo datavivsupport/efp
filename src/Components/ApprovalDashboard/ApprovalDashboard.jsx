@@ -450,9 +450,6 @@ useEffect(() => {
                 </Button>
               </>
             )} */}
-            {record.user_has_acted && !isTerminal && (
-              <Tag color="blue" style={{ margin: 0 }}>Already Reviewed</Tag>
-            )}
           </div>
         );
       }
