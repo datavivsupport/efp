@@ -136,7 +136,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
-    export: true, container: true, otherDetails: true, placement: true, booking: true, documents: true, attachments: true, approvalStatus: true
+    export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
   });
 
   const [previewVisible, setPreviewVisible]     = useState(false);
@@ -410,16 +410,31 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod"><Select disabled options={csHodOptions} optionFilterProp="label" /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs.releaseOrderFiles} onPreview={() => openPreview(docs.releaseOrderFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={docs.bocFiles} onPreview={() => openPreview(docs.bocFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs.haulageCostFiles} onPreview={() => openPreview(docs.haulageCostFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={docs.haulierNoteFiles} onPreview={() => openPreview(docs.haulierNoteFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={docs.loadListFiles} onPreview={() => openPreview(docs.loadListFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><FileChipList files={docs.edFiles} onPreview={() => openPreview(docs.edFiles, 0)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={docs?.bocFiles || []} onPreview={(i) => openPreview(docs?.bocFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+              </Row>
+            </div>
+          </Card>
+
+          {/* CNF DETAILS */}
+          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            <div style={{ display: open.cnfDetails ? "block" : "none" }}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={docs?.haulierNoteFiles || []} onPreview={(i) => openPreview(docs?.haulierNoteFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={docs?.loadListFiles || []} onPreview={(i) => openPreview(docs?.loadListFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="ED" className={Styles.formLabel}>
+                    {(docs?.edFiles || []).length === 0 ? (
+                      <div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div>
+                    ) : (
+                      <FileChipList files={docs?.edFiles || []} onPreview={(i) => openPreview(docs?.edFiles || [], i)} user={user} isAdmin={isAdmin} disabled />
+                    )}
+                  </Form.Item>
+                </Col>
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
@@ -436,16 +451,16 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 {[
-                  { label: 'LPO',       files: docs.lpoFiles },
-                  { label: 'INVOICE',   files: docs.invoiceFiles },
-                  { label: 'HBL',       files: docs.hblFiles },
-                  { label: 'FAC',       files: docs.facFiles },
-                  { label: 'Pre-Alert', files: docs.preAlertFiles },
+                  { label: 'LPO',       files: docs?.lpoFiles || [] },
+                  { label: 'INVOICE',   files: docs?.invoiceFiles || [] },
+                  { label: 'HBL',       files: docs?.hblFiles || [] },
+                  { label: 'FAC',       files: docs?.facFiles || [] },
+                  { label: 'Pre-Alert', files: docs?.preAlertFiles || [] },
                 ].map(({ label, files }) => (
                   <Col key={label} xs={24} md={8}>
                     <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
                     {files?.length > 0
-                      ? <FileChipList files={files} onPreview={openPreview} user={user} isAdmin={isAdmin} />
+                      ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled />
                       : <div style={{ marginTop: 8 }}>
                           <Upload disabled showUploadList={false}>
                             <Button size="small" icon={<UploadOutlined />} disabled style={{ fontSize: 12, color: '#bfbfbf', borderColor: '#d9d9d9' }}>

@@ -177,7 +177,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
-    export: true, container: true, otherDetails: true, placement: true, booking: true, documents: true, attachments: true, approvalStatus: true
+    export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
   });
 
   /* File States */
@@ -506,10 +506,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 {releaseOrderFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {bocFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+              </Row>
+            </div>
+          </Card>
+
+          {/* CNF DETAILS */}
+          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            <div style={{ display: open.cnfDetails ? "block" : "none" }}>
+              <Row gutter={[16, 16]}>
                 {haulageCostFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {haulierNoteFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {loadListFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
-                {preAlertFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><FileChipList files={preAlertFiles} disabled onPreview={(i) => openPreview(preAlertFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                {edFiles.length === 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div></Form.Item></Col>}
+                {edFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><FileChipList files={edFiles} disabled onPreview={(i) => openPreview(edFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
