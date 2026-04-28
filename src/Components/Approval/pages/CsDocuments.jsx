@@ -197,6 +197,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
+  const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
@@ -233,6 +234,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setLoadListFiles(docs.loadListFiles);
     setAttachments(docs.attachments);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
+    setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
     
     form.setFieldsValue({
@@ -242,6 +244,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
+      other_charges_remarks: ad.other_charges_remarks || "",
       cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
@@ -436,7 +439,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   </Row>
                 ))}
               </Form.List>
-              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
+              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && otherChargesRemarks && <span style={{ color: '#666', fontSize: 12 }}>{otherChargesRemarks}</span>}{otherCharges.length === 0 && !otherChargesRemarks && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
             </div>
           </Card>
 

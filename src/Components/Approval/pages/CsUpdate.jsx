@@ -455,7 +455,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         <Space wrap style={{ marginBottom: otherCharges.length ? 6 : 0 }}>
                           {otherCharges.map((c, i) => (<Tag key={i} closable color="cyan" onClose={() => setOtherCharges((p) => p.filter((_, j) => j !== i))}>{c}</Tag>))}
                         </Space>
-                        <Input bordered={false} placeholder={isSalesSectionLocked ? "" : "Type a charge and press Enter…"} value={chargeInput} disabled={isSalesSectionLocked} onChange={(e) => setChargeInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); const v = chargeInput.trim(); if (v && !otherCharges.includes(v)) { setOtherCharges(p => [...p, v]); setChargeInput(""); } } }} style={{ padding: 0 }} />
+                        {isSalesSectionLocked && otherCharges.length === 0 && chargeInput ? (
+                          <Typography.Text type="secondary">{chargeInput}</Typography.Text>
+                        ) : (
+                          <Input bordered={false} placeholder={isSalesSectionLocked ? "" : "Type a charge and press Enter…"} value={chargeInput} disabled={isSalesSectionLocked} onChange={(e) => setChargeInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); const v = chargeInput.trim(); if (v && !otherCharges.includes(v)) { setOtherCharges(p => [...p, v]); setChargeInput(""); } } }} style={{ padding: 0 }} />
+                        )}
                       </div>
                     </Form.Item>
                   </Col>

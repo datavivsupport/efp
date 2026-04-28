@@ -142,10 +142,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
   const [previewIndex, setPreviewIndex]         = useState(0);
+  const [previewLoading, setPreviewLoading]     = useState(false);
   
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
+  const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
   const [attachments, setAttachments]           = useState([]);
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
@@ -170,6 +172,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setDocs(buckets);
     setAttachments(buckets.attachments || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
+    setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
     
     form.setFieldsValue({
@@ -179,6 +182,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
+      other_charges_remarks: ad.other_charges_remarks || "",
       cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
@@ -196,21 +200,25 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   }, [initialJob, form, ad]);
 
   const openPreview = (filesArray, idx = 0) => {
-    const filesWithMime = (filesArray || []).map((file) => {
-      let mimeType = file.mimeType || file.type;
-      if (!mimeType) {
-        const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
-        if (ext === "pdf") mimeType = "application/pdf";
-        else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
-          mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
-        else mimeType = "other";
-      }
-      return { ...file, mimeType };
-    });
-    if (!filesWithMime.length) return;
-    setPreviewUrls(filesWithMime);
-    setPreviewIndex(Math.max(0, Math.min(idx, filesWithMime.length - 1)));
+    if (!filesArray?.length) return;
+    setPreviewLoading(true);
+    setPreviewIndex(Math.max(0, Math.min(idx, filesArray.length - 1)));
     setPreviewVisible(true);
+    setTimeout(() => {
+      const filesWithMime = (filesArray || []).map((file) => {
+        let mimeType = file.mimeType || file.type;
+        if (!mimeType) {
+          const ext = (file.url || file.file_url || "").split(".").pop()?.toLowerCase();
+          if (ext === "pdf") mimeType = "application/pdf";
+          else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext))
+            mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+          else mimeType = "other";
+        }
+        return { ...file, mimeType };
+      });
+      setPreviewUrls(filesWithMime);
+      setPreviewLoading(false);
+    }, 0);
   };
 
   const handleAction = async (action) => {
@@ -345,7 +353,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   </Row>
                 ))}
               </Form.List>
-              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
+              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && otherChargesRemarks && <span style={{ color: '#666', fontSize: 12 }}>{otherChargesRemarks}</span>}{otherCharges.length === 0 && !otherChargesRemarks && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
             </div>
           </Card>
 
@@ -570,7 +578,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
         </Form>
       </Spin>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
-        {previewVisible && previewUrls.length > 0 && (
+        {previewLoading && (
+          <div style={{ height: "87vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Spin size="large" />
+          </div>
+        )}
+        {previewVisible && !previewLoading && previewUrls.length > 0 && (
           <MultiFileViewer
             files={previewUrls.map((item) => {
               const url = typeof item === "string" ? item : item.url || item.file_url || "";

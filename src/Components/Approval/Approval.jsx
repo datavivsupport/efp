@@ -96,7 +96,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
     <div style={{ marginTop: 8 }}>
       {files.map((file, i) => {
         const isOwner = file.uploaded_by_user === user?.id || !file.id; // Allow editing for newly uploaded files in same session
-        const canEditFile = !disabled && (isAdmin || isOwner);
+        const canEditFile = false;
 
         return (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
@@ -837,24 +837,24 @@ const Approval = () => {
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                      <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner || disableAllUploads} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                      <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                      <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked || disableAllUploads} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1242,7 +1242,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="Release Order"
-                          disabled={releaseOrderDisabled || disableAllUploads}
+                          disabled={true}
                           restrictionMessage={releaseOrderRestrictionMessage}
                           isMasterMode={isMasterMode}
                           user={user}
@@ -1261,7 +1261,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="BOC"
-                          disabled={baseLocked || csStage4UploadLocked || (isCNFUploadLocked && !isCS) || isCNF || disableAllUploads}
+                          disabled={true}
                           restrictionMessage={
                             isCNFUploadLocked && !isCS && isLiner && !isCNF
                               ? "CNF is allowd to uplaod it"
@@ -1310,7 +1310,7 @@ const Approval = () => {
                         salesInputId={id}
                         category="booking"
                         docType="Haulage Cost"
-                        disabled={true || disableAllUploads}
+                        disabled={true}
                         restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
                         user={user}
                         isAdmin={isAdmin}
@@ -1329,7 +1329,7 @@ const Approval = () => {
                         salesInputId={id}
                         category="booking"
                         docType="Haulage Note"
-                        disabled={true || disableAllUploads}
+                        disabled={true}
                         restrictionMessage={
                           isCNFUploadLocked
                             ? null
@@ -1359,7 +1359,7 @@ const Approval = () => {
                         salesInputId={id}
                         category="financial"
                         docType="ED"
-                        disabled={true || disableAllUploads}
+                        disabled={true}
                         user={user}
                         isAdmin={isAdmin}
                         isMasterMode={isMasterMode}
@@ -1381,7 +1381,7 @@ const Approval = () => {
                         salesInputId={id}
                         category="booking"
                         docType="Load List"
-                        disabled={true || disableAllUploads}
+                        disabled={true}
                         restrictionMessage={
                           isCNFUploadLocked
                             ? null
@@ -1487,12 +1487,12 @@ const Approval = () => {
                     <>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={8}>
                         <Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                     </>
@@ -1500,7 +1500,7 @@ const Approval = () => {
                   {!isLiner && (isMasterMode || hblFlag) && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="HBL">
-                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                       </Form.Item>
                     </Col>
                   )}
@@ -1513,7 +1513,7 @@ const Approval = () => {
                           showSearch
                           optionFilterProp="label"
                           options={csHodOptions}
-                          disabled={isCSUploadLocked || isMasterMode}
+                          disabled={true}
                         />
                       </Form.Item>
                     </Col>
@@ -1521,7 +1521,7 @@ const Approval = () => {
                   {facFlag && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="FAC">
-                        <DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked || disableAllUploads} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={true} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                       </Form.Item>
                     </Col>
                   )}
@@ -1537,7 +1537,7 @@ const Approval = () => {
                           salesInputId={id}
                           category="booking"
                           docType="Pre-Alert"
-                          disabled={isCSUploadLocked || disableAllUploads}
+                          disabled={true}
                           restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null}
                           user={user}
                           isAdmin={isAdmin}
@@ -1629,7 +1629,7 @@ const Approval = () => {
 
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true || disableAllUploads} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
                 </Col>
               </Row>
             </div>

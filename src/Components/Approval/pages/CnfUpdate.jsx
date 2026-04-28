@@ -211,6 +211,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
+  const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
 
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
@@ -247,7 +248,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setAttachments(docs.attachments);
     }
     
-    setOtherCharges(initialJob.approval_details?.other_charges || []);
+    // Try to get other_charges from approval_details, then fall back to ad.other_charges or empty array
+    const charges = initialJob.approval_details?.other_charges || ad?.other_charges || [];
+    setOtherCharges(charges);
+    setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || ad?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
     
     form.setFieldsValue({
@@ -258,6 +262,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_vessel: ad.booking_vessel,
       booking_voyage: ad.booking_voyage,
       booking_ref_no: ad.booking_ref_no,
+      other_charges_remarks: ad.other_charges_remarks || "",
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
@@ -487,7 +492,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}>
                       <Space wrap>
                         {otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}
-                        {otherCharges.length === 0 && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}
+                        {otherCharges.length === 0 && otherChargesRemarks && <span style={{ color: '#666', fontSize: 12 }}>{otherChargesRemarks}</span>}
+                        {otherCharges.length === 0 && !otherChargesRemarks && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}
                       </Space>
                     </div>
                   </Form.Item>
@@ -683,9 +689,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
-            {isStage3 && (
-              <>
+          <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {isStage3 ? (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
                   size="large"
@@ -706,30 +712,53 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 >
                   Reject
                 </Button>
+                <Button
+                  size="large"
+                  onClick={handleSave}
+                  icon={<Icon icon="mdi:content-save-outline" />}
+                  loading={loading}
+                  style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
+                >
+                  Save
+                </Button>
+                <Button
+                  size="large"
+                  onClick={() => navigate("/")}
+                  icon={<Icon icon="mdi:close" />}
+                  style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', width: '100%', marginBottom: '16px' }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Icon icon="mdi:information-outline" />
+                    Actions will be available once the job reaches Stage 3 (CNF Update).
+                  </Typography.Text>
+                </div>
+                <div style={{ width: '100%', borderTop: '1px solid #f0f0f0', paddingTop: '16px', display: 'flex', justifyContent: 'center', gap: 16 }}>
+                  <Button
+                    size="large"
+                    onClick={handleSave}
+                    icon={<Icon icon="mdi:content-save-outline" />}
+                    loading={loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="large"
+                    onClick={() => navigate("/")}
+                    icon={<Icon icon="mdi:close" />}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </>
             )}
-            {!isStage3 && (
-              <Typography.Text type="secondary" italic style={{ fontSize: 14 }}>
-                Actions will be available once the job reaches Stage 3 (CNF Update).
-              </Typography.Text>
-            )}
-            <Button
-              size="large"
-              onClick={handleSave}
-              icon={<Icon icon="mdi:content-save-outline" />}
-              loading={loading}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
-            >
-              Save
-            </Button>
-            <Button
-              size="large"
-              onClick={() => navigate("/")}
-              icon={<Icon icon="mdi:close" />}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-            >
-              Cancel
-            </Button>
           </div>
         </Form>
       </Spin>
