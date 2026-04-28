@@ -320,31 +320,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
                   <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} /></div>
                 </Col>
               )}
-              {hblFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>HBL</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={hblFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {facFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>FAC</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={facFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {preAlertFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>Pre-Alert</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={preAlertFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {edFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>ED</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={edFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {!lpoFiles.length && !invoiceFiles.length && !hblFiles.length && !facFiles.length && !preAlertFiles.length && !edFiles.length && (
+              {!lpoFiles.length && !invoiceFiles.length && (
                 <Col span={24}><Typography.Text type="secondary" italic>No documents available.</Typography.Text></Col>
               )}
             </Row>

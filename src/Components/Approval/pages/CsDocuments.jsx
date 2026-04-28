@@ -177,7 +177,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
-    export: true, container: true, otherDetails: true, placement: true, booking: true, documents: true, attachments: true, approvalStatus: true
+    export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
   });
 
   /* File States */
@@ -197,6 +197,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
+  const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
@@ -233,6 +234,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setLoadListFiles(docs.loadListFiles);
     setAttachments(docs.attachments);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
+    setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
     
     form.setFieldsValue({
@@ -242,6 +244,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
+      other_charges_remarks: ad.other_charges_remarks || "",
       cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
@@ -436,7 +439,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   </Row>
                 ))}
               </Form.List>
-              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
+              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && otherChargesRemarks && <span style={{ color: '#666', fontSize: 12 }}>{otherChargesRemarks}</span>}{otherCharges.length === 0 && !otherChargesRemarks && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
             </div>
           </Card>
 
@@ -506,10 +509,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 {releaseOrderFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {bocFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+              </Row>
+            </div>
+          </Card>
+
+          {/* CNF DETAILS */}
+          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            <div style={{ display: open.cnfDetails ? "block" : "none" }}>
+              <Row gutter={[16, 16]}>
                 {haulageCostFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {haulierNoteFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {loadListFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
-                {preAlertFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><FileChipList files={preAlertFiles} disabled onPreview={(i) => openPreview(preAlertFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                {edFiles.length === 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div></Form.Item></Col>}
+                {edFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><FileChipList files={edFiles} disabled onPreview={(i) => openPreview(edFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>

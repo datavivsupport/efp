@@ -107,6 +107,7 @@ const DocUploadField = ({
   onAutoSave,
   isOthers
 }) => {
+  const [uploading, setUploading] = useState(false);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
       message.error(restrictionMessage);
@@ -116,6 +117,10 @@ const DocUploadField = ({
       message.warning("Uploads are disabled in View-Only Mode");
       return false;
     }
+
+    setUploading(true);
+    // ⏳ Fake delay to make it "feel" like it's uploading
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     let currentId = salesInputId;
     if (!currentId && isOthers && onAutoSave) {
@@ -157,6 +162,7 @@ const DocUploadField = ({
         }
       ]);
 
+      setUploading(false);
       return false;
     }
 
@@ -192,6 +198,8 @@ const DocUploadField = ({
     } catch (err) {
       console.error(err);
       // message.error("Upload failed. please check your connection.");
+    } finally {
+      setUploading(false);
     }
     return false;
   };
@@ -228,31 +236,33 @@ const DocUploadField = ({
   };
 
   return (
-    <div>
-      {(!disabled || restrictionMessage) && (
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }}>
-            {files.length === 0 ? `Upload ${label}` : "Add More"}
-          </Button>
-        </Upload>
-      )}
+    <Spin spinning={uploading} size="small">
+      <div>
+        {(!disabled || restrictionMessage) && (
+          <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+            <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading} loading={uploading}>
+              {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
+            </Button>
+          </Upload>
+        )}
 
-      {files.length > 0 && (
-        <FileChipList
-          files={files}
-          color={color}
-          onRemove={(i) => {
-            const docId = files[i]?.id;
-            if (docId) {
-              setFiles((p) => p.filter((f) => f.id !== docId));
-            }
-          }}
-          onPreview={(i) => onPreview(files, i)}
-          onRemarkChange={handleRemarkChange}
-          disabled={disabled}
-        />
-      )}
-    </div>
+        {files.length > 0 && (
+          <FileChipList
+            files={files}
+            color={color}
+            onRemove={(i) => {
+              const docId = files[i]?.id;
+              if (docId) {
+                setFiles((p) => p.filter((f) => f.id !== docId));
+              }
+            }}
+            onPreview={(i) => onPreview(files, i)}
+            onRemarkChange={handleRemarkChange}
+            disabled={disabled}
+          />
+        )}
+      </div>
+    </Spin>
   );
 };
 
