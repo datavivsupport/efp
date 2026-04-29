@@ -171,7 +171,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const currentStage = String(jobData?.current_stage || "1");
   
   // Disable if stage 7 and CS HOD not approved
-  const isDisabledAtStage7 = currentStage === "7" && !jobData?.is_cs_hod_approved;
+  const isDisabledAtStage7 =!jobData?.is_cs_hod_approved;
 
   // const openPreview = (files, idx) => {
   //   setPreviewUrls(files.map(f => f.url || f.file_url));

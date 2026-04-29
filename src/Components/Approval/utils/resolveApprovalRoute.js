@@ -39,7 +39,7 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
 
   if (
-    currentStage == "5" || currentStage=="7" && String(user?.id) === String(jobData?.cs_hod) && !jobData?.is_cs_hod_approved
+    (currentStage == "5" || currentStage==="6" || currentStage=="7") && String(user?.id) === String(jobData?.cs_hod) && !jobData?.is_cs_hod_approved
   ) {
     return `/approval/${id}/cs-hod-approval`;
   }
