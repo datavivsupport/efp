@@ -39,7 +39,7 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "cs-hod-approval": {
     label: "CS HOD Approval",
-    allowedStages: ["5"],
+    allowedStages: ["5", "7"],
     check: ({ user, jobData }) =>
       !!jobData?.cs_hod &&
       String(user?.id) === String(jobData?.cs_hod),
@@ -47,7 +47,9 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "accounts": {
     label: "Accounts",
-    allowedStages: ["6"],
-    check: ({ roles }) => roles.isAccountsTeam,
+    allowedStages: ["6", "7"],
+    check: ({ roles, jobData }) =>
+      roles.isAccountsTeam &&
+      (jobData?.current_stage === "6" || (jobData?.current_stage === "7")),
   },
 };

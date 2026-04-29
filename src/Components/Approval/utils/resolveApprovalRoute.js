@@ -38,19 +38,27 @@ export const resolveApprovalRoute = (jobData, user) => {
     return `/approval/${id}/cnf-update`;
   }
 
-  // Stage 4 — CS documents
-  if ((currentStage === "4"|| currentStage === "7") && roles.isCS) {
-    return `/approval/${id}/cs-documents`;
-  }
-  // Stage 5 — Assigned CS HOD (ID match)
   if (
-    currentStage === "5" && String(user?.id) === String(jobData?.cs_hod)
+    currentStage == "5" || currentStage=="7" && String(user?.id) === String(jobData?.cs_hod) && !jobData?.is_cs_hod_approved
   ) {
     return `/approval/${id}/cs-hod-approval`;
   }
+  // Stage 4 — CS documents
+  if ((currentStage === "4"|| currentStage === "7") && roles.isCS && String(user?.id) !== String(jobData?.cs_hod) ) {
+    return `/approval/${id}/cs-documents`;
+  }
+  // Stage 5 — Assigned CS HOD (ID match)
 
   // Stage 6 — Accounts
   if (currentStage === "6" && roles.isAccountsTeam) {
+    return `/approval/${id}/accounts`;
+  }
+
+  // Stage 7 — Accounts (only if CS HOD approved)
+  if (
+    currentStage === "7" &&
+    roles.isAccountsTeam
+  ) {
     return `/approval/${id}/accounts`;
   }
 

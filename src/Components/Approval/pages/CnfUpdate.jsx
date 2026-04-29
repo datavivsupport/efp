@@ -621,7 +621,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label="ED (optional)" className={Styles.formLabel}>
+                  <Form.Item label="ED" className={Styles.formLabel}>
                     <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} />
                   </Form.Item>
                 </Col>
