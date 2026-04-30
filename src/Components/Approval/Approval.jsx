@@ -493,7 +493,7 @@ const Approval = () => {
 
         // Partition documents into typed buckets
         if (data.documents) {
-          const buckets = partitionDocuments(data.documents);
+          const buckets = partitionDocuments(data.documents, data.name_of_executive);
           setReleaseOrderFiles(buckets.releaseOrderFiles);
           setBocFiles(buckets.bocFiles);
           setHaulageCostFiles(buckets.haulageCostFiles);

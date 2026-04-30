@@ -231,7 +231,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     form.setFieldsValue(mapJobToFormValues(initialJob));
     
     if (initialJob.documents) {
-      const docs = partitionDocuments(initialJob.documents);
+      const docs = partitionDocuments(initialJob.documents, initialJob.name_of_executive);
       setReleaseOrderFiles(docs.releaseOrderFiles);
       setBocFiles(docs.bocFiles);
       setHaulageCostFiles(docs.haulageCostFiles);

@@ -250,7 +250,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     if (!jobData) return;
     form.setFieldsValue(mapJobToFormValues(jobData));
     if (jobData.documents) {
-      const buckets = partitionDocuments(jobData.documents);
+      const buckets = partitionDocuments(jobData.documents, jobData.name_of_executive);
       setReleaseOrderFiles(buckets.releaseOrderFiles);
       setBocFiles(buckets.bocFiles);
       setHaulageCostFiles(buckets.haulageCostFiles);
@@ -527,7 +527,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                   <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
-                </Col>
+                                  </Col>
               </Row>
             </div>
           </Card>

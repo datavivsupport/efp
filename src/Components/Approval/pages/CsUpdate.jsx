@@ -274,7 +274,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     if (!jobData) return;
     form.setFieldsValue(mapJobToFormValues(jobData));
     if (jobData.documents) {
-      const buckets = partitionDocuments(jobData.documents);
+      const buckets = partitionDocuments(jobData.documents, jobData.name_of_executive);
       setReleaseOrderFiles(buckets.releaseOrderFiles);
       setBocFiles(buckets.bocFiles);
       setHaulageCostFiles(buckets.haulageCostFiles);
@@ -289,6 +289,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
+      setExecutiveDocuments(buckets.executiveDocuments);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);
