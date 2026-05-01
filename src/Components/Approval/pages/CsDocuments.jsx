@@ -202,6 +202,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
   const [previewIndex, setPreviewIndex]         = useState(0);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
+  
   const throttle = useRef(false);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
@@ -326,6 +332,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (action === "Rejected") {
+      // Show rejection modal instead of directly rejecting
+      setRejectionModalVisible(true);
+      setRejectionRemarks("");
+      return;
+    }
+    
+    // For Approval - proceed normally
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
     const csHodValue = form.getFieldValue("cs_hod");
@@ -341,9 +355,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      const resolved = action === "Rejected"
-        ? { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, hblFiles, facFiles, edFiles, preAlertFiles, haulierNoteFiles, attachments }
-        : await uploadAllPending();
+      const resolved = await uploadAllPending();
 
       const payload = {
         action,
@@ -361,12 +373,44 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         documents: buildDocPayload(resolved),
       };
 
-      const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
+      const endpoint = `/liner/sales-input/${id}/approve/`;
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
+  };
+
+  // Handle rejection confirmation from modal
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.error("Please enter rejection remarks");
+      return;
+    }
+    
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    
+    try {
+      const endpoint = `/liner/sales-input/${id}/reject/`;
+      const payload = {
+        remarks: rejectionRemarks
+      };
+      
+      const res = await apiClient.post(endpoint, payload);
+      if (res.data.status === "success") { 
+        message.success(res.data.message || "Job rejected successfully"); 
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500); 
+      }
+      else { message.error(res.data.message || "Rejection failed"); }
+    } catch (err) { 
+      message.error(err.response?.data?.message || "Something went wrong"); 
+    } finally { 
+      throttle.current = false; 
+      setRejectionLoading(false); 
+    }
   };
 
   const handleSave = async () => {
@@ -624,6 +668,34 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       </Spin>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
         {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+      </Modal>
+      
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invoice mismatch', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS team for corrections.</p>
+        </div>
       </Modal>
     </div>
   );

@@ -219,6 +219,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
   const [previewIndex, setPreviewIndex]         = useState(0);
+  
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
+  
   const throttle = useRef(false);
 
   const history = [...(initialJob?.approval_history || [])].sort(
@@ -341,6 +346,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    // Show rejection modal instead of direct rejection
+    if (action === "Rejected") {
+      setRejectionRemarks("");
+      setRejectionModalVisible(true);
+      return;
+    }
+
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
@@ -386,6 +398,33 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     } finally {
       throttle.current = false;
       setLoading(false);
+    }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.warning("Please enter rejection remarks");
+      return;
+    }
+
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    try {
+      const payload = { remarks: rejectionRemarks.trim() };
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+      if (res.data.status === "success") {
+        message.success(res.data.message || "Job rejected successfully");
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(res.data.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      throttle.current = false;
+      setRejectionLoading(false);
     }
   };
 
@@ -826,6 +865,34 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             defaultIndex={previewIndex || 0}
           />
         )}
+      </Modal>
+
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invalid port codes', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CNF team for corrections.</p>
+        </div>
       </Modal>
     </div>
   );

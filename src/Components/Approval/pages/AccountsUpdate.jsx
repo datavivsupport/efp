@@ -149,6 +149,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   useEffect(() => {
     if (jobData) {
@@ -209,12 +214,22 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     setLoading(true);
     try {
       const values = await form.validateFields();
-      const payload = {
-        carrier_name_2: values.carrier_name_2,
-        account_remarks: values.account_remarks,
-        action: actionType,
-        remarks: values.approvalRemarks || "",
-      };
+      
+      let payload;
+      if (actionType === "Approved") {
+        // For approval
+        payload = {
+          carrier_name_2: values.carrier_name_2,
+          account_remarks: values.account_remarks,
+          action: actionType,
+          remarks: values.approvalRemarks || "",
+        };
+      } else {
+        // For rejection - send only remarks
+        payload = {
+          remarks: values.approvalRemarks || "Rejected by Accounts"
+        };
+      }
 
       const endpoint = actionType === "Approved" 
         ? `/liner/sales-input/${id}/approve/` 
@@ -298,6 +313,12 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       ),
       children: (
         <Card className={Styles.card} bordered={false}>
+          {initialJob?.status?.includes("REJECTED") && (
+            <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
+              <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
+              <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
+            </div>
+          )}
           <Row gutter={24}>
             <Col span={12}>
               <Form.Item label="Carrier Name 2" name="carrier_name_2">
@@ -411,6 +432,55 @@ const AccountsUpdatePage = ({ jobData, user }) => {
               defaultIndex={previewIndex || 0}
             />
           )}
+      </Modal>
+
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={async () => {
+            if (!rejectionRemarks.trim()) {
+              message.warning("Please enter rejection remarks");
+              return;
+            }
+            try {
+              setRejectionLoading(true);
+              const payload = { remarks: rejectionRemarks.trim() };
+              const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+              if (res.data.status === "success") {
+                message.success(res.data.message || "Job rejected successfully");
+                setRejectionModalVisible(false);
+                setTimeout(() => window.location.href = "/", 1500);
+              } else {
+                message.error(res.data.message || "Rejection failed");
+              }
+            } catch (err) {
+              message.error(err.response?.data?.message || "Something went wrong");
+            } finally {
+              setRejectionLoading(false);
+            }
+          }}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Invoice discrepancy', 'Missing payment proof', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS HOD for corrections.</p>
+        </div>
       </Modal>
     </div>
   );

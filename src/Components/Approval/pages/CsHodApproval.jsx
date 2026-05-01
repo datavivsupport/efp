@@ -155,6 +155,11 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
@@ -225,30 +230,70 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (action === "Rejected") {
+      // Show rejection modal instead of directly rejecting
+      setRejectionModalVisible(true);
+      setRejectionRemarks("");
+      return;
+    }
+    
+    // For Approval - proceed normally
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
     throttle.current = true;
     setLoading(true);
     try {
-      const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
+      const endpoint = `/liner/sales-input/${id}/approve/`;
       
-      // Get unapproved document IDs
+      let payload;
+      // For approval: send remarks + approved document IDs
       const unapprovedDocIds = (initialJob?.documents || [])
         .filter(d => d.is_cs_hod_approved === false)
         .map(d => d.id);
       
-      // Simple payload as per MD file
-      const payload = {
+      payload = {
         remarks: approvalRemarks,
         approved_document_ids: unapprovedDocIds
       };
       
       const res = await apiClient.post(endpoint, payload);
-      if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
+      if (res.data.status === "success") { message.success(res.data.message || "Approved successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
+  };
+
+  // Handle rejection confirmation from modal
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.error("Please enter rejection remarks");
+      return;
+    }
+    
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    
+    try {
+      const endpoint = `/liner/sales-input/${id}/reject/`;
+      const payload = {
+        remarks: rejectionRemarks
+      };
+      
+      const res = await apiClient.post(endpoint, payload);
+      if (res.data.status === "success") { 
+        message.success(res.data.message || "Job rejected successfully"); 
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500); 
+      }
+      else { message.error(res.data.message || "Rejection failed"); }
+    } catch (err) { 
+      message.error(err.response?.data?.message || "Something went wrong"); 
+    } finally { 
+      throttle.current = false; 
+      setRejectionLoading(false); 
+    }
   };
 
   const handleSave = async () => {
@@ -307,7 +352,15 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           {/* EXPORT DETAILS */}
           <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS (CS HOD APPROVAL)" open={open.export} onToggle={() => toggle("export")} />}>
             <div style={{ display: open.export ? "block" : "none" }}>
-              <div style={{ marginBottom: 12 }}><Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag></div>
+              <div style={{ marginBottom: 12 }}>
+                <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                {initialJob?.status?.includes("REJECTED") && (
+                  <div style={{ marginTop: 8, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
+                    <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
+                    <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
+                  </div>
+                )}
+              </div>
               <Row gutter={[16, 8]}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input disabled variant="filled" /></Form.Item></Col>
@@ -578,6 +631,34 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             defaultIndex={previewIndex || 0}
           />
         )}
+      </Modal>
+      
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invoice mismatch', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS team for corrections.</p>
+        </div>
       </Modal>
     </div>
   );
