@@ -152,7 +152,9 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 
   useEffect(() => {
     if (jobData) {
-      const docs = partitionDocuments(jobData.documents || []);
+      // Filter documents: Accounts only see approved documents
+      const approvedDocs = (jobData.documents || []).filter(d => d.is_cs_hod_approved !== false);
+      const docs = partitionDocuments(approvedDocs);
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
       setHblFiles(docs.hblFiles);

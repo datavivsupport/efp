@@ -133,6 +133,9 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [form] = Form.useForm();
 
   const isAdmin = user?.is_superuser || user?.user_type === "admin";
+  
+  // Check if there are any unapproved documents
+  const hasPendingDocuments = (initialJob?.documents || []).some(d => d.is_cs_hod_approved === false);
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -224,43 +227,23 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const handleAction = async (action) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
-    // if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
 
     throttle.current = true;
     setLoading(true);
     try {
       const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
-      const dm = (arr, docType, category) =>
-        (arr || []).map(f => ({
-          id: f.id,
-          doc_type: docType,
-          category,
-          file_url: f.url || f.file_url,
-          file_name: f.name || f.file_name,
-          remarks: f.remarks || "",
-          uploaded_by_user: f.uploaded_by_user,
-        }));
+      
+      // Get unapproved document IDs
+      const unapprovedDocIds = (initialJob?.documents || [])
+        .filter(d => d.is_cs_hod_approved === false)
+        .map(d => d.id);
+      
+      // Simple payload as per MD file
       const payload = {
-        action,
         remarks: approvalRemarks,
-        general_remarks: remarks,
-        documents: [
-          ...dm(docs.releaseOrderFiles, "Release Order", "booking"),
-          ...dm(docs.bocFiles, "BOC", "booking"),
-          ...dm(docs.haulageCostFiles, "Haulage Cost", "booking"),
-          ...dm(docs.haulierNoteFiles, "Haulage Note", "booking"),
-          ...dm(docs.loadListFiles, "Load List", "booking"),
-          ...dm(docs.lpoFiles, "LPO", "financial"),
-          ...dm(docs.invoiceFiles, "Invoice", "financial"),
-          ...dm(docs.hblFiles, "HBL", "financial"),
-          ...dm(docs.facFiles, "FAC", "financial"),
-          ...dm(docs.edFiles, "ED", "financial"),
-          ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
-          ...dm(docs.bankSlips, "Bank Slip", "financial"),
-          ...dm(docs.croFiles, "CRO", "financial"),
-          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
-        ],
+        approved_document_ids: unapprovedDocIds
       };
+      
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
@@ -537,6 +520,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
+            {hasPendingDocuments && <>
             <Button
               size="large"
               onClick={handleSave}
@@ -574,6 +558,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             >
               Cancel
             </Button>
+            </>}
           </div>
         </Form>
       </Spin>

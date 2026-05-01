@@ -27,19 +27,19 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "cnf-update": {
     label: "CNF Update",
-    allowedStages: ["2", "3","4", "5", "6", "7"],
+    allowedStages: ["2", "3","4", "5", "6", "7","9"],
     check: ({ roles }) => roles.isCNF,
   },
 
   "cs-documents": {
     label: "CS Documents",
-    allowedStages: ["4","6", "7"],
+    allowedStages: ["4","5", "6", "7","9"],
     check: ({ roles }) => roles.isCS,
   },
 
   "cs-hod-approval": {
     label: "CS HOD Approval",
-    allowedStages: ["5", "6", "7"],
+    allowedStages: ["5", "6", "7","4","9"],
     check: ({ user, jobData }) =>
       !!jobData?.cs_hod &&
       String(user?.id) === String(jobData?.cs_hod),
@@ -47,7 +47,7 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "accounts": {
     label: "Accounts",
-    allowedStages: ["6", "7"],
+    allowedStages: ["6", "7","9"],
     check: ({ roles, jobData }) =>
       roles.isAccountsTeam &&
       (jobData?.current_stage === "6" || (jobData?.current_stage === "7")),
