@@ -27,7 +27,7 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "cnf-update": {
     label: "CNF Update",
-    allowedStages: ["2", "3"],
+    allowedStages: ["2", "3","4", "5", "6", "7"],
     check: ({ roles }) => roles.isCNF,
   },
 

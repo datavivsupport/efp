@@ -179,8 +179,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   const currentStage = String(initialJob?.current_stage || "2");
   const isStage3     = currentStage === "3";
+  const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
-  const isAdmin      = user?.is_superuser || user?.user_type === "admin";
+  const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
+  const canUpdateTransportation = isAdmin;
 
   const [loading, setLoading]                   = useState(false);
   const [open, setOpen] = useState({
@@ -393,6 +395,37 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     try {
       await uploadAllPending();
       message.success("Documents uploaded successfully");
+
+      if (canUpdateTransportation) {
+        const values = form.getFieldsValue();
+        const payload = buildCommonPayload(
+          values,
+          {
+            releaseOrderFiles,
+            bocFiles,
+            haulageCostFiles,
+            loadListFiles,
+            lpoFiles,
+            invoiceFiles,
+            facFiles,
+            croFiles,
+            edFiles,
+            haulierNoteFiles,
+            preAlertFiles,
+            bankSlips,
+            attachments,
+            hblFiles,
+          },
+          { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }
+        );
+
+        const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
+        if (res.data.status === "success") {
+          message.success("Transportation details updated successfully");
+        } else {
+          message.error(res.data.message || "Failed to update transportation");
+        }
+      }
     } catch (err) {
       message.error(err.response?.data?.message || "Upload failed");
     } finally {
@@ -539,6 +572,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
+          {form.getFieldValue("transportation") && (
           <Card
             className={Styles.card}
             bordered
@@ -546,21 +580,45 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           >
             <div style={{ display: open.placement ? "block" : "none" }}>
               <Form.List name="placementRows">
-                {(fields) => (
-                  fields.map(({ key, name, ...restField }) => (
-                    <Row key={key} gutter={16} align="middle">
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled variant="filled" /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled variant="filled" /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                    </Row>
-                  ))
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                        {canUpdateTransportation && (
+                          <Col xs={24} md={1} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0px' }}>
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
+                              size="small"
+                            />
+                          </Col>
+                        )}
+                      </Row>
+                    ))}
+                    {canUpdateTransportation && (
+                      <Button
+                        type="dashed"
+                        onClick={() => add()}
+                        icon={<PlusOutlined />}
+                        style={{ marginTop: '16px' }}
+                      >
+                        Add Placement Row
+                      </Button>
+                    )}
+                  </>
                 )}
               </Form.List>
             </div>
           </Card>
+          )}
 
           {/* ════════ BOOKING DETAILS (Filled by CS) ════════ */}
           <Card
@@ -690,7 +748,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {isStage3 ? (
+            {isStage2or3 ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
@@ -732,12 +790,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </div>
             ) : (
               <>
-                <div style={{ textAlign: 'center', width: '100%', marginBottom: '16px' }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <Icon icon="mdi:information-outline" />
-                    Actions will be available once the job reaches Stage 3 (CNF Update).
-                  </Typography.Text>
-                </div>
                 <div style={{ width: '100%', borderTop: '1px solid #f0f0f0', paddingTop: '16px', display: 'flex', justifyContent: 'center', gap: 16 }}>
                   <Button
                     size="large"

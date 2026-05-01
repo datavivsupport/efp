@@ -34,7 +34,7 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
 
   // Stage 2 or 3 — CNF
-  if ((currentStage === "2" || currentStage === "3") && roles.isCNF) {
+  if (roles.isCNF) {
     return `/approval/${id}/cnf-update`;
   }
 
