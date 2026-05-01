@@ -51,7 +51,7 @@ export const computeUserRoles = (user) => {
   const isGM = userRoles.some((r) => r === "GM");
 
   const isSalesExecutive = (isSales && !isHOD) || isAdmin;
-  const isSalesHOD = (isSales && isHOD) || isAdmin;
+  const isSalesHOD = (isSales && isHOD);
   const isCNFExecutive = (isCNF && !isHOD) || isAdmin;
   const isCSExecutive = (isCS && !isHOD) || isAdmin;
   const isCSHOD = (isCS && isHOD) || isAdmin;
