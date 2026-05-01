@@ -182,6 +182,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
   const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
+  // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const canUpdateTransportation = isAdmin;
 
   const [loading, setLoading]                   = useState(false);
@@ -394,7 +395,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       await uploadAllPending();
-      message.success("Documents uploaded successfully");
 
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
@@ -419,15 +419,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }
         );
 
-        const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
-        if (res.data.status === "success") {
-          message.success("Transportation details updated successfully");
-        } else {
-          message.error(res.data.message || "Failed to update transportation");
-        }
+        await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       }
+      
+      message.success("Saved successfully");
     } catch (err) {
-      message.error(err.response?.data?.message || "Upload failed");
+      console.error("Save error:", err);
+      const errorMsg = typeof err.response?.data?.message === "string" ? err.response?.data?.message : "Failed to save";
+      message.error(errorMsg);
     } finally {
       throttle.current = false;
       setLoading(false);
@@ -748,7 +747,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {isStage2or3 ? (
+            {isStage3 ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
