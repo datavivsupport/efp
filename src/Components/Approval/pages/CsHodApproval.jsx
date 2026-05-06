@@ -652,12 +652,11 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
           <Input.TextArea
             rows={4}
-            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invoice mismatch', etc.)"
+            placeholder="Enter rejection reason"
             value={rejectionRemarks}
             onChange={(e) => setRejectionRemarks(e.target.value)}
             style={{ borderRadius: 4 }}
           />
-          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS team for corrections.</p>
         </div>
       </Modal>
     </div>

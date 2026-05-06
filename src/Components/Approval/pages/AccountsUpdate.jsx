@@ -363,6 +363,9 @@ const AccountsUpdatePage = ({ jobData, user }) => {
               <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam || isDisabledAtStage7}>
                 Approve (Accounts)
               </Button>
+              <Button size="large" danger onClick={() => handleAction("Rejected")} disabled={!isAccountsTeam || isDisabledAtStage7}>
+                Reject
+              </Button>
             </div>
           </div>
         </Card>

@@ -609,7 +609,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                   <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
@@ -656,6 +656,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               Submit Documents & Approve
             </Button>
             <Button
+              danger
+              size="large"
+              onClick={() => handleAction("Rejected")}
+              icon={<Icon icon="mdi:close-circle" />}
+              loading={rejectionLoading}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Reject
+            </Button>
+            <Button
               size="large"
               onClick={() => navigate("/")}
               icon={<Icon icon="mdi:close" />}
@@ -689,12 +699,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
           <Input.TextArea
             rows={4}
-            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invoice mismatch', etc.)"
+            placeholder="Enter rejection reason"
             value={rejectionRemarks}
             onChange={(e) => setRejectionRemarks(e.target.value)}
             style={{ borderRadius: 4 }}
           />
-          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS team for corrections.</p>
         </div>
       </Modal>
     </div>
