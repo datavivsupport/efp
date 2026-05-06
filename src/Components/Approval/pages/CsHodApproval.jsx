@@ -136,6 +136,9 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   
   // Check if there are any unapproved documents
   const hasPendingDocuments = (initialJob?.documents || []).some(d => d.is_cs_hod_approved === false);
+  
+  // Disable if job is rejected
+  const isDisabled = initialJob?.status?.includes("REJECTED");
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -573,7 +576,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
-            {hasPendingDocuments && <>
+            {(hasPendingDocuments || isDisabled) && (
+              <>
             <Button
               size="large"
               onClick={handleSave}
@@ -603,6 +607,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             >
               Reject
             </Button>
+              </>
+            )}
             <Button
               size="large"
               onClick={() => navigate("/")}
@@ -611,7 +617,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             >
               Cancel
             </Button>
-            </>}
           </div>
         </Form>
       </Spin>

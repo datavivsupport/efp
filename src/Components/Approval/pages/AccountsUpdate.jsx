@@ -177,8 +177,9 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const { isAccountsTeam, isAdmin } = computeUserRoles(user);
   const currentStage = String(jobData?.current_stage || "1");
   
-  // Disable if stage 7 and CS HOD not approved
-  const isDisabledAtStage7 =!jobData?.is_cs_hod_approved;
+  // Disable if stage 7 and CS HOD not approved, OR if job is rejected
+  const isDisabledAtStage7 = !jobData?.is_cs_hod_approved;
+  const isDisabled = isDisabledAtStage7 || jobData?.status?.includes("REJECTED");
 
   // const openPreview = (files, idx) => {
   //   setPreviewUrls(files.map(f => f.url || f.file_url));
@@ -313,21 +314,15 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       ),
       children: (
         <Card className={Styles.card} bordered={false}>
-          {initialJob?.status?.includes("REJECTED") && (
-            <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
-              <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
-              <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
-            </div>
-          )}
           <Row gutter={24}>
             <Col span={12}>
               <Form.Item label="Carrier Name 2" name="carrier_name_2">
-                <Input disabled={!isAccountsTeam || isDisabledAtStage7} size="large" />
+                <Input disabled={!isAccountsTeam || isDisabled} size="large" />
               </Form.Item>
             </Col>
             <Col span={24}>
               <Form.Item label="Account Remarks" name="account_remarks">
-                <TextArea rows={3} disabled={!isAccountsTeam || isDisabledAtStage7} />
+                <TextArea rows={3} disabled={!isAccountsTeam || isDisabled} />
               </Form.Item>
             </Col>
           </Row>
@@ -355,15 +350,15 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
             <Form.Item label="Approval Remarks" name="approvalRemarks">
-              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" disabled={isDisabledAtStage7} />
+              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" disabled={isDisabled} />
             </Form.Item>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <Button size="large" onClick={() => navigate("/")}>Cancel</Button>
-              <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam || isDisabledAtStage7}>Save Update</Button>
-              <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam || isDisabledAtStage7}>
+              <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam || isDisabled}>Save Update</Button>
+              <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam || isDisabled}>
                 Approve (Accounts)
               </Button>
-              <Button size="large" danger onClick={() => handleAction("Rejected")} disabled={!isAccountsTeam || isDisabledAtStage7}>
+              <Button size="large" danger onClick={() => handleAction("Rejected")} disabled={!isAccountsTeam || isDisabled}>
                 Reject
               </Button>
             </div>
