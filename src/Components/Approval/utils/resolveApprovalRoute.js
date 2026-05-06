@@ -40,9 +40,6 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
 
   // Stage 2 or 3 — CNF
-  if (roles.isCNF) {
-    return `/approval/${id}/cnf-update`;
-  }
 
   // Stage 4 — CS documents
   if ((currentStage === "4"|| currentStage=="6"|| currentStage === "5"|| currentStage === "7"|| currentStage === "9") && roles.isCS && String(user?.id) !== String(jobData?.cs_hod) ) {
@@ -55,6 +52,9 @@ export const resolveApprovalRoute = (jobData, user) => {
     return `/approval/${id}/accounts`;
   }
 
+  if (roles.isCNF) {
+    return `/approval/${id}/cnf-update`;
+  }
 
   // No matching new route → fall back to old Approval page
   return null;
