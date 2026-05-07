@@ -179,8 +179,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   const currentStage = String(initialJob?.current_stage || "2");
   const isStage3     = currentStage === "3";
+  const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
-  const isAdmin      = user?.is_superuser || user?.user_type === "admin";
+  const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
+  // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
+  const canUpdateTransportation = isAdmin;
 
   const [loading, setLoading]                   = useState(false);
   const [open, setOpen] = useState({
@@ -216,6 +219,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
   const [previewIndex, setPreviewIndex]         = useState(0);
+  
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
+  
   const throttle = useRef(false);
 
   const history = [...(initialJob?.approval_history || [])].sort(
@@ -231,7 +239,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     form.setFieldsValue(mapJobToFormValues(initialJob));
     
     if (initialJob.documents) {
-      const docs = partitionDocuments(initialJob.documents);
+      const docs = partitionDocuments(initialJob.documents, initialJob.name_of_executive);
       setReleaseOrderFiles(docs.releaseOrderFiles);
       setBocFiles(docs.bocFiles);
       setHaulageCostFiles(docs.haulageCostFiles);
@@ -338,6 +346,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    // Show rejection modal instead of direct rejection
+    if (action === "Rejected") {
+      setRejectionRemarks("");
+      setRejectionModalVisible(true);
+      return;
+    }
+
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
@@ -386,15 +401,71 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     }
   };
 
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.warning("Please enter rejection remarks");
+      return;
+    }
+
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    try {
+      const payload = { remarks: rejectionRemarks.trim() };
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+      if (res.data.status === "success") {
+        message.success(res.data.message || "Job rejected successfully");
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(res.data.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      throttle.current = false;
+      setRejectionLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (throttle.current) return;
     throttle.current = true;
     setLoading(true);
     try {
       await uploadAllPending();
-      message.success("Documents uploaded successfully");
+
+      if (canUpdateTransportation) {
+        const values = form.getFieldsValue();
+        const payload = buildCommonPayload(
+          values,
+          {
+            releaseOrderFiles,
+            bocFiles,
+            haulageCostFiles,
+            loadListFiles,
+            lpoFiles,
+            invoiceFiles,
+            facFiles,
+            croFiles,
+            edFiles,
+            haulierNoteFiles,
+            preAlertFiles,
+            bankSlips,
+            attachments,
+            hblFiles,
+          },
+          { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }
+        );
+
+        await apiClient.patch(`/liner/sales-input/${id}/`, payload);
+      }
+      
+      message.success("Saved successfully");
     } catch (err) {
-      message.error(err.response?.data?.message || "Upload failed");
+      console.error("Save error:", err);
+      const errorMsg = typeof err.response?.data?.message === "string" ? err.response?.data?.message : "Failed to save";
+      message.error(errorMsg);
     } finally {
       throttle.current = false;
       setLoading(false);
@@ -425,6 +496,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         <Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>
           {s?.toUpperCase()}
         </Tag>
+      ),
+    },
+    {
+      title: "Remarks",
+      dataIndex: "remarks",
+      key: "remarks",
+      render: (value) => (
+        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+          {value || "N/A"}
+        </span>
       ),
     },
     {
@@ -539,6 +620,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           </Card>
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
+          {form.getFieldValue("transportation") && (
           <Card
             className={Styles.card}
             bordered
@@ -546,21 +628,45 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           >
             <div style={{ display: open.placement ? "block" : "none" }}>
               <Form.List name="placementRows">
-                {(fields) => (
-                  fields.map(({ key, name, ...restField }) => (
-                    <Row key={key} gutter={16} align="middle">
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled variant="filled" /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled variant="filled" /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                    </Row>
-                  ))
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                        {canUpdateTransportation && (
+                          <Col xs={24} md={1} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0px' }}>
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(name)}
+                              size="small"
+                            />
+                          </Col>
+                        )}
+                      </Row>
+                    ))}
+                    {canUpdateTransportation && (
+                      <Button
+                        type="dashed"
+                        onClick={() => add()}
+                        icon={<PlusOutlined />}
+                        style={{ marginTop: '16px' }}
+                      >
+                        Add Placement Row
+                      </Button>
+                    )}
+                  </>
                 )}
               </Form.List>
             </div>
           </Card>
+          )}
 
           {/* ════════ BOOKING DETAILS (Filled by CS) ════════ */}
           <Card
@@ -621,7 +727,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label="ED (optional)" className={Styles.formLabel}>
+                  <Form.Item label="ED" className={Styles.formLabel}>
                     <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} />
                   </Form.Item>
                 </Col>
@@ -732,12 +838,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </div>
             ) : (
               <>
-                <div style={{ textAlign: 'center', width: '100%', marginBottom: '16px' }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    <Icon icon="mdi:information-outline" />
-                    Actions will be available once the job reaches Stage 3 (CNF Update).
-                  </Typography.Text>
-                </div>
                 <div style={{ width: '100%', borderTop: '1px solid #f0f0f0', paddingTop: '16px', display: 'flex', justifyContent: 'center', gap: 16 }}>
                   <Button
                     size="large"
@@ -775,6 +875,34 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             defaultIndex={previewIndex || 0}
           />
         )}
+      </Modal>
+
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Missing HBL document', 'Invalid port codes', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CNF team for corrections.</p>
+        </div>
       </Modal>
     </div>
   );

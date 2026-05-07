@@ -493,7 +493,7 @@ const Approval = () => {
 
         // Partition documents into typed buckets
         if (data.documents) {
-          const buckets = partitionDocuments(data.documents);
+          const buckets = partitionDocuments(data.documents, data.name_of_executive);
           setReleaseOrderFiles(buckets.releaseOrderFiles);
           setBocFiles(buckets.bocFiles);
           setHaulageCostFiles(buckets.haulageCostFiles);
@@ -671,6 +671,16 @@ const Approval = () => {
         <Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>
           {s?.toUpperCase()}
         </Tag>
+      ),
+    },
+    {
+      title: "Remarks",
+      dataIndex: "remarks",
+      key: "remarks",
+      render: (value) => (
+        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+          {value || "N/A"}
+        </span>
       ),
     },
     {

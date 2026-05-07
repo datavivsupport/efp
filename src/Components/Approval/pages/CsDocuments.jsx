@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { computeUserRoles } from "../utils/roleUtils";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -88,10 +89,23 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   const debounceTimerField = useRef(null);
 
   const handleBeforeUpload = async (file) => {
+    if (!file) {
+      message.error("No file selected");
+      return false;
+    }
+    if (!salesInputId) {
+      message.warning("Job ID missing - cannot upload document");
+      return false;
+    }
+    if (!docType || !category) {
+      message.error("Document type or category is missing");
+      return false;
+    }
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
       _tempId: tempId,
+      _localFile: file,
       name: file.name,
       file_name: file.name,
       doc_type: docType,
@@ -172,8 +186,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
-  const isAdmin = user?.is_superuser || user?.user_type === "admin";
+  const { isAdmin, isCS } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
+  const canEditBookingTechnical = isAdmin && isCS;
+  const canEditEtaFields = isCS;
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -202,6 +218,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
   const [previewIndex, setPreviewIndex]         = useState(0);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
+  
   const throttle = useRef(false);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
@@ -271,7 +293,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   /* ── Upload all pending (queued) files before save/approve/reject ── */
   const uploadAllPending = async () => {
+    if (!id) {
+      throw new Error("Job ID missing - cannot upload pending documents");
+    }
+
     const uploadOne = async (file) => {
+      if (!file || !file._localFile || !file.doc_type || !file.category) {
+        throw new Error(`Missing file data for ${file?.name || file?.file_name || "unknown file"}`);
+      }
       const formData = new FormData();
       formData.append("file", file._localFile);
       formData.append("doc_type", file.doc_type);
@@ -285,7 +314,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     };
 
     const resolve = async (arr) =>
-      Promise.all(arr.map((f) => (f.pending ? uploadOne(f) : Promise.resolve(f))));
+      Promise.all((arr || []).map((f) => (f?.pending ? uploadOne(f) : Promise.resolve(f))));
 
     const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newFac, newEd, newPreAlert, newHN, newAttach] =
       await Promise.all([
@@ -326,6 +355,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (action === "Rejected") {
+      // Show rejection modal instead of directly rejecting
+      setRejectionModalVisible(true);
+      setRejectionRemarks("");
+      return;
+    }
+    
+    // For Approval - proceed normally
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
     const csHodValue = form.getFieldValue("cs_hod");
@@ -341,9 +378,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      const resolved = action === "Rejected"
-        ? { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, hblFiles, facFiles, edFiles, preAlertFiles, haulierNoteFiles, attachments }
-        : await uploadAllPending();
+      const resolved = await uploadAllPending();
 
       const payload = {
         action,
@@ -361,12 +396,44 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         documents: buildDocPayload(resolved),
       };
 
-      const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
+      const endpoint = `/liner/sales-input/${id}/approve/`;
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
+  };
+
+  // Handle rejection confirmation from modal
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.error("Please enter rejection remarks");
+      return;
+    }
+    
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    
+    try {
+      const endpoint = `/liner/sales-input/${id}/reject/`;
+      const payload = {
+        remarks: rejectionRemarks
+      };
+      
+      const res = await apiClient.post(endpoint, payload);
+      if (res.data.status === "success") { 
+        message.success(res.data.message || "Job rejected successfully"); 
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500); 
+      }
+      else { message.error(res.data.message || "Rejection failed"); }
+    } catch (err) { 
+      message.error(err.response?.data?.message || "Something went wrong"); 
+    } finally { 
+      throttle.current = false; 
+      setRejectionLoading(false); 
+    }
   };
 
   const handleSave = async () => {
@@ -493,22 +560,22 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS (TECHNICAL DOCUMENTS)" open={open.booking} onToggle={() => toggle("booking")} />}>
             <div style={{ display: open.booking ? "block" : "none" }}>
               <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                {releaseOrderFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
-                {bocFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -520,8 +587,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {haulageCostFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {haulierNoteFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {loadListFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
-                {edFiles.length === 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div></Form.Item></Col>}
-                {edFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="ED (optional)" className={Styles.formLabel}><FileChipList files={edFiles} disabled onPreview={(i) => openPreview(edFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                {edFiles.length === 0 && <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div></Form.Item></Col>}
+                {edFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><FileChipList files={edFiles} disabled onPreview={(i) => openPreview(edFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
@@ -534,7 +601,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" disabled={currentStage === "7"} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="FAC" className={Styles.formLabel}><DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} salesInputId={id} docType="FAC" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
@@ -565,7 +632,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                   <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
@@ -581,6 +648,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 { title: "Pending With", dataIndex: "pending_with" },
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
+                { title: "Remarks", dataIndex: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
                 { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -612,6 +680,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               Submit Documents & Approve
             </Button>
             <Button
+              danger
+              size="large"
+              onClick={() => handleAction("Rejected")}
+              icon={<Icon icon="mdi:close-circle" />}
+              loading={rejectionLoading}
+              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+            >
+              Reject
+            </Button>
+            <Button
               size="large"
               onClick={() => navigate("/")}
               icon={<Icon icon="mdi:close" />}
@@ -624,6 +702,33 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       </Spin>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
         {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+      </Modal>
+      
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+        </div>
       </Modal>
     </div>
   );

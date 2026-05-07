@@ -184,6 +184,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
@@ -191,13 +192,20 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [remarks, setRemarks] = useState([]);
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
+  
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   /* ── Compute roles, context, locks ── */
   const {
-    isAdmin, isCS, userFullName, hasAllowedRole
+    isAdmin: _userIsAdmin, isCS, userFullName, hasAllowedRole
   } = computeUserRoles(user);
 
-  const roles = { isCS: true, isAdmin, userFullName };
+  const isAdminForCsUpdate = false;
+  const isAdmin = false;
+
+  const roles = { isCS: true, isAdmin: isAdminForCsUpdate, userFullName };
 
   const {
     currentStage, isCreator,
@@ -214,7 +222,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isRequirementSelectorLocked,
     showDocumentUploads, showROBOCForCS, needsLpoInvoice,
   } = computeSectionLocks({
-    isAdmin, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
+    isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
     currentStage: "2", isMasterMode, isTerminal, isForwarding,
     isLiner, isExtended, isOthers,
@@ -231,6 +239,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const facFlagForm = Form.useWatch("fac", form);
   const hblFlagForm = Form.useWatch("hbl", form);
   const documentationFlagForm = Form.useWatch("documentation", form);
+  const transportationFlagForm = Form.useWatch("transportation", form);
 
   const isLLReq = normalizeBoolean(isLLReqForm, jobData?.is_load_list_required);
   const isHNReq = normalizeBoolean(isHNReqForm, jobData?.is_haulier_note_required);
@@ -248,13 +257,14 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const facFlag = normalizeBoolean(facFlagForm, jobData?.fac);
   const hblFlag = normalizeBoolean(hblFlagForm, jobData?.hbl);
   const documentationFlag = normalizeBoolean(documentationFlagForm, jobData?.documentation);
+  const transportationFlag = normalizeBoolean(transportationFlagForm, jobData?.transportation);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
-  const showPlacement = true;
+  const showPlacement = transportationFlag || isMasterMode;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
   const canApprove = computeCanApprove({
-    hasAllowedRole, isAdmin, currentStage: "2",
+    hasAllowedRole, isAdmin: isAdminForCsUpdate, currentStage: "2",
     isLiner, isCrossTrade, isForwarding, isExtended,
     isCS: true, isCNF: false, isCNFHOD: false, isCSHOD: false, isAccountsTeam: false, isSalesHOD: false,
     isCNFDone: false, isCNFStage: false, isCSHODStage: false, isThisJobsCSHOD: false, stage2,
@@ -273,7 +283,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     if (!jobData) return;
     form.setFieldsValue(mapJobToFormValues(jobData));
     if (jobData.documents) {
-      const buckets = partitionDocuments(jobData.documents);
+      const buckets = partitionDocuments(jobData.documents, jobData.name_of_executive);
       setReleaseOrderFiles(buckets.releaseOrderFiles);
       setBocFiles(buckets.bocFiles);
       setHaulageCostFiles(buckets.haulageCostFiles);
@@ -288,6 +298,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
+      setExecutiveDocuments(buckets.executiveDocuments);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);
@@ -308,6 +319,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData, includeApprovalDetails: true });
 
   const handleAction = async (actionType, remarksVal = "") => {
+    // Show rejection modal instead of direct rejection
+    if (actionType === "Rejected") {
+      setRejectionRemarks("");
+      setRejectionModalVisible(true);
+      return;
+    }
+
     if (actionThrottleRef.current) return;
     actionThrottleRef.current = true;
     setLoading(true);
@@ -320,7 +338,18 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         });
         if (validationError) { message.error(validationError); setLoading(false); actionThrottleRef.current = false; return; }
       }
-      const payload = { ...getCommonPayload(values), action: actionType, remarks: remarksVal || form.getFieldValue("approvalRemarks") };
+      
+      let payload;
+      if (actionType === "Rejected") {
+        // For rejection - send only remarks
+        payload = {
+          remarks: remarksVal || form.getFieldValue("approvalRemarks") || "Rejected by CS"
+        };
+      } else {
+        // For Submit/Approve - send full payload
+        payload = { ...getCommonPayload(values), action: actionType, remarks: remarksVal || form.getFieldValue("approvalRemarks") };
+      }
+      
       const endpoint = actionType === "Submit" ? `/liner/sales-input/${id}/submit/` : actionType === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
       const response = await apiClient.post(endpoint, payload);
       if (response.data.status === "success") { message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
@@ -329,6 +358,33 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
       message.error("Error performing action: " + errorMsg);
     } finally { actionThrottleRef.current = false; setLoading(false); }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.warning("Please enter rejection remarks");
+      return;
+    }
+
+    if (actionThrottleRef.current) return;
+    actionThrottleRef.current = true;
+    setRejectionLoading(true);
+    try {
+      const payload = { remarks: rejectionRemarks.trim() };
+      const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+      if (response.data.status === "success") {
+        message.success(response.data.message || "Job rejected successfully");
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(response.data.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      actionThrottleRef.current = false;
+      setRejectionLoading(false);
+    }
   };
 
   const onFinish = async (values) => {
@@ -357,6 +413,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm") : "N/A" },
   ];
 
@@ -414,12 +471,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       <Col xs={24} md={6}><Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}><Input placeholder="Free text POD" disabled={isSalesSectionLocked} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                     </Row>
                   </>
                 )}
@@ -484,12 +541,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                  {(() => {
-                    const execDocs = (jobData?.documents || []).filter(d => d.uploaded_by_user_name === jobData?.name_of_executive);
-                    return execDocs.length > 0 ? (
-                      <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    ) : null;
-                  })()}
+                  {executiveDocuments.length > 0 && (
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocuments} disabled onPreview={(i) => openPreview(executiveDocuments, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                  )}
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
@@ -648,7 +702,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdminForCsUpdate} disabled={isOthers} />
                 </Col>
               </Row>
             </div>
@@ -683,6 +737,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
                     Verify & Confirm (CS)
                   </Button>
+                  <Button danger size="large" onClick={() => handleAction("Rejected")} icon={<Icon icon="mdi:close-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                    Reject
+                  </Button>
                 </>
               )}
               <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
@@ -709,6 +766,34 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {/* ════════ PREVIEW MODAL ════════ */}
           <Modal open={previewVisible} footer={null} title="Attachments" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnClose>
             {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+          </Modal>
+
+          {/* Rejection Remarks Modal */}
+          <Modal
+            title="Reject Job"
+            open={rejectionModalVisible}
+            onCancel={() => setRejectionModalVisible(false)}
+            footer={[
+              <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+                Cancel
+              </Button>,
+              <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+                Confirm Rejection
+              </Button>,
+            ]}
+            width={600}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+              <Input.TextArea
+                rows={4}
+                placeholder="Enter rejection reason (e.g., 'Document missing', 'Information incomplete', etc.)"
+                value={rejectionRemarks}
+                onChange={(e) => setRejectionRemarks(e.target.value)}
+                style={{ borderRadius: 4 }}
+              />
+              <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the sales team for corrections.</p>
+            </div>
           </Modal>
         </Form>
       </Spin>

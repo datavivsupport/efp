@@ -24,36 +24,41 @@ export const resolveApprovalRoute = (jobData, user) => {
     return `/approval/${id}/cs-update`;
   }
 
+
+  if (
+    String(user?.id) === String(jobData?.cs_hod)
+  ) {
+    return `/approval/${id}/cs-hod-approval`;
+  }
   // Stage 2 — Named Sales HOD (only if not yet approved)
   if (
     currentStage === "2" &&
     !jobData?.is_hod_approved &&
-    (roles.isSalesHOD || roles.isAdmin)
+    (roles.isSalesHOD)
   ) {
     return `/approval/${id}/hod-review`;
   }
 
   // Stage 2 or 3 — CNF
-  if ((currentStage === "2" || currentStage === "3") && roles.isCNF) {
-    return `/approval/${id}/cnf-update`;
-  }
 
   // Stage 4 — CS documents
-  if ((currentStage === "4"|| currentStage === "7") && roles.isCS) {
+  if ((currentStage === "4"|| currentStage=="6"|| currentStage === "5"|| currentStage === "7"|| currentStage === "9") && roles.isCS && String(user?.id) !== String(jobData?.cs_hod) ) {
     return `/approval/${id}/cs-documents`;
   }
   // Stage 5 — Assigned CS HOD (ID match)
-  if (
-    currentStage === "5" && String(user?.id) === String(jobData?.cs_hod)
-  ) {
-    return `/approval/${id}/cs-hod-approval`;
-  }
 
   // Stage 6 — Accounts
-  if (currentStage === "6" && roles.isAccountsTeam) {
+  if ((currentStage === "6"|| currentStage==="7"|| currentStage === "9"||currentStage=="5" )&& roles.isAccountsTeam) {
     return `/approval/${id}/accounts`;
   }
 
+  if (roles.isCNF) {
+    return `/approval/${id}/cnf-update`;
+  }
+
+  if (roles.isCS && roles.isAdmin){
+    return `/approval/${id}/cs-documents`;
+  }
   // No matching new route → fall back to old Approval page
   return null;
 };

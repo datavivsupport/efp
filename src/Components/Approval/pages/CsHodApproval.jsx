@@ -133,6 +133,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [form] = Form.useForm();
 
   const isAdmin = user?.is_superuser || user?.user_type === "admin";
+  
+  // Check if there are any unapproved documents
+  const hasPendingDocuments = (initialJob?.documents || []).some(d => d.is_cs_hod_approved === false);
+  
+  // Disable if job is rejected
+  const isDisabled = initialJob?.status?.includes("REJECTED");
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -152,6 +158,11 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
@@ -222,50 +233,70 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (action === "Rejected") {
+      // Show rejection modal instead of directly rejecting
+      setRejectionModalVisible(true);
+      setRejectionRemarks("");
+      return;
+    }
+    
+    // For Approval - proceed normally
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
-    // if (!approvalRemarks?.trim()) { message.warning("Please enter remarks before proceeding."); return; }
 
     throttle.current = true;
     setLoading(true);
     try {
-      const endpoint = action === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
-      const dm = (arr, docType, category) =>
-        (arr || []).map(f => ({
-          id: f.id,
-          doc_type: docType,
-          category,
-          file_url: f.url || f.file_url,
-          file_name: f.name || f.file_name,
-          remarks: f.remarks || "",
-          uploaded_by_user: f.uploaded_by_user,
-        }));
-      const payload = {
-        action,
+      const endpoint = `/liner/sales-input/${id}/approve/`;
+      
+      let payload;
+      // For approval: send remarks + approved document IDs
+      const unapprovedDocIds = (initialJob?.documents || [])
+        .filter(d => d.is_cs_hod_approved === false)
+        .map(d => d.id);
+      
+      payload = {
         remarks: approvalRemarks,
-        general_remarks: remarks,
-        documents: [
-          ...dm(docs.releaseOrderFiles, "Release Order", "booking"),
-          ...dm(docs.bocFiles, "BOC", "booking"),
-          ...dm(docs.haulageCostFiles, "Haulage Cost", "booking"),
-          ...dm(docs.haulierNoteFiles, "Haulage Note", "booking"),
-          ...dm(docs.loadListFiles, "Load List", "booking"),
-          ...dm(docs.lpoFiles, "LPO", "financial"),
-          ...dm(docs.invoiceFiles, "Invoice", "financial"),
-          ...dm(docs.hblFiles, "HBL", "financial"),
-          ...dm(docs.facFiles, "FAC", "financial"),
-          ...dm(docs.edFiles, "ED", "financial"),
-          ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
-          ...dm(docs.bankSlips, "Bank Slip", "financial"),
-          ...dm(docs.croFiles, "CRO", "financial"),
-          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
-        ],
+        approved_document_ids: unapprovedDocIds
       };
+      
       const res = await apiClient.post(endpoint, payload);
-      if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
+      if (res.data.status === "success") { message.success(res.data.message || "Approved successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
+  };
+
+  // Handle rejection confirmation from modal
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.error("Please enter rejection remarks");
+      return;
+    }
+    
+    if (throttle.current) return;
+    throttle.current = true;
+    setRejectionLoading(true);
+    
+    try {
+      const endpoint = `/liner/sales-input/${id}/reject/`;
+      const payload = {
+        remarks: rejectionRemarks
+      };
+      
+      const res = await apiClient.post(endpoint, payload);
+      if (res.data.status === "success") { 
+        message.success(res.data.message || "Job rejected successfully"); 
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500); 
+      }
+      else { message.error(res.data.message || "Rejection failed"); }
+    } catch (err) { 
+      message.error(err.response?.data?.message || "Something went wrong"); 
+    } finally { 
+      throttle.current = false; 
+      setRejectionLoading(false); 
+    }
   };
 
   const handleSave = async () => {
@@ -324,7 +355,15 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           {/* EXPORT DETAILS */}
           <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS (CS HOD APPROVAL)" open={open.export} onToggle={() => toggle("export")} />}>
             <div style={{ display: open.export ? "block" : "none" }}>
-              <div style={{ marginBottom: 12 }}><Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag></div>
+              <div style={{ marginBottom: 12 }}>
+                <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                {initialJob?.status?.includes("REJECTED") && (
+                  <div style={{ marginTop: 8, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
+                    <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
+                    <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
+                  </div>
+                )}
+              </div>
               <Row gutter={[16, 8]}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input disabled variant="filled" /></Form.Item></Col>
@@ -525,6 +564,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 { title: "Pending With", dataIndex: "pending_with" },
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
+                { title: "Remarks", dataIndex: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
                 { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               
@@ -537,6 +577,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
+            {(hasPendingDocuments || isDisabled) && (
+              <>
             <Button
               size="large"
               onClick={handleSave}
@@ -566,6 +608,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             >
               Reject
             </Button>
+              </>
+            )}
             <Button
               size="large"
               onClick={() => navigate("/")}
@@ -593,6 +637,33 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             defaultIndex={previewIndex || 0}
           />
         )}
+      </Modal>
+      
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+        </div>
       </Modal>
     </div>
   );

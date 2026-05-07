@@ -190,6 +190,10 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [remarks, setRemarks] = useState([]);
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
+  
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   /* ── Compute roles, context, locks ── */
   const {
@@ -250,7 +254,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     if (!jobData) return;
     form.setFieldsValue(mapJobToFormValues(jobData));
     if (jobData.documents) {
-      const buckets = partitionDocuments(jobData.documents);
+      const buckets = partitionDocuments(jobData.documents, jobData.name_of_executive);
       setReleaseOrderFiles(buckets.releaseOrderFiles);
       setBocFiles(buckets.bocFiles);
       setHaulageCostFiles(buckets.haulageCostFiles);
@@ -285,6 +289,13 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData, includeApprovalDetails });
 
   const handleAction = async (actionType, remarksVal = "") => {
+    // Show rejection modal instead of direct rejection
+    if (actionType === "Rejected") {
+      setRejectionRemarks("");
+      setRejectionModalVisible(true);
+      return;
+    }
+
     if (actionThrottleRef.current) return;
     actionThrottleRef.current = true;
     setLoading(true);
@@ -297,7 +308,18 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
         });
         if (validationError) { message.error(validationError); setLoading(false); actionThrottleRef.current = false; return; }
       }
-      const payload = { ...getCommonPayload(values), action: actionType, remarks: remarksVal || form.getFieldValue("approvalRemarks") };
+      
+      let payload;
+      if (actionType === "Rejected") {
+        // For rejection - send only remarks
+        payload = {
+          remarks: remarksVal || form.getFieldValue("approvalRemarks") || "Rejected by HOD"
+        };
+      } else {
+        // For Submit/Approve - send full payload
+        payload = { ...getCommonPayload(values), action: actionType, remarks: remarksVal || form.getFieldValue("approvalRemarks") };
+      }
+      
       const endpoint = actionType === "Submit" ? `/liner/sales-input/${id}/submit/` : actionType === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
       const response = await apiClient.post(endpoint, payload);
       if (response.data.status === "success") { message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
@@ -306,6 +328,33 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
       message.error("Error performing action: " + errorMsg);
     } finally { actionThrottleRef.current = false; setLoading(false); }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.warning("Please enter rejection remarks");
+      return;
+    }
+
+    if (actionThrottleRef.current) return;
+    actionThrottleRef.current = true;
+    setRejectionLoading(true);
+    try {
+      const payload = { remarks: rejectionRemarks.trim() };
+      const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+      if (response.data.status === "success") {
+        message.success(response.data.message || "Job rejected successfully");
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(response.data.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      actionThrottleRef.current = false;
+      setRejectionLoading(false);
+    }
   };
 
   const onFinish = async (values) => {
@@ -328,6 +377,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" },
   ];
 
@@ -527,7 +577,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                   <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
-                </Col>
+                                  </Col>
               </Row>
             </div>
           </Card>
@@ -607,6 +657,34 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
           {/* PREVIEW MODAL */}
           <Modal open={previewVisible} footer={null} title="Attachments" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnClose>
             {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
+          </Modal>
+
+          {/* Rejection Remarks Modal */}
+          <Modal
+            title="Reject Job"
+            open={rejectionModalVisible}
+            onCancel={() => setRejectionModalVisible(false)}
+            footer={[
+              <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+                Cancel
+              </Button>,
+              <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+                Confirm Rejection
+              </Button>,
+            ]}
+            width={600}
+          >
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+              <Input.TextArea
+                rows={4}
+                placeholder="Enter rejection reason (e.g., 'Incomplete documents', 'Invalid information', etc.)"
+                value={rejectionRemarks}
+                onChange={(e) => setRejectionRemarks(e.target.value)}
+                style={{ borderRadius: 4 }}
+              />
+              <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS team for corrections.</p>
+            </div>
           </Modal>
         </Form>
       </Spin>

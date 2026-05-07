@@ -149,10 +149,17 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
+  
+  // Rejection Modal State
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [rejectionRemarks, setRejectionRemarks] = useState("");
+  const [rejectionLoading, setRejectionLoading] = useState(false);
 
   useEffect(() => {
     if (jobData) {
-      const docs = partitionDocuments(jobData.documents || []);
+      // Filter documents: Accounts only see approved documents
+      const approvedDocs = (jobData.documents || []).filter(d => d.is_cs_hod_approved !== false);
+      const docs = partitionDocuments(approvedDocs);
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
       setHblFiles(docs.hblFiles);
@@ -168,6 +175,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   }, [jobData, form]);
 
   const { isAccountsTeam, isAdmin } = computeUserRoles(user);
+  const currentStage = String(jobData?.current_stage || "1");
+  
+  // Disable if stage 7 and CS HOD not approved, OR if job is rejected
+  const isDisabledAtStage7 = !jobData?.is_cs_hod_approved;
+  const isDisabled = isDisabledAtStage7 || jobData?.status?.includes("REJECTED");
 
   // const openPreview = (files, idx) => {
   //   setPreviewUrls(files.map(f => f.url || f.file_url));
@@ -203,12 +215,22 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     setLoading(true);
     try {
       const values = await form.validateFields();
-      const payload = {
-        carrier_name_2: values.carrier_name_2,
-        account_remarks: values.account_remarks,
-        action: actionType,
-        remarks: values.approvalRemarks || "",
-      };
+      
+      let payload;
+      if (actionType === "Approved") {
+        // For approval
+        payload = {
+          carrier_name_2: values.carrier_name_2,
+          account_remarks: values.account_remarks,
+          action: actionType,
+          remarks: values.approvalRemarks || "",
+        };
+      } else {
+        // For rejection - send only remarks
+        payload = {
+          remarks: values.approvalRemarks || "Rejected by Accounts"
+        };
+      }
 
       const endpoint = actionType === "Approved" 
         ? `/liner/sales-input/${id}/approve/` 
@@ -272,6 +294,16 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       ),
     },
     {
+      title: "Remarks",
+      dataIndex: "remarks",
+      key: "remarks",
+      render: (value) => (
+        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+          {value || "N/A"}
+        </span>
+      ),
+    },
+    {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",
@@ -295,12 +327,12 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           <Row gutter={24}>
             <Col span={12}>
               <Form.Item label="Carrier Name 2" name="carrier_name_2">
-                <Input disabled={!isAccountsTeam} size="large" />
+                <Input disabled={!isAccountsTeam || isDisabled} size="large" />
               </Form.Item>
             </Col>
             <Col span={24}>
               <Form.Item label="Account Remarks" name="account_remarks">
-                <TextArea rows={3} disabled={!isAccountsTeam} />
+                <TextArea rows={3} disabled={!isAccountsTeam || isDisabled} />
               </Form.Item>
             </Col>
           </Row>
@@ -328,13 +360,16 @@ const AccountsUpdatePage = ({ jobData, user }) => {
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
             <Form.Item label="Approval Remarks" name="approvalRemarks">
-              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" />
+              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" disabled={isDisabled} />
             </Form.Item>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <Button size="large" onClick={() => navigate("/")}>Cancel</Button>
-              <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam}>Save Update</Button>
-              <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam}>
+              <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam || isDisabled}>Save Update</Button>
+              <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam || isDisabled}>
                 Approve (Accounts)
+              </Button>
+              <Button size="large" danger onClick={() => handleAction("Rejected")} disabled={!isAccountsTeam || isDisabled}>
+                Reject
               </Button>
             </div>
           </div>
@@ -405,6 +440,55 @@ const AccountsUpdatePage = ({ jobData, user }) => {
               defaultIndex={previewIndex || 0}
             />
           )}
+      </Modal>
+
+      {/* Rejection Remarks Modal */}
+      <Modal
+        title="Reject Job"
+        open={rejectionModalVisible}
+        onCancel={() => setRejectionModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={async () => {
+            if (!rejectionRemarks.trim()) {
+              message.warning("Please enter rejection remarks");
+              return;
+            }
+            try {
+              setRejectionLoading(true);
+              const payload = { remarks: rejectionRemarks.trim() };
+              const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
+              if (res.data.status === "success") {
+                message.success(res.data.message || "Job rejected successfully");
+                setRejectionModalVisible(false);
+                setTimeout(() => window.location.href = "/", 1500);
+              } else {
+                message.error(res.data.message || "Rejection failed");
+              }
+            } catch (err) {
+              message.error(err.response?.data?.message || "Something went wrong");
+            } finally {
+              setRejectionLoading(false);
+            }
+          }}>
+            Confirm Rejection
+          </Button>,
+        ]}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+          <Input.TextArea
+            rows={4}
+            placeholder="Enter rejection reason (e.g., 'Invoice discrepancy', 'Missing payment proof', etc.)"
+            value={rejectionRemarks}
+            onChange={(e) => setRejectionRemarks(e.target.value)}
+            style={{ borderRadius: 4 }}
+          />
+          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CS HOD for corrections.</p>
+        </div>
       </Modal>
     </div>
   );

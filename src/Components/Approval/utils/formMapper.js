@@ -101,7 +101,7 @@ const DOC_TYPE_CONFIG = [
   { key: "releaseOrderFiles", types: ["RELEASE ORDER"],                              keywords: ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"] },
   { key: "bocFiles",          types: ["BOC"],                                        keywords: ["BOC_ATTACHMENT", "BOC"] },
   { key: "haulageCostFiles",  types: ["HAULAGE COST"],                               keywords: ["HAULAGE_COST", "COST_SHEET"] },
-  { key: "loadListFiles",     types: ["LOAD LIST"],                                  keywords: ["LOAD_LIST", "LOADLIST"] },
+  { key: "loadListFiles",     types: ["LOAD LIST", "LOAD LIST UPLOADING"],           keywords: ["LOAD_LIST", "LOADLIST"] },
   { key: "lpoFiles",          types: ["LPO"],                                        keywords: ["LPO"] },
   { key: "invoiceFiles",      types: ["INVOICE"],                                    keywords: ["INVOICE"] },
   { key: "facFiles",          types: ["FAC"],                                        keywords: ["FAC"] },
@@ -118,16 +118,40 @@ const DOC_TYPE_CONFIG = [
  * Anything not matched by DOC_TYPE_CONFIG goes into `attachments`.
  *
  * @param  {array} docs  - raw documents array from API
- * @returns {object}     - one key per DOC_TYPE_CONFIG entry + `attachments`
+ * @param  {string} executiveName - name of the executive to filter executive documents
+ * @returns {object}     - one key per DOC_TYPE_CONFIG entry + `executiveDocuments` + `attachments`
  */
-export const partitionDocuments = (docs) => {
+export const partitionDocuments = (docs, executiveName = null) => {
   const filterBy = (types, keywords) =>
     docs.filter((d) => {
       const dt = d.doc_type?.toUpperCase();
+      const cat = d.category?.toUpperCase();
       const fn = d.file_name?.toUpperCase();
-      if (types.includes(dt)) return true;
-      if (dt === "ATTACHMENT" || dt === "OTHER" || !dt) {
-        return keywords.some((k) => fn?.includes(k));
+
+      // Priority 1: Exact doc_type match
+      if (dt && types.includes(dt)) return true;
+
+      // Priority 2: Keyword match ONLY if doc_type and category are generic/missing.
+      // We consider doc_type "Attachment" or "Other Docs" as specific classifications that belong in general attachments.
+      const isGenericType = !dt || ["OTHER", "OTHERS"].includes(dt);
+      const isGenericCat  = !cat || ["GENERAL", "OTHERS"].includes(cat);
+
+      if (isGenericType && isGenericCat) {
+        return keywords.some((k) => {
+          if (!fn) return false;
+          const index = fn.indexOf(k);
+          if (index === -1) return false;
+
+          // Short keywords strict boundary check
+          if (k.length <= 3) {
+            const prevChar = index > 0 ? fn[index - 1] : null;
+            const nextChar = index + k.length < fn.length ? fn[index + k.length] : null;
+            const isPrevBoundary = !prevChar || !/[A-Z0-9]/.test(prevChar);
+            const isNextBoundary = !nextChar || !/[A-Z0-9]/.test(nextChar);
+            return isPrevBoundary && isNextBoundary;
+          }
+          return true;
+        });
       }
       return false;
     });
@@ -140,6 +164,17 @@ export const partitionDocuments = (docs) => {
     result[key] = list;
     list.forEach((d) => capturedIds.add(d.id));
   });
+
+  // Filter executive documents from the remaining pool
+  if (executiveName) {
+    result.executiveDocuments = docs.filter(d => 
+      !capturedIds.has(d.id) && 
+      (d.uploaded_by_user_name === executiveName || d.uploaded_by_name === executiveName)
+    );
+    result.executiveDocuments.forEach(d => capturedIds.add(d.id));
+  } else {
+    result.executiveDocuments = [];
+  }
 
   result.attachments = docs.filter((d) => !capturedIds.has(d.id));
   return result;
