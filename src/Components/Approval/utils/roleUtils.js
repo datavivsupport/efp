@@ -50,12 +50,12 @@ export const computeUserRoles = (user) => {
 
   const isGM = userRoles.some((r) => r === "GM");
 
-  const isSalesExecutive = (isSales && !isHOD) || (isAdmin);
-  const isSalesHOD = (isSales && isHOD) || (isAdmin);
-  const isCNFExecutive = (isCNF && !isHOD) || (isAdmin);
-  const isCSExecutive = (isCS && !isHOD) || (isAdmin);
-  const isCSHOD = (isCS && isHOD) || (isAdmin);
-  const isAccountsTeam = isAccounts || (isAdmin);
+  const isSalesExecutive = (isSales && !isHOD) || (isAdmin && isSales && !isHOD);
+  const isSalesHOD = (isSales && isHOD) || (isAdmin && isSales && isHOD);
+  const isCNFExecutive = (isCNF && !isHOD) || (isAdmin && isCNF && !isHOD);
+  const isCSExecutive = (isCS && !isHOD) || (isAdmin && isCS && !isHOD);
+  const isCSHOD = (isCS && isHOD) || (isAdmin && isCS && isHOD);
+  const isAccountsTeam = isAccounts || (isAdmin && isAccounts);
   const isDocsTeam =
     userRoles.some((r) => r.includes("DOCS")) ||
     userDepts.some((d) => d.includes("DOCS"));
