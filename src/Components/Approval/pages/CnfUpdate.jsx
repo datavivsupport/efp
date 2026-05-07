@@ -499,6 +499,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       ),
     },
     {
+      title: "Remarks",
+      dataIndex: "remarks",
+      key: "remarks",
+      render: (value) => (
+        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+          {value || "N/A"}
+        </span>
+      ),
+    },
+    {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",

@@ -377,6 +377,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" },
   ];
 

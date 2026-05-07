@@ -564,6 +564,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 { title: "Pending With", dataIndex: "pending_with" },
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
+                { title: "Remarks", dataIndex: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
                 { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               
