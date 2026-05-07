@@ -56,6 +56,9 @@ export const resolveApprovalRoute = (jobData, user) => {
     return `/approval/${id}/cnf-update`;
   }
 
+  if (roles.isCS && roles.isAdmin){
+    return `/approval/${id}/cs-documents`;
+  }
   // No matching new route → fall back to old Approval page
   return null;
 };

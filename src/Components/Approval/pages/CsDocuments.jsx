@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { computeUserRoles } from "../utils/roleUtils";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -88,10 +89,23 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   const debounceTimerField = useRef(null);
 
   const handleBeforeUpload = async (file) => {
+    if (!file) {
+      message.error("No file selected");
+      return false;
+    }
+    if (!salesInputId) {
+      message.warning("Job ID missing - cannot upload document");
+      return false;
+    }
+    if (!docType || !category) {
+      message.error("Document type or category is missing");
+      return false;
+    }
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
       _tempId: tempId,
+      _localFile: file,
       name: file.name,
       file_name: file.name,
       doc_type: docType,
@@ -172,8 +186,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
-  const isAdmin = user?.is_superuser || user?.user_type === "admin";
+  const { isAdmin, isCS } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
+  const canEditBookingTechnical = isAdmin && isCS;
+  const canEditEtaFields = isCS;
 
   const [loading, setLoading]           = useState(false);
   const [open, setOpen]                 = useState({
@@ -277,7 +293,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   /* ── Upload all pending (queued) files before save/approve/reject ── */
   const uploadAllPending = async () => {
+    if (!id) {
+      throw new Error("Job ID missing - cannot upload pending documents");
+    }
+
     const uploadOne = async (file) => {
+      if (!file || !file._localFile || !file.doc_type || !file.category) {
+        throw new Error(`Missing file data for ${file?.name || file?.file_name || "unknown file"}`);
+      }
       const formData = new FormData();
       formData.append("file", file._localFile);
       formData.append("doc_type", file.doc_type);
@@ -291,7 +314,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     };
 
     const resolve = async (arr) =>
-      Promise.all(arr.map((f) => (f.pending ? uploadOne(f) : Promise.resolve(f))));
+      Promise.all((arr || []).map((f) => (f?.pending ? uploadOne(f) : Promise.resolve(f))));
 
     const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newFac, newEd, newPreAlert, newHN, newAttach] =
       await Promise.all([
@@ -537,22 +560,22 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS (TECHNICAL DOCUMENTS)" open={open.booking} onToggle={() => toggle("booking")} />}>
             <div style={{ display: open.booking ? "block" : "none" }}>
               <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                {releaseOrderFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
-                {bocFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
               </Row>
             </div>
           </Card>

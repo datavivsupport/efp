@@ -199,10 +199,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   /* ── Compute roles, context, locks ── */
   const {
-    isAdmin, isCS, userFullName, hasAllowedRole
+    isAdmin: _userIsAdmin, isCS, userFullName, hasAllowedRole
   } = computeUserRoles(user);
 
-  const roles = { isCS: true, isAdmin, userFullName };
+  const isAdminForCsUpdate = false;
+  const isAdmin = false;
+
+  const roles = { isCS: true, isAdmin: isAdminForCsUpdate, userFullName };
 
   const {
     currentStage, isCreator,
@@ -219,7 +222,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isRequirementSelectorLocked,
     showDocumentUploads, showROBOCForCS, needsLpoInvoice,
   } = computeSectionLocks({
-    isAdmin, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
+    isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
     currentStage: "2", isMasterMode, isTerminal, isForwarding,
     isLiner, isExtended, isOthers,
@@ -236,6 +239,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const facFlagForm = Form.useWatch("fac", form);
   const hblFlagForm = Form.useWatch("hbl", form);
   const documentationFlagForm = Form.useWatch("documentation", form);
+  const transportationFlagForm = Form.useWatch("transportation", form);
 
   const isLLReq = normalizeBoolean(isLLReqForm, jobData?.is_load_list_required);
   const isHNReq = normalizeBoolean(isHNReqForm, jobData?.is_haulier_note_required);
@@ -253,13 +257,14 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const facFlag = normalizeBoolean(facFlagForm, jobData?.fac);
   const hblFlag = normalizeBoolean(hblFlagForm, jobData?.hbl);
   const documentationFlag = normalizeBoolean(documentationFlagForm, jobData?.documentation);
+  const transportationFlag = normalizeBoolean(transportationFlagForm, jobData?.transportation);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
-  const showPlacement = true;
+  const showPlacement = transportationFlag || isMasterMode;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
   const canApprove = computeCanApprove({
-    hasAllowedRole, isAdmin, currentStage: "2",
+    hasAllowedRole, isAdmin: isAdminForCsUpdate, currentStage: "2",
     isLiner, isCrossTrade, isForwarding, isExtended,
     isCS: true, isCNF: false, isCNFHOD: false, isCSHOD: false, isAccountsTeam: false, isSalesHOD: false,
     isCNFDone: false, isCNFStage: false, isCSHODStage: false, isThisJobsCSHOD: false, stage2,
@@ -465,12 +470,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       <Col xs={24} md={6}><Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}><Input placeholder="Free text POD" disabled={isSalesSectionLocked} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                     </Row>
                   </>
                 )}
@@ -536,7 +541,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {executiveDocuments.length > 0 && (
-                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocuments} disabled onPreview={(i) => openPreview(executiveDocuments, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocuments} disabled onPreview={(i) => openPreview(executiveDocuments, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                   )}
                 </Row>
                 <Row gutter={16}>
@@ -696,7 +701,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdminForCsUpdate} disabled={isOthers} />
                 </Col>
               </Row>
             </div>

@@ -33,7 +33,7 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "cs-documents": {
     label: "CS Documents",
-    allowedStages: ["4","5", "6", "7","9"],
+    allowedStages: ["4","5", "6", "7","9", "8","10",'2','3'],
     check: ({ roles }) => roles.isCS,
   },
 
