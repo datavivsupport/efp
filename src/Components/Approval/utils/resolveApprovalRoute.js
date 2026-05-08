@@ -18,6 +18,10 @@ export const resolveApprovalRoute = (jobData, user) => {
   if (jobData?.job_type?.toUpperCase() === "OTHERS") {
     return null;
   }
+  
+  if (currentStage=="1"){
+     return null 
+  }
 
   // Stage 2 — CS (only if not yet updated)
   if (currentStage === "2" && roles.isCS && !jobData?.is_cs_updated) {
