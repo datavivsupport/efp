@@ -1032,11 +1032,11 @@ const Approval = () => {
                       <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={12}>
+                  {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Remarks" name="remarks">
                       <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
-                  </Col>
+                  </Col> */}
                   {(() => {
                     const execDocs = (jobData?.documents || []).filter(d => d.uploaded_by_user_name === jobData?.name_of_executive);
                     return execDocs.length > 0 ? (
