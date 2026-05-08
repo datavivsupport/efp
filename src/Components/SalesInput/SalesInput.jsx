@@ -134,14 +134,17 @@ const DocUploadField = ({
     // }
 
     if (!currentId && !isMasterMode) {
+      const tempId = `temp-${Date.now()}`;
 
       // ✅ Store file temporarily in memory
       setPendingFiles((prev) => [
         ...prev,
         {
+          tempId,
           file,
           doc_type: docType,
-          category: category
+          category,
+          remarks: ""
         }
       ]);
 
@@ -150,7 +153,7 @@ const DocUploadField = ({
       setFiles((prev) => [
         ...prev,
         {
-          id: `temp-${Date.now()}`,
+          id: tempId,
           name: file.name,
           file_name: file.name,
           doc_type: docType,
@@ -214,6 +217,13 @@ const DocUploadField = ({
     // 2. Functional update on the global state 'prev' to preserve all other document types
     setFiles((prev) =>
       prev.map((f) => (f.id === docId ? { ...f, remarks: value } : f))
+    );
+    setPendingFiles?.((prev) =>
+      prev.map((item) =>
+        item.tempId === docId || item.file?.name === files[index]?.name
+          ? { ...item, remarks: value }
+          : item
+      )
     );
 
     // 2. Debounced sync to backend
@@ -613,11 +623,12 @@ const SalesInput = () => {
     }
   }, [id, user, form, typeParam]);
 
-  const uploadFileToServer = async (file, currentId, doc_type, category) => {
+  const uploadFileToServer = async (file, currentId, doc_type, category, remarks = "") => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("doc_type", doc_type);
   formData.append("category", category);
+  formData.append("remarks", remarks);
 
   const response = await apiClient.post(
     `/liner/sales-input/${currentId}/upload-document/`,
@@ -760,7 +771,8 @@ const SalesInput = () => {
                 item.file,
                 response?.data?.id,
                 item.doc_type,
-                item.category
+                item.category,
+                item.remarks || ""
               );
 
               if (data.status === "success") {
@@ -776,7 +788,7 @@ const SalesInput = () => {
                           file_name: uploadedDoc.file_name,
                           file_url: uploadedDoc.file_url,
                           doc_type: item.doc_type,
-                          remarks: ""
+                          remarks: item.remarks || ""
                         }
                       : f
                   )
