@@ -64,7 +64,7 @@ export const mapJobToFormValues = (data) => ({
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
     category:         t.category,
-    placement_time:   t.placement_time ? dayjs(t.placement_time) : null,
+    placement_time:   t.placement_time ? dayjs(String(t.placement_time).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
     pickup_location:  t.pickup_location,
     special_remarks:  t.special_remarks,
   })) || [{}],
