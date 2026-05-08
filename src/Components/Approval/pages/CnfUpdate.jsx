@@ -301,6 +301,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   /* ── Upload all pending (queued) files before save/approve/reject ── */
+  const hasPendingFiles = () => {
+    return [
+      releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles,
+      lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
+      haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
+    ].some(arr => arr.some(f => f.pending));
+  };
+
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
       const formData = new FormData();
@@ -433,7 +441,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      await uploadAllPending();
+      if (hasPendingFiles()) {
+        await uploadAllPending();
+      }
 
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
