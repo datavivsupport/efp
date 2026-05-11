@@ -818,7 +818,11 @@ const SalesInput = () => {
   };
 
   const handleCancel = () => {
+    const nameOfExecutive = form.getFieldValue("name_of_executive");
     form.resetFields();
+    if (nameOfExecutive) {
+      form.setFieldValue("name_of_executive", nameOfExecutive);
+    }
     setCommodities([]);
     setEquipmentRows([
       {
