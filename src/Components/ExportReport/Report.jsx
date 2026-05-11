@@ -108,10 +108,11 @@ const ExportReport = () => {
                 placeholder="Select Filter"
               >
                 <Option value="all">All</Option>
-                <Option value="Sales">Sales</Option>
+                {/* <Option value="Sales">Sales</Option> */}
                 <Option value="Sales HOD">Sales HOD</Option>
                 <Option value="CS Team">CS Team</Option>
                 <Option value="CNF Team">CNF Team</Option>
+                <Option value="CS HOD">CS HOD</Option>
                 <Option value="Accounts">Accounts</Option>
               </Select>
             </div>
