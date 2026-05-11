@@ -316,6 +316,7 @@ const Approval = () => {
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  const [otherDocsFiles, setOtherDocsFiles] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
@@ -507,6 +508,7 @@ const Approval = () => {
           setBankSlips(buckets.bankSlips);
           setHblFiles(buckets.hblFiles);
           setPreAlertFiles(buckets.preAlertFiles);
+          setOtherDocsFiles(buckets.otherDocsFiles);
           setAttachments(buckets.attachments);
         }
 
@@ -847,24 +849,24 @@ const Approval = () => {
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                      <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Freight Manifest" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={true} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                      <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={true} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Sailing Report" files={edFiles} setFiles={setEdFiles} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                      <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={true} user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="Other Docs" files={otherDocsFiles} setFiles={setOtherDocsFiles} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={true} user={user} isAdmin={isAdmin} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1588,16 +1590,7 @@ const Approval = () => {
 
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                          {canDelete && (
-                            <Button
-                              type="text"
-                              size="small"
-                              danger
-                              icon={<DeleteOutlined />}
-                              style={{ position: "absolute", top: 6, right: 6 }}
-                              onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
-                            />
-                          )}
+                         
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{text}</p>
                           {authorName && (
                             <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>

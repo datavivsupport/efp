@@ -264,6 +264,7 @@ const DocUploadField = ({
               const docId = files[i]?.id;
               if (docId) {
                 setFiles((p) => p.filter((f) => f.id !== docId));
+                setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
               }
             }}
             onPreview={(i) => onPreview(files, i)}
@@ -1841,24 +1842,22 @@ const SalesInput = () => {
                   </Button>
                 </Col>
 
-                {!isOthers && (
-                  <Col xs={24} md={12}>
-                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                    <DocUploadField
-                      label="Attachment"
-                      files={attachments.filter(d => d.doc_type === "Attachment")}
-                      setFiles={setAttachments}
-                      setPendingFiles={setPendingFiles}
-                      color="blue"
-                      onPreview={openPreview}
-                      salesInputId={id}
-                      category="attachments"
-                      docType="Attachment"
-                      user={user}
-                      isAdmin={isAdmin}
-                    />
-                  </Col>
-                )}
+                <Col xs={24} md={12}>
+                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
+                  <DocUploadField
+                    label="Attachment"
+                    files={attachments.filter(d => d.doc_type === "Attachment")}
+                    setFiles={setAttachments}
+                    setPendingFiles={setPendingFiles}
+                    color="blue"
+                    onPreview={openPreview}
+                    salesInputId={id}
+                    category="attachments"
+                    docType="Attachment"
+                    user={user}
+                    isAdmin={isAdmin}
+                  />
+                </Col>
               </Row>
             </div>
           </Card>
