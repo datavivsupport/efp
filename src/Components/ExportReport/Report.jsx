@@ -85,7 +85,7 @@ const ExportReport = () => {
                 <Option value="none">None</Option>
                 <Option value="carrier">Carrier</Option>
                 <Option value="customer">Customer</Option>
-                <Option value="job">Export Number</Option>
+                {/* <Option value="job">Export Number</Option> */}
               </Select>
             </div>
 
