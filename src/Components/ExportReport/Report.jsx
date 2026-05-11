@@ -73,8 +73,8 @@ const ExportReport = () => {
 
         <div className="p-6 space-y-3">
           {/* Filters */}
-          <div className="grid grid-cols-4 gap-6 items-end mb-4">
-            <div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 24 }}>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Filter Field</label>
               <Select
                 value={filterField}
@@ -85,11 +85,11 @@ const ExportReport = () => {
                 <Option value="none">None</Option>
                 <Option value="carrier">Carrier</Option>
                 <Option value="customer">Customer</Option>
-                <Option value="job">Export Number</Option>
+                {/* <Option value="job">Export Number</Option> */}
               </Select>
             </div>
 
-            <div>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Filter Value</label>
               <Input
                 type="text"
@@ -99,7 +99,7 @@ const ExportReport = () => {
               />
             </div>
 
-            <div>
+            <div style={{ flex: '1 1 200px' }}>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Pending With</label>
               <Select
                 value={pendingWith}
@@ -108,22 +108,16 @@ const ExportReport = () => {
                 placeholder="Select Filter"
               >
                 <Option value="all">All</Option>
-                <Option value="Sales">Sales</Option>
+                {/* <Option value="Sales">Sales</Option> */}
                 <Option value="Sales HOD">Sales HOD</Option>
                 <Option value="CS Team">CS Team</Option>
                 <Option value="CNF Team">CNF Team</Option>
+                <Option value="CS HOD">CS HOD</Option>
                 <Option value="Accounts">Accounts</Option>
               </Select>
             </div>
 
-            <div className="flex gap-2 justify-between">
-              <Button
-                icon={<Icon icon="zondicons:add-solid" />}
-                type="primary"
-                onClick={() => navigate("/liner/sales-input")}
-              >
-                Add
-              </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
               <Button
                 icon={<Icon icon="cil:search" />}
                 type="primary"

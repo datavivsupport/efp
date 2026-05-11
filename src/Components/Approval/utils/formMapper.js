@@ -64,7 +64,7 @@ export const mapJobToFormValues = (data) => ({
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
     category:         t.category,
-    placement_time:   t.placement_time ? dayjs(t.placement_time) : null,
+    placement_time:   t.placement_time ? dayjs(String(t.placement_time).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
     pickup_location:  t.pickup_location,
     special_remarks:  t.special_remarks,
   })) || [{}],
@@ -98,7 +98,7 @@ export const mapJobToFormValues = (data) => ({
  * ─────────────────────────────────────────────────────────────────────────────
  */
 const DOC_TYPE_CONFIG = [
-  { key: "releaseOrderFiles", types: ["RELEASE ORDER"],                              keywords: ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"] },
+  { key: "releaseOrderFiles", types: ["RELEASE ORDER","FREIGHT MANIFEST"],                              keywords: ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"] },
   { key: "bocFiles",          types: ["BOC"],                                        keywords: ["BOC_ATTACHMENT", "BOC"] },
   { key: "haulageCostFiles",  types: ["HAULAGE COST"],                               keywords: ["HAULAGE_COST", "COST_SHEET"] },
   { key: "loadListFiles",     types: ["LOAD LIST", "LOAD LIST UPLOADING"],           keywords: ["LOAD_LIST", "LOADLIST"] },
@@ -106,11 +106,12 @@ const DOC_TYPE_CONFIG = [
   { key: "invoiceFiles",      types: ["INVOICE"],                                    keywords: ["INVOICE"] },
   { key: "facFiles",          types: ["FAC"],                                        keywords: ["FAC"] },
   { key: "croFiles",          types: ["CRO", "CRO UPLOADING"],                       keywords: ["CRO"] },
-  { key: "edFiles",           types: ["ED", "ED UPLOADING"],                         keywords: ["ED"] },
+  { key: "edFiles",           types: ["ED", "ED UPLOADING", "TDR/SAILING REPORT"],   keywords: ["ED"] },
   { key: "haulierNoteFiles",  types: ["HAULAGE NOTE", "HAULAGE NOTE UPLOADING"],     keywords: ["HAULAGE_NOTE", "HAULAGENOTE"] },
   { key: "bankSlips",         types: ["BANK SLIP"],                                  keywords: ["BANK_SLIP", "BANK SLIP"] },
   { key: "hblFiles",          types: ["HBL"],                                        keywords: ["HBL"] },
   { key: "preAlertFiles",     types: ["PRE-ALERT", "PRE ALERT", "PREALERT"],         keywords: ["PRE_ALERT", "PREALERT"] },
+  { key: "otherDocsFiles",    types: ["OTHER DOCS", "OTHER"],                        keywords: ["OTHER_DOCS", "OTHER"] },
 ];
 
 /**

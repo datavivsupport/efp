@@ -134,14 +134,17 @@ const DocUploadField = ({
     // }
 
     if (!currentId && !isMasterMode) {
+      const tempId = `temp-${Date.now()}`;
 
       // ✅ Store file temporarily in memory
       setPendingFiles((prev) => [
         ...prev,
         {
+          tempId,
           file,
           doc_type: docType,
-          category: category
+          category,
+          remarks: ""
         }
       ]);
 
@@ -150,7 +153,7 @@ const DocUploadField = ({
       setFiles((prev) => [
         ...prev,
         {
-          id: `temp-${Date.now()}`,
+          id: tempId,
           name: file.name,
           file_name: file.name,
           doc_type: docType,
@@ -215,6 +218,13 @@ const DocUploadField = ({
     setFiles((prev) =>
       prev.map((f) => (f.id === docId ? { ...f, remarks: value } : f))
     );
+    setPendingFiles?.((prev) =>
+      prev.map((item) =>
+        item.tempId === docId || item.file?.name === files[index]?.name
+          ? { ...item, remarks: value }
+          : item
+      )
+    );
 
     // 2. Debounced sync to backend
     if (salesInputId && docId) {
@@ -254,6 +264,7 @@ const DocUploadField = ({
               const docId = files[i]?.id;
               if (docId) {
                 setFiles((p) => p.filter((f) => f.id !== docId));
+                setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
               }
             }}
             onPreview={(i) => onPreview(files, i)}
@@ -613,11 +624,12 @@ const SalesInput = () => {
     }
   }, [id, user, form, typeParam]);
 
-  const uploadFileToServer = async (file, currentId, doc_type, category) => {
+  const uploadFileToServer = async (file, currentId, doc_type, category, remarks = "") => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("doc_type", doc_type);
   formData.append("category", category);
+  formData.append("remarks", remarks);
 
   const response = await apiClient.post(
     `/liner/sales-input/${currentId}/upload-document/`,
@@ -760,7 +772,8 @@ const SalesInput = () => {
                 item.file,
                 response?.data?.id,
                 item.doc_type,
-                item.category
+                item.category,
+                item.remarks || ""
               );
 
               if (data.status === "success") {
@@ -776,7 +789,7 @@ const SalesInput = () => {
                           file_name: uploadedDoc.file_name,
                           file_url: uploadedDoc.file_url,
                           doc_type: item.doc_type,
-                          remarks: ""
+                          remarks: item.remarks || ""
                         }
                       : f
                   )
@@ -805,7 +818,11 @@ const SalesInput = () => {
   };
 
   const handleCancel = () => {
+    const nameOfExecutive = form.getFieldValue("name_of_executive");
     form.resetFields();
+    if (nameOfExecutive) {
+      form.setFieldValue("name_of_executive", nameOfExecutive);
+    }
     setCommodities([]);
     setEquipmentRows([
       {
@@ -861,14 +878,14 @@ const SalesInput = () => {
                   width: "100%",
                 }}
               >
-                <Space align="center">
-                  <div className={Styles.mainhead}>
-                    <Icon icon="basil:document-solid" width="18" height="18" />
-                  </div>
-                  <Typography.Title level={5} style={{ margin: 0 }}>
-                    JOB HEADER
-                  </Typography.Title>
-                </Space>
+                  <Space align="center">
+                    <div className={Styles.mainhead}>
+                      <Icon icon="basil:document-solid" width="18" height="18" />
+                    </div>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      JOB HEADER
+                    </Typography.Title>
+                  </Space>
 
                 <span style={{ fontSize: 22, color: "#626161" }}>
                   {showExportDetails ? (
@@ -881,11 +898,12 @@ const SalesInput = () => {
             }
           >
             <div style={{ display: showExportDetails ? "block" : "none" }}>
+             
               <Row gutter={16}>
-                <Col xs={24} md={24}>
+              <Col xs={24} md={6}>
                   <Form.Item
                     className={Styles.formLabel}
-                    label="Job Type"
+                    label="Job"
                     name="job_type"
                     rules={[{ required: true, message: "Required" }]}
                   >
@@ -895,9 +913,7 @@ const SalesInput = () => {
                     />
                   </Form.Item>
                 </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={6}>
                   <Form.Item
                     className={Styles.formLabel}
                     label="Export Number"
@@ -907,7 +923,7 @@ const SalesInput = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} md={8}>
+                <Col xs={24} md={6}>
                   <Form.Item
                     className={Styles.formLabel}
                     label="Created Date"
@@ -922,7 +938,7 @@ const SalesInput = () => {
                   </Form.Item>
                 </Col>
 
-                <Col xs={24} md={8}>
+                <Col xs={24} md={6}>
                   <Form.Item
                     className={Styles.formLabel}
                     label="Created By"
@@ -969,22 +985,22 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={6}>
                       <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Free text carrier" disabled={isReadOnly} />
+                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="VSL/VOY" name="vessel_voyage_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Free text vessel/voyage" disabled={isReadOnly} />
+                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="POL (Port of Loading)" name="pol_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Free text POL" disabled={isReadOnly} />
+                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Free text POD" disabled={isReadOnly} />
+                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1776,9 +1792,8 @@ const SalesInput = () => {
               </Space>
             }
           >
-            <div>
-              <Row gutter={32}>
-                <Col xs={24} md={isOthers ? 24 : 12}>
+            <div style={{ display: 'flex', gap: 32, flexWrap: 'nowrap' }}>
+              <div style={{ flex: '1 1 50%', minWidth: 0 }}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
                   <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
                     {remarks.map((r, i) => (
@@ -1827,27 +1842,24 @@ const SalesInput = () => {
                   >
                     Add Remark
                   </Button>
-                </Col>
+              </div>
 
-                {!isOthers && (
-                  <Col xs={24} md={12}>
-                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                    <DocUploadField
-                      label="Attachment"
-                      files={attachments.filter(d => d.doc_type === "Attachment")}
-                      setFiles={setAttachments}
-                      setPendingFiles={setPendingFiles}
-                      color="blue"
-                      onPreview={openPreview}
-                      salesInputId={id}
-                      category="attachments"
-                      docType="Attachment"
-                      user={user}
-                      isAdmin={isAdmin}
-                    />
-                  </Col>
-                )}
-              </Row>
+              <div style={{ flex: '1 1 50%', minWidth: 0 }}>
+                <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
+                <DocUploadField
+                  label="Attachment"
+                  files={attachments.filter(d => d.doc_type === "Attachment")}
+                  setFiles={setAttachments}
+                  setPendingFiles={setPendingFiles}
+                  color="blue"
+                  onPreview={openPreview}
+                  salesInputId={id}
+                  category="attachments"
+                  docType="Attachment"
+                  user={user}
+                  isAdmin={isAdmin}
+                />
+              </div>
             </div>
           </Card>
 

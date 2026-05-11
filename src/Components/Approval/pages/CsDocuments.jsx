@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -161,10 +162,19 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       {files.length > 0 && (
         <FileChipList
           files={files}
-          onRemove={(i) => {
+          onRemove={async (i) => {
             const f = files[i];
+            if (!f) return;
             if (f?.id && !f.pending) {
+              const prev = files;
               setFiles((p) => p.filter((ff) => ff.id !== f.id));
+              try {
+                await deleteDocument(salesInputId, f.id);
+                message.success("Attachment deleted");
+              } catch (err) {
+                setFiles(prev);
+                message.error(err.response?.data?.message || "Failed to delete attachment");
+              }
             } else {
               setFiles((p) => p.filter((_, j) => j !== i));
             }
@@ -520,7 +530,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col>
                 {(() => {
                   const execDocs = (initialJob?.documents || []).filter(d => d.uploaded_by_user_name === initialJob?.name_of_executive);
                   return execDocs.length > 0 ? (

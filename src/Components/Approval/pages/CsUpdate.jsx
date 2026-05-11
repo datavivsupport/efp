@@ -46,6 +46,7 @@ import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
@@ -144,7 +145,36 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         </Upload>
         {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
         {files.length > 0 && (
-          <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
+          <FileChipList
+            files={files}
+            color={color}
+            onRemove={async (i) => {
+              const f = files[i];
+              if (!f) return;
+              // If document has been uploaded to backend, call delete API
+              if (f.id) {
+                const prev = files;
+                // optimistic UI update
+                setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                try {
+                  await deleteDocument(salesInputId, f.id);
+                  message.success("Attachment deleted");
+                } catch (err) {
+                  // rollback on failure
+                  setFiles(prev);
+                  message.error(err.response?.data?.message || "Failed to delete attachment");
+                }
+              } else {
+                // local/temp file - just remove from local state
+                setFiles((p) => p.filter((_, j) => j !== i));
+              }
+            }}
+            onPreview={(i) => onPreview(files, i)}
+            onRemarkChange={handleRemarkChange}
+            disabled={disabled}
+            user={user}
+            isAdmin={isAdmin}
+          />
         )}
       </div>
     </Spin>
@@ -540,7 +570,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}><Option value="prepaid">Prepaid</Option><Option value="collect">Collect</Option></Select></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                  {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   {executiveDocuments.length > 0 && (
                     <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocuments} disabled onPreview={(i) => openPreview(executiveDocuments, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                   )}
