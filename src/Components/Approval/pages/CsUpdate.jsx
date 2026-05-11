@@ -46,6 +46,7 @@ import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
@@ -144,7 +145,36 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         </Upload>
         {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
         {files.length > 0 && (
-          <FileChipList files={files} color={color} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} disabled={disabled} user={user} isAdmin={isAdmin} />
+          <FileChipList
+            files={files}
+            color={color}
+            onRemove={async (i) => {
+              const f = files[i];
+              if (!f) return;
+              // If document has been uploaded to backend, call delete API
+              if (f.id) {
+                const prev = files;
+                // optimistic UI update
+                setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                try {
+                  await deleteDocument(salesInputId, f.id);
+                  message.success("Attachment deleted");
+                } catch (err) {
+                  // rollback on failure
+                  setFiles(prev);
+                  message.error(err.response?.data?.message || "Failed to delete attachment");
+                }
+              } else {
+                // local/temp file - just remove from local state
+                setFiles((p) => p.filter((_, j) => j !== i));
+              }
+            }}
+            onPreview={(i) => onPreview(files, i)}
+            onRemarkChange={handleRemarkChange}
+            disabled={disabled}
+            user={user}
+            isAdmin={isAdmin}
+          />
         )}
       </div>
     </Spin>

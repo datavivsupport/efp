@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -154,8 +155,25 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           color={color}
           onRemove={(i) => {
             const f = files[i];
+            if (!f) return;
             if (f?.id && !f.pending) {
-              setFiles((p) => p.filter((ff) => ff.id !== f.id));
+              const prev = files;
+              Modal.confirm({
+                title: "Delete attachment?",
+                content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                okText: "Delete",
+                okType: "danger",
+                onOk: async () => {
+                  setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                  try {
+                    await deleteDocument(salesInputId, f.id);
+                    message.success("Attachment deleted");
+                  } catch (err) {
+                    setFiles(prev);
+                    message.error(err.response?.data?.message || "Failed to delete attachment");
+                  }
+                }
+              });
             } else {
               setFiles((p) => p.filter((_, j) => j !== i));
             }

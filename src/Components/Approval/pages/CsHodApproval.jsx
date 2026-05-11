@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
+import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -119,7 +120,39 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
         </Upload>
         {files.length > 0 && (
-          <FileChipList files={files} onRemove={(i) => { const docId = files[i]?.id; if (docId) setFiles((p) => p.filter((f) => f.id !== docId)); }} onPreview={(i) => onPreview(files, i)} onRemarkChange={handleRemarkChange} user={user} isAdmin={isAdmin} disabled={disabled} />
+          <FileChipList
+            files={files}
+            onRemove={async (i) => {
+              const f = files[i];
+              if (!f) return;
+              if (f?.id && !f.pending) {
+                const prev = files;
+                Modal.confirm({
+                  title: "Delete attachment?",
+                  content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                  okText: "Delete",
+                  okType: "danger",
+                  onOk: async () => {
+                    setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                    try {
+                      await deleteDocument(salesInputId, f.id);
+                      message.success("Attachment deleted");
+                    } catch (err) {
+                      setFiles(prev);
+                      message.error(err.response?.data?.message || "Failed to delete attachment");
+                    }
+                  }
+                });
+              } else {
+                setFiles((p) => p.filter((_, j) => j !== i));
+              }
+            }}
+            onPreview={(i) => onPreview(files, i)}
+            onRemarkChange={handleRemarkChange}
+            user={user}
+            isAdmin={isAdmin}
+            disabled={disabled}
+          />
         )}
       </div>
     </Spin>
