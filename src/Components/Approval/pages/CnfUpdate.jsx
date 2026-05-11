@@ -490,6 +490,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
       
       message.success("Saved successfully");
+      setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       console.error("Save error:", err);
       const errorMsg = typeof err.response?.data?.message === "string" ? err.response?.data?.message : "Failed to save";
