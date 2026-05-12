@@ -321,6 +321,7 @@ const Approval = () => {
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
+  const otherChargesDisplay = otherCharges.length > 0 ? otherCharges.join(", ") : chargeInput || "";
   const [remarks, setRemarks] = useState([]);
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
@@ -942,38 +943,13 @@ const Approval = () => {
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   <Col xs={24}>
                     <Form.Item className={Styles.formLabel} label="Other Charges">
-                      <div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#fff' }}>
-                        <Space wrap style={{ marginBottom: otherCharges.length ? 6 : 0 }}>
-                          {otherCharges.map((c, i) => (
-                            <Tag
-                              key={i}
-                              closable
-                              color="cyan"
-                              onClose={() => setOtherCharges((p) => p.filter((_, j) => j !== i))}
-                            >
-                              {c}
-                            </Tag>
-                          ))}
-                        </Space>
-                        <Input
-                          bordered={false}
-                          placeholder={isSalesSectionLocked ? "" : "Type a charge and press Enter…"}
-                          value={chargeInput}
-                          disabled={isSalesSectionLocked}
-                          onChange={(e) => setChargeInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === ",") {
-                              e.preventDefault();
-                              const v = chargeInput.trim();
-                              if (v && !otherCharges.includes(v)) {
-                                setOtherCharges(p => [...p, v]);
-                                setChargeInput("");
-                              }
-                            }
-                          }}
-                          style={{ padding: 0 }}
-                        />
-                      </div>
+                      <Input.TextArea
+                        value={otherChargesDisplay}
+                        placeholder="No other charges"
+                        disabled
+                        variant="filled"
+                        autoSize={{ minRows: 2 }}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
