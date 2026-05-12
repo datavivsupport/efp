@@ -122,6 +122,19 @@
   display: block;
 }
 
+/* ================= DISABLED INPUT COLOR ================= */
+.card :global(.ant-select-disabled),
+.card :global(.ant-select-disabled .ant-select-selection-item),
+.card :global(.ant-select-disabled .ant-select-selection-placeholder),
+.card :global(.ant-select-disabled .ant-select-content),
+.card :global(.ant-input-disabled),
+.card :global(.ant-input-number-input[disabled]),
+.card :global(.ant-picker-input > input[disabled]) {
+  color: #374151 !important;
+  -webkit-text-fill-color: #374151 !important;
+  opacity: 1 !important;
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
   .card :global(.ant-card-head-title) {
