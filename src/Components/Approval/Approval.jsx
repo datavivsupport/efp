@@ -1007,7 +1007,7 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
-                      <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
+                      <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
                   {/* <Col xs={24} md={12}>

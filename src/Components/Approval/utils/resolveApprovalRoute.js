@@ -38,7 +38,7 @@ export const resolveApprovalRoute = (jobData, user) => {
   if (
     currentStage === "2" &&
     !jobData?.is_hod_approved &&
-    (roles.isSalesHOD)
+    (roles.isSalesHOD) && String(user?.id) === String(jobData?.sales_hod)
   ) {
     return `/approval/${id}/hod-review`;
   }
