@@ -47,9 +47,10 @@ export const APPROVAL_ROUTE_CONFIG = {
 
   "accounts": {
     label: "Accounts",
-    allowedStages: ["6", "7","9","5"],
+    allowedStages: ["6", "7","9","5","4","8","10","2","3","1"],
     check: ({ roles, jobData }) =>
-      roles.isAccountsTeam &&
-      (jobData?.current_stage === "6" || (jobData?.current_stage === "7")||(jobData?.current_stage === "9")||(jobData?.current_stage === "5")),
+      roles.isAccountsTeam
+    //  &&
+    //   (jobData?.current_stage === "6" || (jobData?.current_stage === "7")||(jobData?.current_stage === "9")||(jobData?.current_stage === "5")),
   },
 };
