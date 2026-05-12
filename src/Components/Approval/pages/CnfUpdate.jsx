@@ -397,7 +397,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
-      const resolvedDocs = await uploadAllPending();
+      // const resolvedDocs = await uploadAllPending();
       const payload = {
         ...buildCommonPayload(
           values,
@@ -459,9 +459,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      if (hasPendingFiles()) {
-        await uploadAllPending();
-      }
+      // if (hasPendingFiles()) {
+      //   await uploadAllPending();
+      // }
 
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
