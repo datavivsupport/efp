@@ -34,7 +34,7 @@ const Navigation = () => {
   const tabs = [
     { key: "/dashboard", label: "Overview" },
     { key: "/sales-input", label: "Sales Input" },
-    { key: "/approval", label: "Approval" },
+    // { key: "/approval", label: "Approval" },
     ...(isAccountsTeam || isAdmin ? [{ key: "/accounts-dashboard", label: "Accounts" }] : []),
     { key: "/export-report", label: "Report" },
   ];
