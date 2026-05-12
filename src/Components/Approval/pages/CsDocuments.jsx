@@ -224,6 +224,9 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
   const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
+  const otherChargesDisplay = otherCharges.length > 0
+    ? otherCharges.join(", ")
+    : otherChargesRemarks || "";
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const [previewVisible, setPreviewVisible]     = useState(false);
   const [previewUrls, setPreviewUrls]           = useState([]);
@@ -516,7 +519,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   </Row>
                 ))}
               </Form.List>
-              <Row gutter={16} style={{ marginTop: 8 }}><Col xs={24}><Form.Item className={Styles.formLabel} label="Other Charges"><div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#f5f5f5', minHeight: 32 }}><Space wrap>{otherCharges.map((c, i) => (<Tag key={i} color="cyan">{c}</Tag>))}{otherCharges.length === 0 && otherChargesRemarks && <span style={{ color: '#666', fontSize: 12 }}>{otherChargesRemarks}</span>}{otherCharges.length === 0 && !otherChargesRemarks && <span style={{ color: '#bfbfbf', fontSize: 12 }}>No other charges</span>}</Space></div></Form.Item></Col></Row>
+              <Row gutter={16} style={{ marginTop: 8 }}>
+                <Col xs={24}>
+                  <Form.Item className={Styles.formLabel} label="Other Charges">
+                    <Input.TextArea
+                      value={otherChargesDisplay}
+                      placeholder="No other charges"
+                      disabled
+                      variant="filled"
+                      autoSize={{ minRows: 2 }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </div>
           </Card>
 
