@@ -52,7 +52,7 @@ export const resolveApprovalRoute = (jobData, user) => {
   // Stage 5 — Assigned CS HOD (ID match)
 
   // Stage 6 — Accounts
-  if ((currentStage === "6"|| currentStage==="7"|| currentStage === "9"||currentStage=="5" )&& roles.isAccountsTeam) {
+  if (roles.isAccountsTeam) {
     return `/approval/${id}/accounts`;
   }
 
