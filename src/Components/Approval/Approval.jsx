@@ -128,11 +128,12 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
                 placeholder="Remarks..."
                 value={file.remarks || ""}
                 onChange={(e) => onRemarkChange(i, e.target.value)}
-                style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }}
+                className={Styles.remarkInput}
+                style={{ marginTop: '2px', padding: "7px" }}
               />
             ) : (
               file.remarks && (
-                <Typography.Text type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px' }}>
+                <Typography.Text type="secondary" italic className={Styles.remarkText} style={{ paddingLeft: '4px' }}>
                   {file.remarks}
                 </Typography.Text>
               )
@@ -1036,11 +1037,11 @@ const Approval = () => {
                 </Row>
                 <Row gutter={16}>
                   {!isLiner && (
-                    <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}>HBL</Checkbox></Form.Item></Col>
+                    <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
                   )}
-                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}>FAC</Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}>Documentation</Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}>Transportation</Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>FAC</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
                 </Row>
               </div>
             </Card>

@@ -91,9 +91,9 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
           </div>
           {canEditFile ? (
-            <Input size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
+            <Input   className={Styles.remarkInput} size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
           ) : (
-            file.remarks && <Typography.Text type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px' }}>{file.remarks}</Typography.Text>
+            file.remarks && <Typography.Text   className={Styles.remarkInput} type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px' }}>{file.remarks}</Typography.Text>
           )}
         </div>
       );
