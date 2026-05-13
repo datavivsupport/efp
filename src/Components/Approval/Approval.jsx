@@ -784,8 +784,13 @@ const Approval = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Contact Details" name="phone_no">
-                    <Input placeholder="Phone / Email" disabled={isSalesSectionLocked} />
+                  <Form.Item className={Styles.formLabel} label="Phone" name="phone_no">
+                    <Input placeholder="Phone" disabled={isSalesSectionLocked} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item className={Styles.formLabel} label="Email" name="email">
+                    <Input placeholder="Email" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={6}>

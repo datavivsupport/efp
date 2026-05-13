@@ -1200,7 +1200,7 @@ const SalesInput = () => {
                   <Col xs={24} md={6}>
                     <Form.Item
                       className={Styles.formLabel}
-                      label="Contact Details"
+                      label="Phone"
                       name="phone_no"
                     >
                       <Input placeholder="Phone Number" disabled={isReadOnly} />
