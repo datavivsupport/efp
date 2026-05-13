@@ -70,6 +70,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     carrier_name: values.carrier_name,
     contact_pic: values.contact_pic,
     phone_no: values.phone_no,
+    email: values.email,
     port_of_loading: values.port_of_loading,
     port_of_discharge: values.port_of_discharge,
     final_pod: values.final_pod,

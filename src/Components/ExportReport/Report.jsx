@@ -28,17 +28,23 @@ const ExportReport = () => {
     fetchData(currentPage, pageSize);
   }, [pendingWith, currentPage, pageSize]);
 
-  const fetchData = async (page = 1, size = 10) => {
+  const fetchData = async (page = 1, size = 10, overrides = {}) => {
     setLoading(true);
     try {
+      // Use overrides if provided (useful for clearing state)
+      const pWith = overrides.pendingWith !== undefined ? overrides.pendingWith : pendingWith;
+      const fField = overrides.filterField !== undefined ? overrides.filterField : filterField;
+      const fValue = overrides.filterValue !== undefined ? overrides.filterValue : filterValue;
+      const sTerm = overrides.searchTerm !== undefined ? overrides.searchTerm : searchTerm;
+
       let url = `/liner/sales-input/reports/?page=${page}&page_size=${size}`;
 
       // Optional query params for filtering
-      if (pendingWith !== 'all') url += `&pending_with=${pendingWith}`;
-      if (filterField !== 'none' && filterValue) {
-        url += `&${filterField}=${encodeURIComponent(filterValue)}`;
+      if (pWith !== 'all') url += `&pending_with=${pWith}`;
+      if (fField !== 'none' && fValue) {
+        url += `&${fField}=${encodeURIComponent(fValue)}`;
       }
-      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+      if (sTerm) url += `&search=${encodeURIComponent(sTerm)}`;
 
       const response = await apiClient.get(url);
       if (response.data.status === "success") {
@@ -121,7 +127,10 @@ const ExportReport = () => {
               <Button
                 icon={<Icon icon="cil:search" />}
                 type="primary"
-                onClick={() => fetchData(1, pageSize)}
+                onClick={() => {
+                  setCurrentPage(1);
+                  fetchData(1, pageSize);
+                }}
               >
                 Search
               </Button>
@@ -133,7 +142,13 @@ const ExportReport = () => {
                   setFilterValue("");
                   setPendingWith("all");
                   setSearchTerm("");
-                  fetchData(1, pageSize);
+                  setCurrentPage(1);
+                  fetchData(1, pageSize, {
+                    filterField: "none",
+                    filterValue: "",
+                    pendingWith: "all",
+                    searchTerm: ""
+                  });
                 }}
               >
                 Clear

@@ -985,22 +985,22 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={6}>
                       <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
+                        <Input placeholder="Enter Carrier" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="VSL/VOY" name="vessel_voyage_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
+                        <Input placeholder="Enter Vessel/Voyage" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="POL (Port of Loading)" name="pol_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
+                        <Input placeholder="Enter Port of Loading" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
-                        <Input placeholder="Enter Carrier Name" disabled={isReadOnly} />
+                        <Input placeholder="Enter Port of Discharge" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1200,7 +1200,7 @@ const SalesInput = () => {
                   <Col xs={24} md={6}>
                     <Form.Item
                       className={Styles.formLabel}
-                      label="Contact Details"
+                      label="Phone"
                       name="phone_no"
                     >
                       <Input placeholder="Phone Number" disabled={isReadOnly} />
