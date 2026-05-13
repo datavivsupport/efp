@@ -480,7 +480,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   </Form.Item>
                 </Col> */}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input placeholder="Contact PIC" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact Details" name="phone_no"><Input placeholder="Phone / Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 {isForwarding && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name"><Input placeholder="Enter Overseas Agent Name" disabled={isSalesSectionLocked} /></Form.Item></Col>}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" /></Form.Item></Col>
