@@ -1088,7 +1088,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {!stage2.isThisJobsHOD && !isCreator && !isOthers && (
+          {true && (
             <Card
               className={Styles.card}
               bordered
