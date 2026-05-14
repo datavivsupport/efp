@@ -353,8 +353,36 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   }, []);
 
   /* ── Handlers ── */
-  const getCommonPayload = (values) =>
-    buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData, includeApprovalDetails: true });
+  const getCommonPayload = (values) => {
+    // Preserve executive-uploaded files in outgoing `documents` payload.
+    const mergedAttachments = [...(attachments || []), ...(executiveDocuments || [])]
+      .filter((doc, idx, arr) => {
+        if (!doc) return false;
+        if (doc.id == null) return true;
+        return idx === arr.findIndex((d) => d?.id === doc.id);
+      });
+
+    return buildCommonPayload(
+      values,
+      {
+        releaseOrderFiles,
+        bocFiles,
+        haulageCostFiles,
+        loadListFiles,
+        lpoFiles,
+        invoiceFiles,
+        facFiles,
+        croFiles,
+        edFiles,
+        haulierNoteFiles,
+        preAlertFiles,
+        bankSlips,
+        attachments: mergedAttachments,
+        hblFiles,
+      },
+      { remarks, otherCharges, jobData, includeApprovalDetails: true }
+    );
+  };
 
   const handleAction = async (actionType, remarksVal = "") => {
     if (isDocumentUploading) {

@@ -405,6 +405,15 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
+      const executiveDocs = (initialJob?.documents || []).filter(
+        (d) => d.uploaded_by_user_name === initialJob?.name_of_executive
+      );
+      const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
+        if (!doc) return false;
+        if (doc.id == null) return true;
+        return idx === arr.findIndex((d) => d?.id === doc.id);
+      });
+
       const resolvedDocs = {
             releaseOrderFiles,
             bocFiles,
@@ -418,7 +427,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments,
+            attachments: mergedAttachments,
             hblFiles,
           };
       const payload = {
@@ -492,6 +501,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     try {
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
+        const executiveDocs = (initialJob?.documents || []).filter(
+          (d) => d.uploaded_by_user_name === initialJob?.name_of_executive
+        );
+        const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
+          if (!doc) return false;
+          if (doc.id == null) return true;
+          return idx === arr.findIndex((d) => d?.id === doc.id);
+        });
         const payload = buildCommonPayload(
           values,
           {
@@ -507,7 +524,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments,
+            attachments: mergedAttachments,
             hblFiles,
           },
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }

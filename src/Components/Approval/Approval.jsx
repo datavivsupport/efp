@@ -540,16 +540,37 @@ const Approval = () => {
   };
 
   /* ── Handlers ── */
-  const getCommonPayload = (values, includeApprovalDetails = true) =>
-    buildCommonPayload(
+  const getCommonPayload = (values, includeApprovalDetails = true) => {
+    const executiveDocs = (jobData?.documents || []).filter(
+      (d) => d.uploaded_by_user_name === jobData?.name_of_executive
+    );
+    const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
+      if (!doc) return false;
+      if (doc.id == null) return true;
+      return idx === arr.findIndex((d) => d?.id === doc.id);
+    });
+
+    return buildCommonPayload(
       values,
       {
-        releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles,
-        lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
-        haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
+        releaseOrderFiles,
+        bocFiles,
+        haulageCostFiles,
+        loadListFiles,
+        lpoFiles,
+        invoiceFiles,
+        facFiles,
+        croFiles,
+        edFiles,
+        haulierNoteFiles,
+        preAlertFiles,
+        bankSlips,
+        attachments: mergedAttachments,
+        hblFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails }
     );
+  };
 
   const handleAction = async (actionType, remarksVal = "") => {
     if (isDocumentUploading) {
