@@ -199,6 +199,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const { isAdmin, isCS } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
   const canEditBookingTechnical = isAdmin && isCS;
+  const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
 
   const [loading, setLoading]           = useState(false);
@@ -600,7 +601,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
