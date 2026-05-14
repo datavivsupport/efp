@@ -50,7 +50,16 @@ export const mapJobToFormValues = (data) => ({
   invoice_date:   data.invoice_date ? dayjs(data.invoice_date) : null,
 
   // Container rows
-  containerRows: data.container_details?.map((c) => ({
+  containerRows: [...(data.container_details || [])]
+    .sort((a, b) => {
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+      if (Number.isFinite(aId)) return -1;
+      if (Number.isFinite(bId)) return 1;
+      return 0;
+    })
+    .map((c) => ({
     id:             c.id,
     equipment_type: c.equipment_type,
     quantity:       c.quantity,
@@ -59,8 +68,17 @@ export const mapJobToFormValues = (data) => ({
     cost:           c.cost,
   })) || [{}],
 
-  // Placement rows
-  placementRows: data.transportation_rows?.map((t) => ({
+  // Placement rows (normalize order so reopened forms don't appear reversed)
+  placementRows: [...(data.transportation_rows || [])]
+    .sort((a, b) => {
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+      if (Number.isFinite(aId)) return -1;
+      if (Number.isFinite(bId)) return 1;
+      return 0;
+    })
+    .map((t) => ({
     id:               t.id,
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
@@ -124,8 +142,17 @@ const DOC_TYPE_CONFIG = [
  * @returns {object}     - one key per DOC_TYPE_CONFIG entry + `executiveDocuments` + `attachments`
  */
 export const partitionDocuments = (docs, executiveName = null) => {
+  const normalizedDocs = [...(docs || [])].sort((a, b) => {
+    const aId = Number(a?.id);
+    const bId = Number(b?.id);
+    if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+    if (Number.isFinite(aId)) return -1;
+    if (Number.isFinite(bId)) return 1;
+    return 0;
+  });
+
   const filterBy = (types, keywords) =>
-    docs.filter((d) => {
+    normalizedDocs.filter((d) => {
       const dt = d.doc_type?.toUpperCase();
       const cat = d.category?.toUpperCase();
       const fn = d.file_name?.toUpperCase();
@@ -169,7 +196,7 @@ export const partitionDocuments = (docs, executiveName = null) => {
 
   // Filter executive documents from the remaining pool
   if (executiveName) {
-    result.executiveDocuments = docs.filter(d => 
+    result.executiveDocuments = normalizedDocs.filter(d => 
       !capturedIds.has(d.id) && 
       (d.uploaded_by_user_name === executiveName || d.uploaded_by_name === executiveName)
     );
@@ -178,6 +205,6 @@ export const partitionDocuments = (docs, executiveName = null) => {
     result.executiveDocuments = [];
   }
 
-  result.attachments = docs.filter((d) => !capturedIds.has(d.id));
+  result.attachments = normalizedDocs.filter((d) => !capturedIds.has(d.id));
   return result;
 };

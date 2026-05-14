@@ -199,6 +199,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const { isAdmin, isCS } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
   const canEditBookingTechnical = isAdmin && isCS;
+  const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
 
   const [loading, setLoading]           = useState(false);
@@ -238,6 +239,20 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [rejectionLoading, setRejectionLoading] = useState(false);
   
   const throttle = useRef(false);
+  const isDocumentUploading = [
+    releaseOrderFiles,
+    bocFiles,
+    haulageCostFiles,
+    haulierNoteFiles,
+    loadListFiles,
+    lpoFiles,
+    invoiceFiles,
+    hblFiles,
+    facFiles,
+    edFiles,
+    preAlertFiles,
+    attachments,
+  ].some((files) => (files || []).some((f) => f?.pending));
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const history = [...(initialJob?.approval_history || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -368,6 +383,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (action === "Rejected") {
       // Show rejection modal instead of directly rejecting
       setRejectionModalVisible(true);
@@ -419,6 +438,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   // Handle rejection confirmation from modal
   const handleConfirmRejection = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (!rejectionRemarks.trim()) {
       message.error("Please enter rejection remarks");
       return;
@@ -450,6 +473,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleSave = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (throttle.current) return;
     throttle.current = true;
     setLoading(true);
@@ -600,7 +627,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -690,6 +717,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               onClick={handleSave}
               icon={<Icon icon="mdi:content-save-outline" />}
               loading={loading}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Save
@@ -700,6 +728,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               onClick={() => handleAction("Approved")}
               icon={<Icon icon="mdi:check-circle" />}
               loading={loading}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
             >
               Submit Documents & Approve
@@ -710,6 +739,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               onClick={() => handleAction("Rejected")}
               icon={<Icon icon="mdi:close-circle" />}
               loading={rejectionLoading}
+              disabled={isDocumentUploading || rejectionLoading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Reject
@@ -738,7 +768,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
             Cancel
           </Button>,
-          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+          <Button key="reject" danger type="primary" loading={rejectionLoading} disabled={isDocumentUploading || rejectionLoading} onClick={handleConfirmRejection}>
             Confirm Rejection
           </Button>,
         ]}

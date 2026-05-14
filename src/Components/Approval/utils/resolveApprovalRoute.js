@@ -21,6 +21,10 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
   
   if (currentStage=="1"){
+    
+      if (roles.isAccountsTeam && !isSalesHod) {
+    return `/approval/${id}/accounts`;
+  }
      return null 
   }
 

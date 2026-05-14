@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
 import { computeJobContext } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
@@ -61,6 +61,7 @@ const STATUS_COLOR = {
   Submitted: "processing",
   Draft: "default",
 };
+const UploadActivityContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -161,6 +162,7 @@ const DocUploadField = ({
   user,
   isAdmin
 }) => {
+  const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
       message.error(restrictionMessage);
@@ -180,6 +182,7 @@ const DocUploadField = ({
     formData.append('doc_type', docType);
     formData.append('category', category);
 
+    uploadActivity?.inc?.();
     try {
       const response = await apiClient.post(
         `/liner/sales-input/${salesInputId}/upload-document/`,
@@ -208,6 +211,8 @@ const DocUploadField = ({
       console.error(err);
       const errMsg = err.response?.data?.message || "Upload failed. Please check your connection.";
       message.error(errMsg);
+    } finally {
+      uploadActivity?.dec?.();
     }
     return false;
   };
@@ -286,6 +291,8 @@ const Approval = () => {
   const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(false);
   const actionThrottleRef = useRef(false);
+  const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
+  const isDocumentUploading = uploadingDocsCount > 0;
   const [jobData, setJobData] = useState(null);
   const [open, setOpen] = useState({
     export: true,
@@ -533,18 +540,43 @@ const Approval = () => {
   };
 
   /* ── Handlers ── */
-  const getCommonPayload = (values, includeApprovalDetails = true) =>
-    buildCommonPayload(
+  const getCommonPayload = (values, includeApprovalDetails = true) => {
+    const executiveDocs = (jobData?.documents || []).filter(
+      (d) => d.uploaded_by_user_name === jobData?.name_of_executive
+    );
+    const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
+      if (!doc) return false;
+      if (doc.id == null) return true;
+      return idx === arr.findIndex((d) => d?.id === doc.id);
+    });
+
+    return buildCommonPayload(
       values,
       {
-        releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles,
-        lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
-        haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
+        releaseOrderFiles,
+        bocFiles,
+        haulageCostFiles,
+        loadListFiles,
+        lpoFiles,
+        invoiceFiles,
+        facFiles,
+        croFiles,
+        edFiles,
+        haulierNoteFiles,
+        preAlertFiles,
+        bankSlips,
+        attachments: mergedAttachments,
+        hblFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails }
     );
+  };
 
   const handleAction = async (actionType, remarksVal = "") => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (actionThrottleRef.current) return;
     actionThrottleRef.current = true;
     setLoading(true);
@@ -597,6 +629,10 @@ const Approval = () => {
   };
 
   const onFinish = async (values) => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (actionThrottleRef.current) return;
     actionThrottleRef.current = true;
     setLoading(true);
@@ -698,6 +734,12 @@ const Approval = () => {
   /* RENDER */
   return (
     <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
+      <UploadActivityContext.Provider
+        value={{
+          inc: () => setUploadingDocsCount((prev) => prev + 1),
+          dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
+        }}
+      >
       <Spin spinning={loading}>
         <Form
           layout="vertical"
@@ -1692,6 +1734,7 @@ const Approval = () => {
           </Modal>
         </Form>
       </Spin >
+      </UploadActivityContext.Provider>
     </div >
   );
 };
