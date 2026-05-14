@@ -59,8 +59,17 @@ export const mapJobToFormValues = (data) => ({
     cost:           c.cost,
   })) || [{}],
 
-  // Placement rows
-  placementRows: data.transportation_rows?.map((t) => ({
+  // Placement rows (normalize order so reopened forms don't appear reversed)
+  placementRows: [...(data.transportation_rows || [])]
+    .sort((a, b) => {
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+      if (Number.isFinite(aId)) return -1;
+      if (Number.isFinite(bId)) return 1;
+      return 0;
+    })
+    .map((t) => ({
     id:               t.id,
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
