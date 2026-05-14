@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Form,
@@ -53,6 +53,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 const STATUS_COLOR = { Submitted: "processing", Draft: "default" };
+const UploadActivityContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -106,6 +107,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
   const debounceTimerField = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
@@ -114,6 +116,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     formData.append('file', file);
     formData.append('doc_type', docType);
     formData.append('category', category);
+    uploadActivity?.inc?.();
     setUploading(true);
     try {
       const response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -123,7 +126,10 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         message.success(`${file.name} uploaded successfully to S3`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
-    finally { setUploading(false); }
+    finally {
+      setUploading(false);
+      uploadActivity?.dec?.();
+    }
     return false;
   };
   const handleRemarkChange = (index, value) => {
@@ -226,6 +232,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
   const [rejectionRemarks, setRejectionRemarks] = useState("");
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
+  const isDocumentUploading = uploadingDocsCount > 0;
 
   /* ── Compute roles, context, locks ── */
   const {
@@ -349,6 +357,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     buildCommonPayload(values, { releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles, lpoFiles, invoiceFiles, facFiles, croFiles, edFiles, haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles }, { remarks, otherCharges, jobData, includeApprovalDetails: true });
 
   const handleAction = async (actionType, remarksVal = "") => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     // Show rejection modal instead of direct rejection
     if (actionType === "Rejected") {
       setRejectionRemarks("");
@@ -391,6 +403,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   };
 
   const handleConfirmRejection = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (!rejectionRemarks.trim()) {
       message.warning("Please enter rejection remarks");
       return;
@@ -418,6 +434,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   };
 
   const onFinish = async (values) => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (actionThrottleRef.current) return;
     actionThrottleRef.current = true;
     setLoading(true);
@@ -452,6 +472,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   ═══════════════════════════════════════════════════════════════════════ */
   return (
     <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
+      <UploadActivityContext.Provider
+        value={{
+          inc: () => setUploadingDocsCount((prev) => prev + 1),
+          dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
+        }}
+      >
       <Spin spinning={loading}>
         <Form layout="vertical" form={form} onFinish={onFinish} initialValues={{ containerRows: [{}], placementRows: [{}] }}>
 
@@ -765,10 +791,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
               {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
                 <>
-                  <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
+                  <Button type="primary" size="large" onClick={() => handleAction("Approved")} icon={<Icon icon="mdi:check-circle" />} loading={loading} disabled={isHalted || isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', backgroundColor: "#10b981", borderColor: "#10b981" }}>
                     Verify & Confirm (CS)
                   </Button>
-                  <Button danger size="large" onClick={() => handleAction("Rejected")} icon={<Icon icon="mdi:close-circle" />} loading={loading} disabled={isHalted} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                  <Button danger size="large" onClick={() => handleAction("Rejected")} icon={<Icon icon="mdi:close-circle" />} loading={loading} disabled={isHalted || isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                     Reject
                   </Button>
                 </>
@@ -782,10 +808,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {/* ════════ BOTTOM BUTTONS ════════ */}
           {!canApprove && !isMasterMode && (!isSalesSectionLocked) && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
-              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save Draft
               </Button>
-              <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Submit
               </Button>
               <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
@@ -808,7 +834,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
                 Cancel
               </Button>,
-              <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+              <Button key="reject" danger type="primary" loading={rejectionLoading} disabled={isDocumentUploading || rejectionLoading} onClick={handleConfirmRejection}>
                 Confirm Rejection
               </Button>,
             ]}
@@ -828,6 +854,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           </Modal>
         </Form>
       </Spin>
+      </UploadActivityContext.Provider>
     </div>
   );
 };

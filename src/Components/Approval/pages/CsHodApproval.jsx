@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -31,6 +31,7 @@ const STATUS_COLOR = {
   Rejected: "error",
   REJECTED: "error"
 };
+const UploadActivityContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -84,12 +85,14 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("doc_type", docType);
     formData.append("category", category);
+    uploadActivity?.inc?.();
     setUploading(true);
     try {
       const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
@@ -99,7 +102,10 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
         message.success(`${file.name} uploaded`);
       } else { message.error(res.data.message || "Upload failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
-    finally { setUploading(false); }
+    finally {
+      setUploading(false);
+      uploadActivity?.dec?.();
+    }
     return false;
   };
   const handleRemarkChange = (index, value) => {
@@ -199,6 +205,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
   const [rejectionRemarks, setRejectionRemarks] = useState("");
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
+  const isDocumentUploading = uploadingDocsCount > 0;
 
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
@@ -269,6 +277,10 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (action === "Rejected") {
       // Show rejection modal instead of directly rejecting
       setRejectionModalVisible(true);
@@ -305,6 +317,10 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
   // Handle rejection confirmation from modal
   const handleConfirmRejection = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (!rejectionRemarks.trim()) {
       message.error("Please enter rejection remarks");
       return;
@@ -336,6 +352,10 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   };
 
   const handleSave = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (throttle.current) return;
     throttle.current = true;
     setLoading(true);
@@ -385,6 +405,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
   return (
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
+      <UploadActivityContext.Provider
+        value={{
+          inc: () => setUploadingDocsCount((prev) => prev + 1),
+          dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
+        }}
+      >
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
           
@@ -627,6 +653,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               onClick={handleSave}
               icon={<Icon icon="mdi:content-save-outline" />}
               loading={loading}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Save
@@ -637,6 +664,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               onClick={() => handleAction("Approved")}
               icon={<Icon icon="mdi:check-circle" />}
               loading={loading}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
             >
               Approve (CS HOD)
@@ -647,6 +675,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               onClick={() => handleAction("Rejected")}
               icon={<Icon icon="mdi:close-circle" />}
               loading={loading}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Reject
@@ -664,6 +693,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           </div>
         </Form>
       </Spin>
+      </UploadActivityContext.Provider>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
         {previewLoading && (
           <div style={{ height: "87vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -691,7 +721,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
             Cancel
           </Button>,
-          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+          <Button key="reject" danger type="primary" loading={rejectionLoading} disabled={isDocumentUploading || rejectionLoading} onClick={handleConfirmRejection}>
             Confirm Rejection
           </Button>,
         ]}

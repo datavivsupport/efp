@@ -329,6 +329,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
     ].some(arr => arr.some(f => f.pending));
   };
+  const isDocumentUploading = hasPendingFiles();
 
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
@@ -375,6 +376,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   const handleAction = async (action) => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     // Show rejection modal instead of direct rejection
     if (action === "Rejected") {
       setRejectionRemarks("");
@@ -446,6 +451,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   const handleConfirmRejection = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (!rejectionRemarks.trim()) {
       message.warning("Please enter rejection remarks");
       return;
@@ -473,6 +482,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
 
   const handleSave = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
     if (throttle.current) return;
     throttle.current = true;
     setLoading(true);
@@ -848,6 +861,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={() => handleAction("Approved")}
                   icon={<Icon icon="mdi:check-circle" />}
                   loading={loading}
+                  disabled={isDocumentUploading || loading}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
                 >
                   Submit & Verify (CNF)
@@ -858,6 +872,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={() => handleAction("Rejected")}
                   icon={<Icon icon="mdi:close-circle" />}
                   loading={loading}
+                  disabled={isDocumentUploading || loading}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
                 >
                   Reject
@@ -867,6 +882,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={handleSave}
                   icon={<Icon icon="mdi:content-save-outline" />}
                   loading={loading}
+                  disabled={isDocumentUploading || loading}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                 >
                   Save
@@ -888,6 +904,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     onClick={handleSave}
                     icon={<Icon icon="mdi:content-save-outline" />}
                     loading={loading}
+                    disabled={isDocumentUploading || loading}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                   >
                     Save
@@ -930,7 +947,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
             Cancel
           </Button>,
-          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={handleConfirmRejection}>
+          <Button key="reject" danger type="primary" loading={rejectionLoading} disabled={isDocumentUploading || rejectionLoading} onClick={handleConfirmRejection}>
             Confirm Rejection
           </Button>,
         ]}
