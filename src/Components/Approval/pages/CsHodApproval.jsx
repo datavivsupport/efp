@@ -360,6 +360,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      const existingApprovalById = new Map(
+        (initialJob?.documents || [])
+          .filter((d) => d?.id != null)
+          .map((d) => [d.id, d.is_cs_hod_approved])
+      );
+
       const dm = (arr, docType, category) =>
         (arr || []).map(f => ({
           id: f.id,
@@ -369,6 +375,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           file_name: f.name || f.file_name,
           remarks: f.remarks || "",
           uploaded_by_user: f.uploaded_by_user,
+          // Keep already-approved docs approved; only previously-false docs remain false.
+          is_cs_hod_approved: existingApprovalById.get(f.id) === true,
         }));
       const payload = {
         general_remarks: remarks,
@@ -386,7 +394,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
           ...dm(docs.bankSlips, "Bank Slip", "financial"),
           ...dm(docs.croFiles, "CRO", "financial"),
-          ...attachments.map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+          ...attachments.map(f => ({
+            ...f,
+            doc_type: "Attachment",
+            category: "attachments",
+            is_cs_hod_approved: existingApprovalById.get(f.id) === true,
+          })),
         ],
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
