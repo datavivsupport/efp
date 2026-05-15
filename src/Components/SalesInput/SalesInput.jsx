@@ -50,7 +50,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
   return (
     <div style={{ marginTop: 8 }}>
       {files.map((file, i) => (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
+        <div key={file.id || file.file_url || `${file.name || file.file_name}-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Space>
               <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
@@ -108,6 +108,7 @@ const DocUploadField = ({
   isOthers
 }) => {
   const [uploading, setUploading] = useState(false);
+  const buildTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
       message.error(restrictionMessage);
@@ -134,7 +135,7 @@ const DocUploadField = ({
     // }
 
     if (!currentId && !isMasterMode) {
-      const tempId = `temp-${Date.now()}`;
+      const tempId = buildTempId();
 
       // ✅ Store file temporarily in memory
       setPendingFiles((prev) => [
@@ -158,6 +159,7 @@ const DocUploadField = ({
           file_name: file.name,
           doc_type: docType,
           remarks: "",
+          tempId,
           isTemp: true,
           url: tempUrl,       // ✅ add this
           file_url: tempUrl,   // optional, if your preview uses file_url
@@ -220,14 +222,14 @@ const DocUploadField = ({
     );
     setPendingFiles?.((prev) =>
       prev.map((item) =>
-        item.tempId === docId || item.file?.name === files[index]?.name
+        item.tempId === docId
           ? { ...item, remarks: value }
           : item
       )
     );
 
     // 2. Debounced sync to backend
-    if (salesInputId && docId) {
+    if (salesInputId && docId && !String(docId).startsWith("temp-")) {
       if (debounceTimerField.current) {
         clearTimeout(debounceTimerField.current);
       }
@@ -779,9 +781,9 @@ const SalesInput = () => {
               if (data.status === "success") {
                 const uploadedDoc = data.data;
 
-                setFiles((prev) =>
+                setAttachments((prev) =>
                   prev.map((f) =>
-                    f.name === item.file.name && f.isTemp
+                    (f.id === item.tempId || f.tempId === item.tempId) && f.isTemp
                       ? {
                           id: uploadedDoc.id,
                           name: uploadedDoc.file_name,
@@ -789,7 +791,8 @@ const SalesInput = () => {
                           file_name: uploadedDoc.file_name,
                           file_url: uploadedDoc.file_url,
                           doc_type: item.doc_type,
-                          remarks: item.remarks || ""
+                          remarks: item.remarks || "",
+                          isTemp: false
                         }
                       : f
                   )
@@ -1848,7 +1851,7 @@ const SalesInput = () => {
                 <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                 <DocUploadField
                   label="Attachment"
-                  files={attachments.filter(d => d.doc_type === "Attachment")}
+                  files={attachments.filter(d => (d.doc_type || "").toUpperCase() === "ATTACHMENT")}
                   setFiles={setAttachments}
                   setPendingFiles={setPendingFiles}
                   color="blue"
