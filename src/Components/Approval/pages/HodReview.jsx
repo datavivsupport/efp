@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, createContext, useContext } from "react";
+import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Form,
@@ -229,6 +229,20 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
   const isDocumentUploading = uploadingDocsCount > 0;
+  const executiveDocs = useMemo(
+    () =>
+      (jobData?.documents || [])
+        .filter((d) => d.uploaded_by_user_name === jobData?.name_of_executive)
+        .sort((a, b) => {
+          const aId = Number(a?.id);
+          const bId = Number(b?.id);
+          if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+          if (Number.isFinite(aId)) return -1;
+          if (Number.isFinite(bId)) return 1;
+          return 0;
+        }),
+    [jobData?.documents, jobData?.name_of_executive]
+  );
 
   /* ── Compute roles, context, locks ── */
   const {
@@ -321,9 +335,6 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values, includeApprovalDetails = false) => {
-    const executiveDocs = (jobData?.documents || []).filter(
-      (d) => d.uploaded_by_user_name === jobData?.name_of_executive
-    );
     const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
       if (!doc) return false;
       if (doc.id == null) return true;
@@ -585,12 +596,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
-                  {(() => {
-                    const execDocs = (jobData?.documents || []).filter(d => d.uploaded_by_user_name === jobData?.name_of_executive);
-                    return execDocs.length > 0 ? (
-                      <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    ) : null;
-                  })()}
+                  {executiveDocs.length > 0 ? (
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                  ) : null}
                 </Row>
                 <Row gutter={16}>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>

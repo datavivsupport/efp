@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, createContext, useContext } from "react";
+import { useState, useRef, useEffect, createContext, useContext, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -207,6 +207,20 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
   const isDocumentUploading = uploadingDocsCount > 0;
+  const executiveDocs = useMemo(
+    () =>
+      (initialJob?.documents || [])
+        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .sort((a, b) => {
+          const aId = Number(a?.id);
+          const bId = Number(b?.id);
+          if (Number.isFinite(aId) && Number.isFinite(bId)) return aId - bId;
+          if (Number.isFinite(aId)) return -1;
+          if (Number.isFinite(bId)) return 1;
+          return 0;
+        }),
+    [initialJob?.documents, initialJob?.name_of_executive]
+  );
 
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
@@ -489,12 +503,9 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
                 {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col> */}
-                {(() => {
-                  const execDocs = (initialJob?.documents || []).filter(d => d.uploaded_by_user_name === initialJob?.name_of_executive);
-                  return execDocs.length > 0 ? (
-                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={execDocs} disabled onPreview={(i) => openPreview(execDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                  ) : null;
-                })()}
+                {executiveDocs.length > 0 ? (
+                  <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                ) : null}
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
