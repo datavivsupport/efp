@@ -284,7 +284,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     if (!initialJob) return;
     form.setFieldsValue(mapJobToFormValues(initialJob));
-    const docs = partitionDocuments(initialJob.documents || []);
+    const docs = partitionDocuments(initialJob.documents || [], initialJob.name_of_executive);
     setLpoFiles(docs.lpoFiles);
     setInvoiceFiles(docs.invoiceFiles);
     setHblFiles(docs.hblFiles);
@@ -395,6 +395,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...(d.attachments || []).map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
     ];
   };
+  const withExecutiveDocs = (resolved) => ({
+    ...resolved,
+    attachments: [...(resolved?.attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
+      if (!doc) return false;
+      if (doc.id == null) return true;
+      return idx === arr.findIndex((d) => d?.id === doc.id);
+    }),
+  });
 
   const handleAction = async (action) => {
     if (isDocumentUploading) {
@@ -439,7 +447,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_latest_eta: form.getFieldValue("vsl_latest_eta") ? form.getFieldValue("vsl_latest_eta").format("YYYY-MM-DD") : null,
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
-        documents: buildDocPayload(resolved),
+        documents: buildDocPayload(withExecutiveDocs(resolved)),
       };
 
       const endpoint = `/liner/sales-input/${id}/approve/`;
@@ -507,7 +515,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_latest_eta: form.getFieldValue("vsl_latest_eta") ? form.getFieldValue("vsl_latest_eta").format("YYYY-MM-DD") : null,
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
-        documents: buildDocPayload(resolved),
+        documents: buildDocPayload(withExecutiveDocs(resolved)),
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
