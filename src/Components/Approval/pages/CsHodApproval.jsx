@@ -237,7 +237,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     if (!initialJob) return;
     form.setFieldsValue(mapJobToFormValues(initialJob));
-    const buckets = partitionDocuments(initialJob.documents || []);
+    const buckets = partitionDocuments(initialJob.documents || [], initialJob.name_of_executive);
     setDocs(buckets);
     setAttachments(buckets.attachments || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
@@ -267,6 +267,13 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       })(),
     });
   }, [initialJob, form, ad]);
+
+  const withExecutiveDocs = (files) =>
+    [...(files || []), ...executiveDocs].filter((doc, idx, arr) => {
+      if (!doc) return false;
+      if (doc.id == null) return true;
+      return idx === arr.findIndex((d) => d?.id === doc.id);
+    });
 
   const openPreview = (filesArray, idx = 0) => {
     if (!filesArray?.length) return;
@@ -408,7 +415,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
           ...dm(docs.bankSlips, "Bank Slip", "financial"),
           ...dm(docs.croFiles, "CRO", "financial"),
-          ...attachments.map(f => ({
+          ...withExecutiveDocs(attachments).map(f => ({
             ...f,
             doc_type: "Attachment",
             category: "attachments",
