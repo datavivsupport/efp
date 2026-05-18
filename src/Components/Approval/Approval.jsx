@@ -1143,7 +1143,7 @@ const Approval = () => {
           )}
 
           {/* ════════ BOOKING DETAILS ════════ */}
-          {true && (
+          {!isOthers && (
             <Card
               className={Styles.card}
               bordered

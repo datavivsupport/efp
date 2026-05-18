@@ -92,17 +92,12 @@ const AccountsDashboard = () => {
       title: "Action",
       key: "action",
       render: (_, record) => (
-        <Button 
-          type="primary" 
-          size="small" 
+        <Button
+          type="primary"
+          size="small"
           onClick={(e) => {
-            if(record.current_stage !== "6") {
-              window.open(`/approval?id=${record.id}`, "_blank");
-              e.stopPropagation();
-              return;
-            }
-            window.open(`/approval/${record.id}/accounts`, "_blank");
             e.stopPropagation();
+            window.open(`/approval/${record.id}/accounts`, "_blank");
           }}
         >
           Open Accounts
@@ -134,13 +129,7 @@ const AccountsDashboard = () => {
             }}
             onRow={(record) => ({
               onClick: () => {
-                 if(record.current_stage !== "6") {
-                   window.open(`/approval?id=${record.id}`, "_blank");
-                   e.stopPropagation();
-              return;
-            }
-            window.open(`/approval/${record.id}/accounts`, "_blank");
-            e.stopPropagation();
+                window.open(`/approval/${record.id}/accounts`, "_blank");
               },
               style: { cursor: "pointer" },
             })}
