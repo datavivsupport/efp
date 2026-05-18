@@ -902,6 +902,16 @@ const Approval = () => {
                   </Col>
                 </Row>
                 <Row gutter={16}>
+                  <Col xs={24} md={8}>
+                    <Form.Item label="Export / Import" name="is_export" className={Styles.formLabel}>
+                      <Radio.Group disabled={isSalesSectionLocked} buttonStyle="solid">
+                        <Radio.Button value={true}>Export</Radio.Button>
+                        <Radio.Button value={false}>Import</Radio.Button>
+                      </Radio.Group>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
                       <DocUploadField label="Freight Manifest" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />

@@ -38,6 +38,7 @@ export const mapJobToFormValues = (data) => ({
   pol_remarks:             data.pol_remarks,
   name_of_executive:       data.name_of_executive,
   pod_remarks:             data.pod_remarks,
+  is_export:               data.is_export ?? null,
 
   // ETA fields
   vsl_initial_eta: data.vsl_initial_eta ? dayjs(data.vsl_initial_eta) : null,
