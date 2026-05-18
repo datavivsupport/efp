@@ -517,7 +517,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
                 <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>FAC</span></Checkbox></Form.Item></Col>
+                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
               </Row>
@@ -601,7 +601,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   { label: 'LPO',       files: docs?.lpoFiles || [] },
                   { label: 'INVOICE',   files: docs?.invoiceFiles || [] },
                   { label: 'HBL',       files: docs?.hblFiles || [] },
-                  { label: 'FAC',       files: docs?.facFiles || [] },
+                  { label: 'HCS',       files: docs?.facFiles || [] },
                   { label: 'Pre-Alert', files: docs?.preAlertFiles || [] },
                 ].map(({ label, files }) => (
                   <Col key={label} xs={24} md={8}>

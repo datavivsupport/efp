@@ -1519,7 +1519,7 @@ const SalesInput = () => {
                         }))
                       }
                     >
-                      FAC
+                      HCS
                     </Checkbox>
                   </Col>
                   <Col xs={24} md={6}>

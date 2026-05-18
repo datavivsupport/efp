@@ -124,13 +124,20 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
 
 /* ── Read-only File View ── */
 const FileListView = ({ files, onPreview }) => (
-  <Space wrap>
+  <div>
     {files.length > 0 ? files.map((f, i) => (
-      <Button key={i} type="link" size="small" icon={<Icon icon="mdi:file-document-outline" />} onClick={() => onPreview(files, i)}>
-        {f.name || f.file_name}
-      </Button>
+      <div key={i} style={{ marginBottom: 6, padding: '6px 8px', border: '1px solid #f0f0f0', borderRadius: 4, backgroundColor: '#fafafa' }}>
+        <Button type="link" size="small" icon={<Icon icon="mdi:file-document-outline" />} style={{ padding: 0 }} onClick={() => onPreview(files, i)}>
+          {f.name || f.file_name}
+        </Button>
+        {f.remarks ? (
+          <Typography.Text type="secondary" italic style={{ display: 'block', fontSize: 12, paddingLeft: 4, marginTop: 2 }}>
+            {f.remarks}
+          </Typography.Text>
+        ) : null}
+      </div>
     )) : <Typography.Text type="secondary" italic>No files</Typography.Text>}
-  </Space>
+  </div>
 );
 
 const AccountsUpdatePage = ({ jobData, user }) => {

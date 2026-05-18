@@ -635,7 +635,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </Row>
                 <Row gutter={16}>
                   {!isLiner && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
-                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>FAC</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
                 </Row>
@@ -748,7 +748,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice, message: "Required" }]}><Select placeholder="Select CS HOD" allowClear showSearch optionFilterProp="label" options={csHodOptions} disabled={isCSUploadLocked || isMasterMode} /></Form.Item></Col>
                   )}
                   {facFlag && (
-                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="FAC"><DocUploadField label="FAC" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
+                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HCS"><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
                   )}
                   {(documentationFlag || isLiner || isForwarding || isCrossTrade) && (
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="Pre-Alert"><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
