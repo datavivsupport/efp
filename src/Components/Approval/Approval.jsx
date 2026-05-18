@@ -695,12 +695,12 @@ const Approval = () => {
   /* ── Table columns ── */
   const approvalColumns = [
     { title: "Stage", dataIndex: "stage", key: "stage" },
-    {
+    ...(!isOthers ? [{
       title: "Pending With",
       dataIndex: "pending_with",
       key: "pending_with",
       render: (pw) => pw || "N/A"
-    },
+    }] : []),
     {
       title: "Updated By",
       dataIndex: "updated_by_user_name",
@@ -787,6 +787,13 @@ const Approval = () => {
           >
             <div style={{ display: open.export ? "block" : "none" }}>
               <Row gutter={16}>
+                {isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Job Type">
+                      <Input readOnly variant="filled" value={jobData?.job_type || ""} />
+                    </Form.Item>
+                  </Col>
+                )}
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Export Number" name="export_number">
                     <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
@@ -797,11 +804,13 @@ const Approval = () => {
                     <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}>
-                    <Input placeholder="Customer Name" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
+                {!isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}>
+                      <Input placeholder="Customer Name" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
                 {!isOthers && (
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name">
@@ -809,48 +818,34 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                 )}
-
-                {/* <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Job No (AFSYS)" name="afsys_job_no">
-                    <Input placeholder="Job No" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Booking Ref No" name="booking_ref_no">
-                    <Input placeholder="Booking Ref" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col> */}
-                {/* <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Status">
-                    <Tag
-                      color={STATUS_COLOR[jobData?.status] || STATUS_COLOR[jobData?.status?.toLowerCase()] || "default"}
-                      style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}
-                    >
-                      {(jobData?.status || "Draft").toUpperCase()}
-                    </Tag>
-                  </Form.Item>
-                </Col> */}
-
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
-                    <Input placeholder="Contact PIC" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Phone" name="phone_no">
-                    <Input placeholder="Phone" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Email" name="email">
-                    <Input placeholder="Email" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Commodity" name="commodity">
-                    <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
+                {!isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
+                      <Input placeholder="Contact PIC" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
+                {!isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Phone" name="phone_no">
+                      <Input placeholder="Phone" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
+                {!isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Email" name="email">
+                      <Input placeholder="Email" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
+                {!isOthers && (
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Commodity" name="commodity">
+                      <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
+                )}
                 {isForwarding && (
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name">
