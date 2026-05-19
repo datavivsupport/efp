@@ -88,6 +88,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     overseas_agent_name: values.overseas_agent_name,
     name_of_executive: values.name_of_executive,
     special_instructions: values.special_instructions,
+    is_export: values.is_export ?? null,
     fac: values.fac,
     hbl: values.hbl,
     cs_hod: values.cs_hod,

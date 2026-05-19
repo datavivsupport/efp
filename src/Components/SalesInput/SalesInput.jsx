@@ -8,6 +8,7 @@ import {
   Col,
   Select,
   Checkbox,
+  Radio,
   DatePicker,
   Space,
   Typography,
@@ -547,6 +548,7 @@ const SalesInput = () => {
             created_by_name: data.created_by_name || "",
             lpo_required: data.approval_details?.lpo_required ?? true,
             release_order_required: data.approval_details?.release_order_required ?? true,
+            is_export: data.is_export ?? null,
           });
 
           setRemarks(data.general_remarks || []);
@@ -692,6 +694,7 @@ const SalesInput = () => {
       vessel_voyage_remarks: values?.vessel_voyage_remarks || "",
       pol_remarks: values?.pol_remarks || "",
       pod_remarks: values?.pod_remarks || "",
+      is_export: values?.is_export ?? null,
       port_of_loading: values?.port_of_loading || "",
       port_of_discharge: values?.port_of_discharge || "",
       final_pod: values?.final_pod || "",
@@ -1004,6 +1007,16 @@ const SalesInput = () => {
                     <Col xs={24} md={6}>
                       <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
                         <Input placeholder="Enter Port of Discharge" disabled={isReadOnly} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col xs={24} md={8}>
+                      <Form.Item label="Export / Import" name="is_export" className={Styles.formLabel}>
+                        <Radio.Group disabled={isReadOnly} buttonStyle="solid">
+                          <Radio.Button value={true}>Export</Radio.Button>
+                          <Radio.Button value={false}>Import</Radio.Button>
+                        </Radio.Group>
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1519,7 +1532,7 @@ const SalesInput = () => {
                         }))
                       }
                     >
-                      FAC
+                      HCS
                     </Checkbox>
                   </Col>
                   <Col xs={24} md={6}>
