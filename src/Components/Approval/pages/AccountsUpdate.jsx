@@ -39,7 +39,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
           {canEditFile ? (
             <Input size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} className={Styles.remarkInput} style={{ marginTop: '2px', padding: "7px" }} />
           ) : (
-            file.remarks && <Typography.Text type="secondary" italic className={Styles.remarkText} style={{ paddingLeft: '4px' }}>{file.remarks}</Typography.Text>
+            file.remarks && <Typography.Text className={Styles.remarkText}>{file.remarks}</Typography.Text>
           )}
         </div>
       );
@@ -131,7 +131,7 @@ const FileListView = ({ files, onPreview }) => (
           {f.name || f.file_name}
         </Button>
         {f.remarks ? (
-          <Typography.Text type="secondary" italic style={{ display: 'block', fontSize: 12, paddingLeft: 4, marginTop: 2 }}>
+          <Typography.Text className={Styles.remarkText} style={{ display: 'block', marginTop: 2 }}>
             {f.remarks}
           </Typography.Text>
         ) : null}
