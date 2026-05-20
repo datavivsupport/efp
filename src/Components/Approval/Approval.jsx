@@ -1333,7 +1333,7 @@ const Approval = () => {
             </Card>
           )}
 
-          {showDocumentUploads && !hideDocumentsAtStage2 && !isOthers && (
+          {showDocumentUploads && !hideDocumentsAtStage2 && !isOthers && !isSalesHOD && (
             <Card
               className={Styles.card}
               bordered
