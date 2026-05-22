@@ -221,6 +221,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [loadListFiles, setLoadListFiles]       = useState([]);
   const [attachments, setAttachments]           = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
 
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
@@ -299,6 +300,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setLoadListFiles(docs.loadListFiles);
     setAttachments(docs.attachments);
     setExecutiveDocuments(docs.executiveDocuments || []);
+    setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
@@ -394,7 +396,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...dm(d.facFiles, "FAC", "financial"),
       ...dm(d.edFiles, "ED", "financial"),
       ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
-      ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: "attachments" })),
+      ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: f.category || "attachments" })),
     ];
   };
   const withExecutiveDocs = (resolved) => ({

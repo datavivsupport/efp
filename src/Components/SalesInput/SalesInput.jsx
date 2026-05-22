@@ -1231,17 +1231,6 @@ const SalesInput = () => {
                       <Input placeholder="Enter Agent Name" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
-                  {isForwarding && (
-                    <Col xs={24} md={6}>
-                      <Form.Item
-                        className={Styles.formLabel}
-                        label="Overseas Agent Name"
-                        name="overseas_agent_name"
-                      >
-                        <Input placeholder="Enter Overseas Agent Name" disabled={isReadOnly} />
-                      </Form.Item>
-                    </Col>
-                  )}
                 </Row>
               </div>
             </Card>
@@ -1870,7 +1859,7 @@ const SalesInput = () => {
                   color="blue"
                   onPreview={openPreview}
                   salesInputId={id}
-                  category="attachments"
+                  category="Sales Executive"
                   docType="Sales Executive"
                   user={user}
                   isAdmin={isAdmin}

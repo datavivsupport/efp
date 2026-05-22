@@ -198,6 +198,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     : otherChargesRemarks || "";
   const [attachments, setAttachments]           = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
@@ -242,6 +243,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setDocs(buckets);
     setAttachments(buckets.attachments || []);
     setExecutiveDocuments(buckets.executiveDocuments || []);
+    setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
@@ -420,7 +422,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...withExecutiveDocs(attachments).map(f => ({
             ...f,
             doc_type: f.doc_type || "Attachment",
-            category: "attachments",
+            category: f.category || "attachments",
             is_cs_hod_approved: existingApprovalById.get(f.id) === true,
           })),
         ],

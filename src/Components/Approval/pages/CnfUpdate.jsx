@@ -230,6 +230,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [bankSlips, setBankSlips]                 = useState([]);
   const [attachments, setAttachments]             = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
@@ -291,6 +292,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setBankSlips(docs.bankSlips);
       setAttachments(docs.attachments);
       setExecutiveDocuments(docs.executiveDocuments || []);
+      setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
     }
 
     // Try to get other_charges from approval_details, then fall back to ad.other_charges or empty array
@@ -421,11 +423,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
-      const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-        if (!doc) return false;
-        if (doc.id == null) return true;
-        return idx === arr.findIndex((d) => d?.id === doc.id);
-      });
 
       const resolvedDocs = {
             releaseOrderFiles,
@@ -440,8 +437,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments: mergedAttachments,
+            attachments,
             hblFiles,
+            salesExecutiveFiles,
           };
       const payload = {
         ...buildCommonPayload(
@@ -514,11 +512,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     try {
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
-        const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-          if (!doc) return false;
-          if (doc.id == null) return true;
-          return idx === arr.findIndex((d) => d?.id === doc.id);
-        });
         const payload = buildCommonPayload(
           values,
           {
@@ -534,8 +527,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments: mergedAttachments,
+            attachments,
             hblFiles,
+            salesExecutiveFiles,
           },
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }
         );

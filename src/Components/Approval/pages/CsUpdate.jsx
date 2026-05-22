@@ -221,6 +221,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
@@ -336,7 +337,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
-      setExecutiveDocuments(buckets.executiveDocuments);
+      setExecutiveDocuments(buckets.executiveDocuments || []);
+      setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);
@@ -354,14 +356,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values) => {
-    // Preserve executive-uploaded files in outgoing `documents` payload.
-    const mergedAttachments = [...(attachments || []), ...(executiveDocuments || [])]
-      .filter((doc, idx, arr) => {
-        if (!doc) return false;
-        if (doc.id == null) return true;
-        return idx === arr.findIndex((d) => d?.id === doc.id);
-      });
-
     return buildCommonPayload(
       values,
       {
@@ -377,8 +371,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         haulierNoteFiles,
         preAlertFiles,
         bankSlips,
-        attachments: mergedAttachments,
+        attachments,
         hblFiles,
+        salesExecutiveFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails: true }
     );
@@ -625,8 +620,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
-                  {executiveDocuments.length > 0 && (
-                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocuments} disabled onPreview={(i) => openPreview(executiveDocuments, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
+                  {salesExecutiveFiles.length > 0 && (
+                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                   )}
                 </Row>
                 <Row gutter={16}>

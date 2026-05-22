@@ -153,6 +153,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
 
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -175,6 +176,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setPreAlertFiles(docs.preAlertFiles);
       setEdFiles(docs.edFiles);
       setExecutiveDocuments(docs.executiveDocuments || []);
+      setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,

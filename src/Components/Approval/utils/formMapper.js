@@ -132,6 +132,7 @@ const DOC_TYPE_CONFIG = [
   { key: "hblFiles",          types: ["HBL"],                                        keywords: ["HBL"] },
   { key: "preAlertFiles",     types: ["PRE-ALERT", "PRE ALERT", "PREALERT"],         keywords: ["PRE_ALERT", "PREALERT"] },
   { key: "otherDocsFiles",    types: ["OTHER DOCS", "OTHER"],                        keywords: ["OTHER_DOCS", "OTHER"] },
+  { key: "salesExecutiveFiles", types: ["SALES EXECUTIVE"],                           keywords: [] },
 ];
 
 /**
@@ -199,7 +200,7 @@ export const partitionDocuments = (docs, executiveName = null) => {
   if (executiveName) {
     result.executiveDocuments = normalizedDocs.filter(d =>
       !capturedIds.has(d.id) &&
-      (d.uploaded_by_user_name === executiveName && (String(d.stage_uploaded) === "2" && d.doc_type?.toLowerCase() === "sales executive"))
+      d.doc_type?.toLowerCase() === "sales executive"
     );
     result.executiveDocuments.forEach(d => capturedIds.add(d.id));
   } else {

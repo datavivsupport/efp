@@ -217,6 +217,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [attachments, setAttachments] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
@@ -320,6 +321,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
       setExecutiveDocuments(buckets.executiveDocuments || []);
+      setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);
@@ -337,12 +339,6 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values, includeApprovalDetails = false) => {
-    const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-      if (!doc) return false;
-      if (doc.id == null) return true;
-      return idx === arr.findIndex((d) => d?.id === doc.id);
-    });
-
     return buildCommonPayload(
       values,
       {
@@ -358,8 +354,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
         haulierNoteFiles,
         preAlertFiles,
         bankSlips,
-        attachments: mergedAttachments,
+        attachments,
         hblFiles,
+        salesExecutiveFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails }
     );
