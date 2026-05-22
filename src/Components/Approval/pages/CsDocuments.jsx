@@ -452,6 +452,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        approval_details: {
+          afsys_job_no: form.getFieldValue("afsys_job_no"),
+          booking_vessel: form.getFieldValue("booking_vessel"),
+          booking_voyage: form.getFieldValue("booking_voyage"),
+          vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
+          booking_ref_no: form.getFieldValue("booking_ref_no"),
+          ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          booking_remarks: form.getFieldValue("booking_remarks"),
+          cnf_remarks: form.getFieldValue("cnf_remarks"),
+          other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",
+        },
       };
 
       const endpoint = `/liner/sales-input/${id}/approve/`;
@@ -520,6 +533,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        approval_details: {
+          afsys_job_no: form.getFieldValue("afsys_job_no"),
+          booking_vessel: form.getFieldValue("booking_vessel"),
+          booking_voyage: form.getFieldValue("booking_voyage"),
+          vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
+          booking_ref_no: form.getFieldValue("booking_ref_no"),
+          ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          booking_remarks: form.getFieldValue("booking_remarks"),
+          cnf_remarks: form.getFieldValue("cnf_remarks"),
+          other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",
+        },
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
