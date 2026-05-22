@@ -604,9 +604,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 {[
                   { label: 'LPO',       files: docs?.lpoFiles || [] },
                   { label: 'INVOICE',   files: docs?.invoiceFiles || [] },
-                  { label: 'HBL',       files: docs?.hblFiles || [] },
-                  { label: 'HCS',       files: docs?.facFiles || [] },
-                  { label: 'Pre-Alert', files: docs?.preAlertFiles || [] },
                 ].map(({ label, files }) => (
                   <Col key={label} xs={24} md={8}>
                     <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>

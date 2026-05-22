@@ -29,7 +29,7 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
 
   // Stage 2 — CS (only if not yet updated)
-  if (currentStage === "2" && roles.isCS && !jobData?.is_cs_updated && !isSalesHod) {
+  if (currentStage === "2" && roles.isCS && !isSalesHod) {
     return `/approval/${id}/cs-update`;
   }
 

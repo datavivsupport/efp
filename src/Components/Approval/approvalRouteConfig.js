@@ -12,9 +12,9 @@
 export const APPROVAL_ROUTE_CONFIG = {
   "cs-update": {
     label: "CS Update",
-    allowedStages: ["2"],
+    allowedStages: ["2","3"],
     check: ({ roles, jobData }) =>
-      roles.isCS && !jobData?.is_cs_updated,
+      roles.isCS,
   },
 
   "hod-review": {
