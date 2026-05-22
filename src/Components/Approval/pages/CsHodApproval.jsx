@@ -419,7 +419,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...dm(docs.croFiles, "CRO", "financial"),
           ...withExecutiveDocs(attachments).map(f => ({
             ...f,
-            doc_type: "Attachment",
+            doc_type: f.doc_type || "Attachment",
             category: "attachments",
             is_cs_hod_approved: existingApprovalById.get(f.id) === true,
           })),

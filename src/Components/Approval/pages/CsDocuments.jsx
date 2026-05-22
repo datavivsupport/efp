@@ -394,7 +394,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...dm(d.facFiles, "FAC", "financial"),
       ...dm(d.edFiles, "ED", "financial"),
       ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
-      ...(d.attachments || []).map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+      ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: "attachments" })),
     ];
   };
   const withExecutiveDocs = (resolved) => ({
