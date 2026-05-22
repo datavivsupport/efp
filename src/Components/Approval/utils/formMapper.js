@@ -197,9 +197,9 @@ export const partitionDocuments = (docs, executiveName = null) => {
 
   // Filter executive documents from the remaining pool
   if (executiveName) {
-    result.executiveDocuments = normalizedDocs.filter(d => 
-      !capturedIds.has(d.id) && 
-      (d.uploaded_by_user_name === executiveName || d.uploaded_by_name === executiveName)
+    result.executiveDocuments = normalizedDocs.filter(d =>
+      !capturedIds.has(d.id) &&
+      (d.uploaded_by_user_name === executiveName && (String(d.stage_uploaded) === "2" && d.doc_type?.toLowerCase() === "sales executive"))
     );
     result.executiveDocuments.forEach(d => capturedIds.add(d.id));
   } else {

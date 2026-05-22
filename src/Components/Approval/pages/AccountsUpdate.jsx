@@ -152,7 +152,8 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [facFiles, setFacFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
-  
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -173,6 +174,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setFacFiles(docs.facFiles);
       setPreAlertFiles(docs.preAlertFiles);
       setEdFiles(docs.edFiles);
+      setExecutiveDocuments(docs.executiveDocuments || []);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,

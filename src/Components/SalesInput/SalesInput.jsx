@@ -1864,14 +1864,14 @@ const SalesInput = () => {
                 <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                 <DocUploadField
                   label="Attachment"
-                  files={attachments.filter(d => (d.doc_type || "").toUpperCase() === "ATTACHMENT")}
+                  files={attachments.filter(d => (d.doc_type || "").toUpperCase() === "SALES EXECUTIVE")}
                   setFiles={setAttachments}
                   setPendingFiles={setPendingFiles}
                   color="blue"
                   onPreview={openPreview}
                   salesInputId={id}
                   category="attachments"
-                  docType="Attachment"
+                  docType="Sales Executive"
                   user={user}
                   isAdmin={isAdmin}
                 />

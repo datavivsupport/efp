@@ -229,6 +229,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [preAlertFiles, setPreAlertFiles]         = useState([]);
   const [bankSlips, setBankSlips]                 = useState([]);
   const [attachments, setAttachments]             = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
@@ -254,7 +255,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -289,8 +290,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setPreAlertFiles(docs.preAlertFiles);
       setBankSlips(docs.bankSlips);
       setAttachments(docs.attachments);
+      setExecutiveDocuments(docs.executiveDocuments || []);
     }
-    
+
     // Try to get other_charges from approval_details, then fall back to ad.other_charges or empty array
     const charges = initialJob.approval_details?.other_charges || ad?.other_charges || [];
     setOtherCharges(charges);

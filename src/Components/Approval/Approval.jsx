@@ -326,6 +326,7 @@ const Approval = () => {
   const [attachments, setAttachments] = useState([]);
   const [otherDocsFiles, setOtherDocsFiles] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
@@ -459,7 +460,7 @@ const Approval = () => {
   const executiveDocs = useMemo(
     () =>
       (jobData?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === jobData?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -533,6 +534,7 @@ const Approval = () => {
           setPreAlertFiles(buckets.preAlertFiles);
           setOtherDocsFiles(buckets.otherDocsFiles);
           setAttachments(buckets.attachments);
+          setExecutiveDocuments(buckets.executiveDocuments || []);
         }
 
         // Map History (Sort chronologically: Sales Created first)

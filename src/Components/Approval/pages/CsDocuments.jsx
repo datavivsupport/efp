@@ -220,6 +220,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
   const [loadListFiles, setLoadListFiles]       = useState([]);
   const [attachments, setAttachments]           = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
 
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
@@ -240,7 +241,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -297,6 +298,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setHaulierNoteFiles(docs.haulierNoteFiles);
     setLoadListFiles(docs.loadListFiles);
     setAttachments(docs.attachments);
+    setExecutiveDocuments(docs.executiveDocuments || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);

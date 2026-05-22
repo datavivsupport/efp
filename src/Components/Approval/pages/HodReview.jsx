@@ -216,6 +216,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
@@ -232,7 +233,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const executiveDocs = useMemo(
     () =>
       (jobData?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === jobData?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -318,6 +319,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
+      setExecutiveDocuments(buckets.executiveDocuments || []);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);

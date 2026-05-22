@@ -197,6 +197,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     ? otherCharges.join(", ")
     : otherChargesRemarks || "";
   const [attachments, setAttachments]           = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
@@ -210,7 +211,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -240,6 +241,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     const buckets = partitionDocuments(initialJob.documents || [], initialJob.name_of_executive);
     setDocs(buckets);
     setAttachments(buckets.attachments || []);
+    setExecutiveDocuments(buckets.executiveDocuments || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
