@@ -61,7 +61,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     ...haulierNoteFiles.map((f) => ({ ...f, doc_type: "Haulage Note", category: "financial" })),
     ...preAlertFiles.map((f) => ({ ...f, doc_type: "Pre-Alert", category: "booking" })),
     ...bankSlips.map((f) => ({ ...f, doc_type: "Bank Slip", category: "financial" })),
-    ...attachments.map((f) => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+    ...attachments.map((f) => ({ ...f, doc_type: f.doc_type || "Attachment", category: "attachments" })),
     ...hblFiles.map((f) => ({ ...f, doc_type: "HBL", category: "financial" })),
   ];
 
