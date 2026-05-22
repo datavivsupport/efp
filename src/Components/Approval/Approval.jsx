@@ -1170,7 +1170,7 @@ const Approval = () => {
 
                   {/* PRD v3.2 Relocated ETA Fields */}
                   <Col xs={24} md={6}>
-                    <Form.Item label="Initial ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                    <Form.Item label="Release ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
