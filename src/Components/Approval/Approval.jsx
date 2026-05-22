@@ -848,13 +848,6 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                 )}
-                {isForwarding && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name">
-                      <Input placeholder="Enter Overseas Agent Name" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
                     <Input readOnly variant="filled" />
