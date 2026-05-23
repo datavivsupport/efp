@@ -152,7 +152,9 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [facFiles, setFacFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
-  
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
+
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -173,6 +175,8 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setFacFiles(docs.facFiles);
       setPreAlertFiles(docs.preAlertFiles);
       setEdFiles(docs.edFiles);
+      setExecutiveDocuments(docs.executiveDocuments || []);
+      setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,
@@ -185,8 +189,10 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const currentStage = String(jobData?.current_stage || "1");
   
   // Disable if stage 7 and CS HOD not approved, OR if job is rejected
-  const isDisabledAtStage7 = !jobData?.is_cs_hod_approved;
-  const isDisabled = isDisabledAtStage7 || jobData?.status?.includes("REJECTED");
+  const hasAccountsPending = (jobData?.approval_history || []).some(
+    (h) => h.pending_with?.toLowerCase().includes("accounts") && h.status === "PENDING"
+  );
+  const isDisabled = !hasAccountsPending || jobData?.status?.includes("REJECTED");
 
   // const openPreview = (files, idx) => {
   //   setPreviewUrls(files.map(f => f.url || f.file_url));

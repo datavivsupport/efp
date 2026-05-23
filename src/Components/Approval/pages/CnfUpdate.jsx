@@ -229,6 +229,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [preAlertFiles, setPreAlertFiles]         = useState([]);
   const [bankSlips, setBankSlips]                 = useState([]);
   const [attachments, setAttachments]             = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
@@ -254,7 +256,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -289,8 +291,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setPreAlertFiles(docs.preAlertFiles);
       setBankSlips(docs.bankSlips);
       setAttachments(docs.attachments);
+      setExecutiveDocuments(docs.executiveDocuments || []);
+      setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
     }
-    
+
     // Try to get other_charges from approval_details, then fall back to ad.other_charges or empty array
     const charges = initialJob.approval_details?.other_charges || ad?.other_charges || [];
     setOtherCharges(charges);
@@ -307,7 +311,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       other_charges_remarks: ad.other_charges_remarks || "",
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
@@ -419,11 +423,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
-      const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-        if (!doc) return false;
-        if (doc.id == null) return true;
-        return idx === arr.findIndex((d) => d?.id === doc.id);
-      });
 
       const resolvedDocs = {
             releaseOrderFiles,
@@ -438,8 +437,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments: mergedAttachments,
+            attachments,
             hblFiles,
+            salesExecutiveFiles,
           };
       const payload = {
         ...buildCommonPayload(
@@ -512,11 +512,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     try {
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
-        const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-          if (!doc) return false;
-          if (doc.id == null) return true;
-          return idx === arr.findIndex((d) => d?.id === doc.id);
-        });
         const payload = buildCommonPayload(
           values,
           {
@@ -532,8 +527,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             haulierNoteFiles,
             preAlertFiles,
             bankSlips,
-            attachments: mergedAttachments,
+            attachments,
             hblFiles,
+            salesExecutiveFiles,
           },
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: false }
         );
@@ -623,7 +619,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone" name="phone_no"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input disabled variant="filled" /></Form.Item></Col>
-                {isForwarding && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name"><Input disabled variant="filled" /></Form.Item></Col>}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input disabled variant="filled" /></Form.Item></Col>
               </Row>
             </div>
@@ -760,7 +755,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>

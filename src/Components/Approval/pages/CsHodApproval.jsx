@@ -197,6 +197,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     ? otherCharges.join(", ")
     : otherChargesRemarks || "";
   const [attachments, setAttachments]           = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [docs, setDocs]                         = useState({});
   const [csHodOptions, setCsHodOptions]         = useState([]);
   const throttle = useRef(false);
@@ -210,7 +212,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -240,6 +242,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     const buckets = partitionDocuments(initialJob.documents || [], initialJob.name_of_executive);
     setDocs(buckets);
     setAttachments(buckets.attachments || []);
+    setExecutiveDocuments(buckets.executiveDocuments || []);
+    setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
@@ -258,7 +262,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
       vsl_etd: initialJob.vsl_etd ? dayjs(initialJob.vsl_etd) : null,
       pod_eta: initialJob.pod_eta ? dayjs(initialJob.pod_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
@@ -417,8 +421,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...dm(docs.croFiles, "CRO", "financial"),
           ...withExecutiveDocs(attachments).map(f => ({
             ...f,
-            doc_type: "Attachment",
-            category: "attachments",
+            doc_type: f.doc_type || "Attachment",
+            category: f.category || "attachments",
             is_cs_hod_approved: existingApprovalById.get(f.id) === true,
           })),
         ],
@@ -550,7 +554,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
@@ -600,9 +604,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 {[
                   { label: 'LPO',       files: docs?.lpoFiles || [] },
                   { label: 'INVOICE',   files: docs?.invoiceFiles || [] },
-                  { label: 'HBL',       files: docs?.hblFiles || [] },
-                  { label: 'HCS',       files: docs?.facFiles || [] },
-                  { label: 'Pre-Alert', files: docs?.preAlertFiles || [] },
                 ].map(({ label, files }) => (
                   <Col key={label} xs={24} md={8}>
                     <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>

@@ -326,6 +326,8 @@ const Approval = () => {
   const [attachments, setAttachments] = useState([]);
   const [otherDocsFiles, setOtherDocsFiles] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
@@ -459,7 +461,7 @@ const Approval = () => {
   const executiveDocs = useMemo(
     () =>
       (jobData?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === jobData?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -533,6 +535,8 @@ const Approval = () => {
           setPreAlertFiles(buckets.preAlertFiles);
           setOtherDocsFiles(buckets.otherDocsFiles);
           setAttachments(buckets.attachments);
+          setExecutiveDocuments(buckets.executiveDocuments || []);
+          setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
         }
 
         // Map History (Sort chronologically: Sales Created first)
@@ -555,12 +559,6 @@ const Approval = () => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values, includeApprovalDetails = true) => {
-    const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-      if (!doc) return false;
-      if (doc.id == null) return true;
-      return idx === arr.findIndex((d) => d?.id === doc.id);
-    });
-
     return buildCommonPayload(
       values,
       {
@@ -576,8 +574,9 @@ const Approval = () => {
         haulierNoteFiles,
         preAlertFiles,
         bankSlips,
-        attachments: mergedAttachments,
+        attachments,
         hblFiles,
+        salesExecutiveFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails }
     );
@@ -843,13 +842,6 @@ const Approval = () => {
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Commodity" name="commodity">
                       <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {isForwarding && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name">
-                      <Input placeholder="Enter Overseas Agent Name" disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
                 )}
@@ -1178,7 +1170,7 @@ const Approval = () => {
 
                   {/* PRD v3.2 Relocated ETA Fields */}
                   <Col xs={24} md={6}>
-                    <Form.Item label="Initial ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                    <Form.Item label="Release ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>

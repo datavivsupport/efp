@@ -95,7 +95,7 @@ export const mapJobToFormValues = (data) => ({
   booking_voyage:  data.approval_details?.booking_voyage,
   vessel_eta:      data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
   booking_ref_no:  data.approval_details?.booking_ref_no,
-  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs(data.approval_details.ll_cut_off_datetime) : null,
+  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs(String(data.approval_details.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
   si_cut_off_date: (() => {
     const d = data.approval_details?.si_cut_off_date;
     const t = data.approval_details?.si_cut_off_time;
@@ -132,6 +132,7 @@ const DOC_TYPE_CONFIG = [
   { key: "hblFiles",          types: ["HBL"],                                        keywords: ["HBL"] },
   { key: "preAlertFiles",     types: ["PRE-ALERT", "PRE ALERT", "PREALERT"],         keywords: ["PRE_ALERT", "PREALERT"] },
   { key: "otherDocsFiles",    types: ["OTHER DOCS", "OTHER"],                        keywords: ["OTHER_DOCS", "OTHER"] },
+  { key: "salesExecutiveFiles", types: ["SALES EXECUTIVE"],                           keywords: [] },
 ];
 
 /**
@@ -197,9 +198,9 @@ export const partitionDocuments = (docs, executiveName = null) => {
 
   // Filter executive documents from the remaining pool
   if (executiveName) {
-    result.executiveDocuments = normalizedDocs.filter(d => 
-      !capturedIds.has(d.id) && 
-      (d.uploaded_by_user_name === executiveName || d.uploaded_by_name === executiveName)
+    result.executiveDocuments = normalizedDocs.filter(d =>
+      !capturedIds.has(d.id) &&
+      d.doc_type?.toLowerCase() === "sales executive"
     );
     result.executiveDocuments.forEach(d => capturedIds.add(d.id));
   } else {

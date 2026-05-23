@@ -220,6 +220,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
   const [loadListFiles, setLoadListFiles]       = useState([]);
   const [attachments, setAttachments]           = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
 
   const [remarks, setRemarks]                   = useState([]);
   const [newRemark, setNewRemark]               = useState("");
@@ -240,7 +242,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const executiveDocs = useMemo(
     () =>
       (initialJob?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === initialJob?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -297,6 +299,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setHaulierNoteFiles(docs.haulierNoteFiles);
     setLoadListFiles(docs.loadListFiles);
     setAttachments(docs.attachments);
+    setExecutiveDocuments(docs.executiveDocuments || []);
+    setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
@@ -315,7 +319,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
       vsl_etd: initialJob.vsl_etd ? dayjs(initialJob.vsl_etd) : null,
       pod_eta: initialJob.pod_eta ? dayjs(initialJob.pod_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
@@ -392,7 +396,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...dm(d.facFiles, "FAC", "financial"),
       ...dm(d.edFiles, "ED", "financial"),
       ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
-      ...(d.attachments || []).map(f => ({ ...f, doc_type: "Attachment", category: "attachments" })),
+      ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: f.category || "attachments" })),
     ];
   };
   const withExecutiveDocs = (resolved) => ({
@@ -448,6 +452,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        approval_details: {
+          afsys_job_no: form.getFieldValue("afsys_job_no"),
+          booking_vessel: form.getFieldValue("booking_vessel"),
+          booking_voyage: form.getFieldValue("booking_voyage"),
+          vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
+          booking_ref_no: form.getFieldValue("booking_ref_no"),
+          ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          booking_remarks: form.getFieldValue("booking_remarks"),
+          cnf_remarks: form.getFieldValue("cnf_remarks"),
+          other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",
+        },
       };
 
       const endpoint = `/liner/sales-input/${id}/approve/`;
@@ -516,6 +533,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        approval_details: {
+          afsys_job_no: form.getFieldValue("afsys_job_no"),
+          booking_vessel: form.getFieldValue("booking_vessel"),
+          booking_voyage: form.getFieldValue("booking_voyage"),
+          vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
+          booking_ref_no: form.getFieldValue("booking_ref_no"),
+          ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          booking_remarks: form.getFieldValue("booking_remarks"),
+          cnf_remarks: form.getFieldValue("cnf_remarks"),
+          other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",
+        },
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
@@ -635,13 +665,13 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Initial ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditEtaFields} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>

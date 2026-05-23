@@ -216,6 +216,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
+  const [executiveDocuments, setExecutiveDocuments] = useState([]);
+  const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [csHodOptions, setCsHodOptions] = useState([]);
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
@@ -232,7 +234,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const executiveDocs = useMemo(
     () =>
       (jobData?.documents || [])
-        .filter((d) => d.uploaded_by_user_name === jobData?.name_of_executive)
+        .filter((d) => d.doc_type?.toLowerCase() === "sales executive")
         .sort((a, b) => {
           const aId = Number(a?.id);
           const bId = Number(b?.id);
@@ -318,6 +320,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
       setAttachments(buckets.attachments);
+      setExecutiveDocuments(buckets.executiveDocuments || []);
+      setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     }
     const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     setApprovalHistory(sortedHistory);
@@ -335,12 +339,6 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
   /* ── Handlers ── */
   const getCommonPayload = (values, includeApprovalDetails = false) => {
-    const mergedAttachments = [...(attachments || []), ...executiveDocs].filter((doc, idx, arr) => {
-      if (!doc) return false;
-      if (doc.id == null) return true;
-      return idx === arr.findIndex((d) => d?.id === doc.id);
-    });
-
     return buildCommonPayload(
       values,
       {
@@ -356,8 +354,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
         haulierNoteFiles,
         preAlertFiles,
         bankSlips,
-        attachments: mergedAttachments,
+        attachments,
         hblFiles,
+        salesExecutiveFiles,
       },
       { remarks, otherCharges, jobData, includeApprovalDetails }
     );
@@ -510,7 +509,6 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                {isForwarding && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Overseas Agent Name" name="overseas_agent_name"><Input placeholder="Enter Overseas Agent Name" disabled={isSalesSectionLocked} /></Form.Item></Col>}
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" /></Form.Item></Col>
               </Row>
             </div>

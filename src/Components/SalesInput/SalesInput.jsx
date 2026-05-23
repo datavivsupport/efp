@@ -1231,17 +1231,6 @@ const SalesInput = () => {
                       <Input placeholder="Enter Agent Name" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
-                  {isForwarding && (
-                    <Col xs={24} md={6}>
-                      <Form.Item
-                        className={Styles.formLabel}
-                        label="Overseas Agent Name"
-                        name="overseas_agent_name"
-                      >
-                        <Input placeholder="Enter Overseas Agent Name" disabled={isReadOnly} />
-                      </Form.Item>
-                    </Col>
-                  )}
                 </Row>
               </div>
             </Card>
@@ -1864,14 +1853,14 @@ const SalesInput = () => {
                 <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                 <DocUploadField
                   label="Attachment"
-                  files={attachments.filter(d => (d.doc_type || "").toUpperCase() === "ATTACHMENT")}
+                  files={attachments.filter(d => (d.doc_type || "").toUpperCase() === "SALES EXECUTIVE")}
                   setFiles={setAttachments}
                   setPendingFiles={setPendingFiles}
                   color="blue"
                   onPreview={openPreview}
                   salesInputId={id}
-                  category="attachments"
-                  docType="Attachment"
+                  category="Sales Executive"
+                  docType="Sales Executive"
                   user={user}
                   isAdmin={isAdmin}
                 />
