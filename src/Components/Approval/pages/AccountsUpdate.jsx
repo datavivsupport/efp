@@ -443,7 +443,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
             <MultiFileViewer
               files={previewUrls.map((item) => {
                 const url = typeof item === "string" ? item : item.url || item.file_url || "";
-                const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+                const name = typeof url === "string" ? decodeURIComponent(url.split("/").pop()) : "unknown";
                 return {
                   url,
                   name,
