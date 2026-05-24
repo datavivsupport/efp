@@ -163,6 +163,7 @@ const DocUploadField = ({
   isAdmin
 }) => {
   const uploadActivity = useContext(UploadActivityContext);
+  const pendingCountRef = useRef(0);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
       message.error(restrictionMessage);
@@ -176,7 +177,11 @@ const DocUploadField = ({
       message.warning("Save the draft first before uploading documents");
       return false;
     }
-
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', docType);

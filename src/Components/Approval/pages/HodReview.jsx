@@ -105,12 +105,15 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── DocUploadField ── */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
   const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
+    if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
+    pendingCountRef.current += 1;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', docType);

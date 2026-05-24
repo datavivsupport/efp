@@ -88,9 +88,15 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
 
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
@@ -126,6 +132,8 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     } catch (err) {
       setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
       message.error(`Failed to upload ${file.name}`);
+    } finally {
+      pendingCountRef.current -= 1;
     }
     return false;
   };

@@ -109,6 +109,7 @@ const DocUploadField = ({
   isOthers
 }) => {
   const [uploading, setUploading] = useState(false);
+  const pendingCountRef = useRef(0);
   const buildTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
@@ -119,6 +120,11 @@ const DocUploadField = ({
       message.warning("Uploads are disabled in View-Only Mode");
       return false;
     }
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
 
     setUploading(true);
     // ⏳ Fake delay to make it "feel" like it's uploading
@@ -168,6 +174,7 @@ const DocUploadField = ({
         }
       ]);
 
+      pendingCountRef.current -= 1;
       setUploading(false);
       return false;
     }
@@ -205,6 +212,7 @@ const DocUploadField = ({
       console.error(err);
       // message.error("Upload failed. please check your connection.");
     } finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
     }
     return false;
