@@ -217,6 +217,7 @@ const DocUploadField = ({
       const errMsg = err.response?.data?.message || "Upload failed. Please check your connection.";
       message.error(errMsg);
     } finally {
+      pendingCountRef.current -= 1;
       uploadActivity?.dec?.();
     }
     return false;

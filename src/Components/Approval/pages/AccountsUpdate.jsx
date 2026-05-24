@@ -51,6 +51,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, disabled, user, isAdmin }) => {
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) return false;
+    if (files.length >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("doc_type", docType);

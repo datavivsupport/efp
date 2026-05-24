@@ -88,6 +88,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
 
   const handleBeforeUpload = async (file) => {
     if (!file) {
@@ -102,6 +103,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       message.error("Document type or category is missing");
       return false;
     }
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
@@ -138,6 +144,8 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
     } catch (err) {
       setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
       message.error(`Failed to upload ${file.name}`);
+    } finally {
+      pendingCountRef.current -= 1;
     }
     return false;
   };

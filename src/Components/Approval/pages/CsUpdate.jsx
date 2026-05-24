@@ -130,6 +130,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
     finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
       uploadActivity?.dec?.();
     }

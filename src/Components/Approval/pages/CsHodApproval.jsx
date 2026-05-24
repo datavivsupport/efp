@@ -106,6 +106,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       } else { message.error(res.data.message || "Upload failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
     finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
       uploadActivity?.dec?.();
     }
