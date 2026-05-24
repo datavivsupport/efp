@@ -158,24 +158,29 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           <FileChipList
             files={files}
             color={color}
-            onRemove={async (i) => {
+            onRemove={(i) => {
               const f = files[i];
               if (!f) return;
-              // If document has been uploaded to backend, call delete API
               if (f.id) {
-                const prev = files;
-                // optimistic UI update
-                setFiles((p) => p.filter((ff) => ff.id !== f.id));
-                try {
-                  await deleteDocument(salesInputId, f.id);
-                  message.success("Attachment deleted");
-                } catch (err) {
-                  // rollback on failure
-                  setFiles(prev);
-                  message.error(err.response?.data?.message || "Failed to delete attachment");
-                }
+                Modal.confirm({
+                  title: "Delete attachment?",
+                  content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                  okText: "Delete",
+                  okType: "danger",
+                  cancelText: "Cancel",
+                  onOk: async () => {
+                    const prev = files;
+                    setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                    try {
+                      await deleteDocument(salesInputId, f.id);
+                      message.success("Attachment deleted");
+                    } catch (err) {
+                      setFiles(prev);
+                      message.error(err.response?.data?.message || "Failed to delete attachment");
+                    }
+                  },
+                });
               } else {
-                // local/temp file - just remove from local state
                 setFiles((p) => p.filter((_, j) => j !== i));
               }
             }}

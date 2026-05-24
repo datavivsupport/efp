@@ -171,19 +171,28 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       {files.length > 0 && (
         <FileChipList
           files={files}
-          onRemove={async (i) => {
+          onRemove={(i) => {
             const f = files[i];
             if (!f) return;
             if (f?.id && !f.pending) {
-              const prev = files;
-              setFiles((p) => p.filter((ff) => ff.id !== f.id));
-              try {
-                await deleteDocument(salesInputId, f.id);
-                message.success("Attachment deleted");
-              } catch (err) {
-                setFiles(prev);
-                message.error(err.response?.data?.message || "Failed to delete attachment");
-              }
+              Modal.confirm({
+                title: "Delete attachment?",
+                content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                okText: "Delete",
+                okType: "danger",
+                cancelText: "Cancel",
+                onOk: async () => {
+                  const prev = files;
+                  setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                  try {
+                    await deleteDocument(salesInputId, f.id);
+                    message.success("Attachment deleted");
+                  } catch (err) {
+                    setFiles(prev);
+                    message.error(err.response?.data?.message || "Failed to delete attachment");
+                  }
+                },
+              });
             } else {
               setFiles((p) => p.filter((_, j) => j !== i));
             }

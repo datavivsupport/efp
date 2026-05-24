@@ -273,10 +273,18 @@ const DocUploadField = ({
             color={color}
             onRemove={(i) => {
               const docId = files[i]?.id;
-              if (docId) {
-                setFiles((p) => p.filter((f) => f.id !== docId));
-                setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
-              }
+              if (!docId) return;
+              Modal.confirm({
+                title: "Delete attachment?",
+                content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                okText: "Delete",
+                okType: "danger",
+                cancelText: "Cancel",
+                onOk: () => {
+                  setFiles((p) => p.filter((f) => f.id !== docId));
+                  setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                },
+              });
             }}
             onPreview={(i) => onPreview(files, i)}
             onRemarkChange={handleRemarkChange}
