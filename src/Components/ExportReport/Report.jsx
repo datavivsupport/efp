@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import apiClient from "../../api/apiclient";
 import dayjs from "dayjs";
-import { Spin, Empty, message, Tag, Select, Input, Button, DatePicker } from "antd";
+import { message, Tag, Select, Input, Button, DatePicker } from "antd";
 import CommonTable from "../Commontable/Commontable";
 import { Icon } from "@iconify/react";
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
@@ -27,13 +26,13 @@ const EMPTY_FILTERS = {
 };
 
 const ExportReport = () => {
-  const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   const [jobType, setJobType] = useState("");
   const [exportNumber, setExportNumber] = useState("");
@@ -49,67 +48,76 @@ const ExportReport = () => {
   const [fpod, setFpod] = useState("");
   const [pendingWith, setPendingWith] = useState("all");
 
-  useEffect(() => {
-    fetchData(currentPage, pageSize);
-  }, [pendingWith, currentPage, pageSize]);
+  const debounceRef = useRef(null);
 
-  const buildUrl = (page, size, overrides = {}) => {
-    const get = (key, fallback) =>
-      overrides[key] !== undefined ? overrides[key] : fallback;
-
-    const jType = get("jobType", jobType);
-    const expNo = get("exportNumber", exportNumber);
-    const cAtFrom = get("createdAtFrom", createdAtFrom);
-    const cAtTo = get("createdAtTo", createdAtTo);
-    const cBy = get("createdBy", createdBy);
-    const carr = get("carrier", carrier);
-    const custName = get("customerName", customerName);
-    const afsys = get("afsysJobNo", afsysJobNo);
-    const bkRef = get("bookingRef", bookingRef);
-    const sales = get("salesName", salesName);
-    const polVal = get("pol", pol);
-    const fpodVal = get("fpod", fpod);
-    const pWith = get("pendingWith", pendingWith);
-
+  const buildUrl = useCallback((page, size, f = {}) => {
     let url = `/liner/sales-input/reports/?page=${page}&page_size=${size}`;
-    if (pWith && pWith !== "all") url += `&pending_with=${encodeURIComponent(pWith)}`;
-    if (jType) url += `&job_type=${encodeURIComponent(jType)}`;
-    if (expNo) url += `&export_number=${encodeURIComponent(expNo)}`;
-    if (cAtFrom) url += `&created_at_gte=${dayjs(cAtFrom).format("YYYY-MM-DD")}`;
-    if (cAtTo) url += `&created_at_lte=${dayjs(cAtTo).format("YYYY-MM-DD")}`;
-    if (cBy) url += `&created_by=${encodeURIComponent(cBy)}`;
-    if (carr) url += `&carrier=${encodeURIComponent(carr)}`;
-    if (custName) url += `&customer_name=${encodeURIComponent(custName)}`;
-    if (afsys) url += `&afsys_job_no=${encodeURIComponent(afsys)}`;
-    if (bkRef) url += `&booking_ref=${encodeURIComponent(bkRef)}`;
-    if (sales) url += `&sales_name=${encodeURIComponent(sales)}`;
-    if (polVal) url += `&pol=${encodeURIComponent(polVal)}`;
-    if (fpodVal) url += `&fpod=${encodeURIComponent(fpodVal)}`;
+    if (f.pendingWith && f.pendingWith !== "all") url += `&pending_with=${encodeURIComponent(f.pendingWith)}`;
+    if (f.jobType)       url += `&job_type=${encodeURIComponent(f.jobType)}`;
+    if (f.exportNumber)  url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
+    if (f.createdAtFrom) url += `&created_at_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
+    if (f.createdAtTo)   url += `&created_at_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
+    if (f.createdBy)     url += `&created_by=${encodeURIComponent(f.createdBy)}`;
+    if (f.carrier)       url += `&carrier=${encodeURIComponent(f.carrier)}`;
+    if (f.customerName)  url += `&customer_name=${encodeURIComponent(f.customerName)}`;
+    if (f.afsysJobNo)    url += `&afsys_job_no=${encodeURIComponent(f.afsysJobNo)}`;
+    if (f.bookingRef)    url += `&booking_ref=${encodeURIComponent(f.bookingRef)}`;
+    if (f.salesName)     url += `&sales_name=${encodeURIComponent(f.salesName)}`;
+    if (f.pol)           url += `&pol=${encodeURIComponent(f.pol)}`;
+    if (f.fpod)          url += `&fpod=${encodeURIComponent(f.fpod)}`;
     return url;
-  };
+  }, []);
 
-  const fetchData = async (page = 1, size = 10, overrides = {}) => {
+  const fetchData = useCallback(async (page, size, filters) => {
     setLoading(true);
     try {
-      const url = buildUrl(page, size, overrides);
+      const url = buildUrl(page, size, filters);
       const response = await apiClient.get(url);
       if (response.data.status === "success") {
         const resultData = response.data.data.results || response.data.data || [];
         setData(resultData.map((r) => ({ ...r, key: r.id })));
         setTotal(response.data.data.count || resultData.length);
-        setCurrentPage(response.data.data.current_page || 1);
+        setCurrentPage(response.data.data.current_page || page);
         setPageSize(response.data.data.page_size || size);
       }
-    } catch (err) {
+    } catch {
       message.error("Failed to fetch export reports");
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildUrl]);
 
-  const handleSearch = () => {
-    setCurrentPage(1);
-    fetchData(1, pageSize);
+  // Auto-fetch with debounce whenever any filter changes
+  useEffect(() => {
+    const filters = {
+      jobType, exportNumber, createdAtFrom, createdAtTo,
+      createdBy, carrier, customerName, afsysJobNo,
+      bookingRef, salesName, pol, fpod, pendingWith,
+    };
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchData(1, pageSize, filters);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [
+    jobType, exportNumber, createdAtFrom, createdAtTo,
+    createdBy, carrier, customerName, afsysJobNo,
+    bookingRef, salesName, pol, fpod, pendingWith,
+  ]);
+
+  // Pagination change — fetch immediately with current filters
+  const handleTableChange = (pagination) => {
+    const { current, pageSize: ps } = pagination;
+    setCurrentPage(current);
+    setPageSize(ps);
+    fetchData(current, ps, {
+      jobType, exportNumber, createdAtFrom, createdAtTo,
+      createdBy, carrier, customerName, afsysJobNo,
+      bookingRef, salesName, pol, fpod, pendingWith,
+    });
   };
 
   const handleClear = () => {
@@ -126,15 +134,6 @@ const ExportReport = () => {
     setPol("");
     setFpod("");
     setPendingWith("all");
-    setCurrentPage(1);
-    fetchData(1, pageSize, EMPTY_FILTERS);
-  };
-
-  const handleTableChange = (pagination) => {
-    const { current, pageSize: ps } = pagination;
-    setCurrentPage(current);
-    setPageSize(ps);
-    fetchData(current, ps);
   };
 
   const labelCls = "block text-xs font-semibold text-gray-600 mb-1";
@@ -144,170 +143,139 @@ const ExportReport = () => {
     <div className="px-4 py-4" style={{ maxWidth: "100%" }}>
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
         {/* Header */}
-        <div style={{ backgroundColor: "#1b9cac" }} className="px-6 py-3 flex gap-4">
+        <div style={{ backgroundColor: "#1b9cac" }} className="px-6 py-3 flex gap-4 items-center">
           <h3 className="text-xl font-bold text-white">EXPORT REPORT</h3>
           <p className="text-white/70 text-sm mt-1">Export forwarding status overview</p>
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Filters */}
-          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-            <p className="text-sm font-bold text-gray-700 mb-3">Filters</p>
 
-            {/* Row 1 */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px 16px", marginBottom: 12 }}>
-              <div className={colCls}>
-                <label className={labelCls}>Job Type</label>
-                <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear className="w-full">
-                  <Option value="LINER">LINER</Option>
-                  <Option value="FORWARDING">FORWARDING</Option>
-                  <Option value="OTHERS">OTHERS</Option>
-                </Select>
-              </div>
+          {/* Always-visible default filters + toggle */}
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
 
-              <div className={colCls}>
-                <label className={labelCls}>Export No (DMS)</label>
-                <Input
-                  placeholder="e.g. EXP-FWD-001"
-                  value={exportNumber}
-                  onChange={(e) => setExportNumber(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Created By</label>
-                <Input
-                  placeholder="Name"
-                  value={createdBy}
-                  onChange={(e) => setCreatedBy(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Carrier</label>
-                <Input
-                  placeholder="e.g. Maersk"
-                  value={carrier}
-                  onChange={(e) => setCarrier(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Customer Name</label>
-                <Input
-                  placeholder="e.g. ABC Corp"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Afsys Job No.</label>
-                <Input
-                  placeholder="e.g. AF123"
-                  value={afsysJobNo}
-                  onChange={(e) => setAfsysJobNo(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Booking Ref #</label>
-                <Input
-                  placeholder="e.g. BK001"
-                  value={bookingRef}
-                  onChange={(e) => setBookingRef(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Sales Name</label>
-                <Input
-                  placeholder="e.g. Jane"
-                  value={salesName}
-                  onChange={(e) => setSalesName(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>POL</label>
-                <Input
-                  placeholder="e.g. Dubai"
-                  value={pol}
-                  onChange={(e) => setPol(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>FPOD</label>
-                <Input
-                  placeholder="e.g. Singapore"
-                  value={fpod}
-                  onChange={(e) => setFpod(e.target.value)}
-                  onPressEnter={handleSearch}
-                />
-              </div>
-
-              <div className={colCls}>
-                <label className={labelCls}>Pending With</label>
-                <Select value={pendingWith} onChange={setPendingWith} className="w-full">
-                  <Option value="all">All</Option>
-                  <Option value="SALES HOD">Sales HOD</Option>
-                  <Option value="CS">CS Team</Option>
-                  <Option value="CNF">CNF Team</Option>
-                  <Option value="CS HOD">CS HOD</Option>
-                  <Option value="ACCOUNTS">Accounts</Option>
-                  <Option value="WORKFLOW COMPLETED">Workflow Completed</Option>
-                </Select>
-              </div>
+            {/* Default filter 1 — Pending With */}
+            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+              <label className={labelCls}>Pending With</label>
+              <Select value={pendingWith} onChange={setPendingWith} style={{ width: "100%" }}>
+                <Option value="all">All</Option>
+                <Option value="SALES HOD">Sales HOD</Option>
+                <Option value="CS">CS Team</Option>
+                <Option value="CNF">CNF Team</Option>
+                <Option value="CS HOD">CS HOD</Option>
+                <Option value="ACCOUNTS">Accounts</Option>
+                <Option value="WORKFLOW COMPLETED">Workflow Completed</Option>
+              </Select>
             </div>
 
-            {/* Row 2 — date range + actions */}
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div className={colCls}>
-                <label className={labelCls}>Created Date (From)</label>
-                <DatePicker
-                  value={createdAtFrom}
-                  onChange={setCreatedAtFrom}
-                  format="DD-MM-YYYY"
-                  placeholder="From date"
-                  style={{ width: 160 }}
-                />
-              </div>
+            {/* Default filter 2 — Customer Name */}
+            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+              <label className={labelCls}>Customer Name</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+            </div>
 
-              <div className={colCls}>
-                <label className={labelCls}>Created Date (To)</label>
-                <DatePicker
-                  value={createdAtTo}
-                  onChange={setCreatedAtTo}
-                  format="DD-MM-YYYY"
-                  placeholder="To date"
-                  style={{ width: 160 }}
-                />
-              </div>
+            {/* Default filter 3 — Carrier */}
+            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+              <label className={labelCls}>Carrier</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+            </div>
 
-              <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+            {/* Default filter 4 — Export No */}
+            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+              <label className={labelCls}>Export No (DMS)</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
+            </div>
+
+            {/* More filters toggle */}
+            <div className={colCls} style={{ flexShrink: 0 }}>
+              <label className={labelCls} style={{ visibility: "hidden" }}>.</label>
+              <div style={{ display: "flex", gap: 8 }}>
                 <Button
-                  icon={<Icon icon="cil:search" />}
-                  type="primary"
-                  onClick={handleSearch}
-                  style={{ backgroundColor: "#1b9cac", borderColor: "#1b9cac" }}
+                  type={filtersExpanded ? "primary" : "default"}
+                  onClick={() => setFiltersExpanded((p) => !p)}
+                  icon={<Icon icon={filtersExpanded ? "mdi:tune-vertical" : "mdi:tune"} width="16" height="16" />}
                 >
-                  Search
+                  {(() => {
+                    const extra = [jobType, createdAtFrom, createdAtTo, createdBy,
+                      afsysJobNo, bookingRef, salesName, pol, fpod].filter(Boolean).length;
+                    return extra > 0 ? (
+                      <span style={{
+                        marginLeft: 4, background: "#1b9cac", color: "#fff",
+                        borderRadius: 10, padding: "0px 6px", fontSize: 11, fontWeight: 700,
+                      }}>{extra}</span>
+                    ) : null;
+                  })()}
                 </Button>
-                <Button icon={<Icon icon="pajamas:clear" />} onClick={handleClear}>
-                  Clear
-                </Button>
+
+                {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
+                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all") && (
+                  <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
+                    Clear
+                  </Button>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Collapsible extra filters */}
+          {filtersExpanded && (
+            <div style={{
+              padding: "10px", background: "#fafafa", borderRadius: "8px",
+              border: "1px solid #f0f0f0", width: "100%",
+            }}>
+              <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", flexWrap: "wrap" }}>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>Job Type</label>
+                  <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
+                    <Option value="LINER">LINER</Option>
+                    <Option value="FORWARDING">FORWARDING</Option>
+                    <Option value="OTHERS">OTHERS</Option>
+                  </Select>
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>Created By</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>Afsys Job No.</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>Booking Ref #</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>Sales Name</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>POL</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={pol} onChange={(e) => setPol(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                  <label className={labelCls}>FPOD</label>
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={fpod} onChange={(e) => setFpod(e.target.value)} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
+                  <label className={labelCls}>Created Date (From)</label>
+                  <DatePicker value={createdAtFrom} onChange={setCreatedAtFrom} format="DD-MM-YYYY" placeholder="From date" style={{ width: "100%" }} />
+                </div>
+
+                <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
+                  <label className={labelCls}>Created Date (To)</label>
+                  <DatePicker value={createdAtTo} onChange={setCreatedAtTo} format="DD-MM-YYYY" placeholder="To date" style={{ width: "100%" }} />
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* Table */}
           <section>
@@ -321,12 +289,17 @@ const ExportReport = () => {
             <CommonTable
               columns={[
                 { title: "Export No", dataIndex: "export_number", key: "export_number", render: (v) => <span style={{ fontWeight: 600, color: "#0d9488" }}>{v || "N/A (Draft)"}</span> },
+                { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (v) => v ? <Tag color="geekblue">{v}</Tag> : "-" },
                 { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "-" },
                 { title: "Created By", dataIndex: "created_by_name", key: "created_by_name", render: (v) => v || "-" },
-                { title: "Carrier", dataIndex: "carrier_name", key: "carrier_name", render: (text) => text || "-" },
-                { title: "Customer", dataIndex: "customer_name", key: "customer_name", render: (text) => text || "-" },
+                { title: "Carrier", dataIndex: "carrier_name", key: "carrier_name", render: (v) => v || "-" },
+                { title: "Customer", dataIndex: "customer_name", key: "customer_name", render: (v) => v || "-" },
+                { title: "POL", dataIndex: "port_of_loading", key: "port_of_loading", render: (v) => v || "-" },
+                { title: "FPOD", dataIndex: "final_pod", key: "final_pod", render: (v) => v || "-" },
+                { title: "Vessel / Voyage", dataIndex: "vessel_voyage", key: "vessel_voyage", render: (v) => v || "-" },
                 { title: "Job No (AFSYS)", dataIndex: "afsys_job_no", key: "afsys_job_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
                 { title: "Booking Ref", dataIndex: "booking_ref_no", key: "booking_ref_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
+                { title: "Sales HOD", dataIndex: "sales_hod", key: "sales_hod", render: (v) => v || "-" },
                 { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (v) => <Tag color="blue">{v || "-"}</Tag> },
                 {
                   title: "Status", dataIndex: "status", key: "status",
@@ -338,6 +311,7 @@ const ExportReport = () => {
                 },
               ]}
               data={data}
+              loading={loading}
               yescomp
               page={currentPage}
               total={total}
