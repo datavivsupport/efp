@@ -4,6 +4,7 @@ import { Worker, Viewer } from "@react-pdf-viewer/core";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+import "@react-pdf-viewer/thumbnail/lib/styles/index.css";
 import { Icon } from "@iconify/react";
 import { Tooltip } from "antd";
 import ExcelOnlineEditor from "./ExcelOnlineEditor";
@@ -27,24 +28,21 @@ const IconButton = ({ icon, onClick, title }) => (
   </Tooltip>
 );
 
+// Isolated so its useMemo never conflicts with the parent's hook tree.
+// key={url} on the caller forces a full remount when the file changes.
+const PdfPane = ({ fileUrl, onClose }) => {
+  const pluginInstance = useMemo(() => defaultLayoutPlugin(), []);
+  return (
+    <Worker workerUrl="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js">
+      <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
+        <Viewer fileUrl={fileUrl} plugins={[pluginInstance]} theme="dark" defaultScale={1} />
+      </div>
+    </Worker>
+  );
+};
+
+// Zero hooks — pure switch on file category.
 const UniversalEmbedViewer = ({ url, type, fileName, readOnly, onClose, onSave }) => {
-  const [pdfError, setPdfError] = React.useState(false);
-
-  const defaultLayoutPluginInstance = useMemo(() =>
-    defaultLayoutPlugin({
-      sidebarTabs: (defaultTabs) => [...defaultTabs],
-      renderToolbar: (Toolbar) => (
-        <div style={{ display: "flex", alignItems: "center", background: "#1c1c1c", padding: "4px 8px", width: "100%" }}>
-          <Toolbar />
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <IconButton icon="mdi:open-in-new" onClick={() => window.open(url, "_blank")} title="Open in New Tab" />
-            {onClose && <IconButton icon="mdi:close" onClick={onClose} title="Close" />}
-          </div>
-        </div>
-      ),
-    }),
-  []);
-
   if (!url) return <p style={{ color: "#ccc", padding: 16 }}>No file to preview</p>;
 
   const category = getFileCategory(type || url);
@@ -71,38 +69,9 @@ const UniversalEmbedViewer = ({ url, type, fileName, readOnly, onClose, onSave }
 
   switch (category) {
     case "pdf":
-      if (pdfError) {
-        return (
-          <div style={{ ...baseStyle, position: "relative" }}>
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", margin: "auto", backgroundColor: "#d32f2f",
-              fontSize: 14, flexDirection: "column", gap: 16, padding: "20px", borderRadius: 8,
-            }}>
-              <span>Failed to load PDF.</span>
-            </div>
-            {onClose && (
-              <button onClick={onClose} style={{
-                position: "absolute", top: 12, right: 12,
-                background: "none", border: "none", color: "#fff",
-                cursor: "pointer", fontSize: 24, padding: "4px 8px",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>✕</button>
-            )}
-          </div>
-        );
-      }
       return (
         <div style={{ ...baseStyle, backgroundColor: "#000" }}>
-          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-            <Viewer
-              fileUrl={url}
-              theme="dark"
-              defaultScale={1}
-              plugins={[defaultLayoutPluginInstance]}
-              renderError={() => { setPdfError(true); return <div />; }}
-            />
-          </Worker>
+          <PdfPane key={url} fileUrl={url} onClose={onClose} />
         </div>
       );
 
