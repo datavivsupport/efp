@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 
 /**
  * Builds the approval_details sub-object from form values.

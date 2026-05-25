@@ -1,5 +1,6 @@
 import { StrictMode, lazy } from "react";
 import { createRoot } from "react-dom/client";
+import "./dayjs-config";
 import "./index.css";
 import { createBrowserRouter, redirect, RouterProvider } from "react-router";
 import { ConfigProvider } from "antd";
@@ -48,6 +49,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     loader: authLoader,
+    errorElement: <ErrorFallback />,
     children: [
       { index: true, element: <ApprovalDashboard /> },
       { path: "dashboard", element: <ApprovalDashboard /> },

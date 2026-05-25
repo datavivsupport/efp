@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 
 /**
  * Maps a job API response object to Antd form field values.
@@ -6,7 +6,7 @@ import dayjs from "dayjs";
  */
 export const mapJobToFormValues = (data) => ({
   export_number:          data.export_number || "N/A",
-  export_created_date:    data.export_created_date ? dayjs(data.export_created_date) : null,
+  export_created_date:    data.export_created_date ? dayjs(data.export_created_date).tz("Asia/Dubai").format("DD-MM-YYYY") : null,
   created_by_name:        data.created_by_name || "N/A",
   carrier_name:           data.carrier_name,
   customer_name:          data.customer_name,
@@ -84,7 +84,7 @@ export const mapJobToFormValues = (data) => ({
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
     category:         t.category,
-    placement_time:   t.placement_time ? dayjs(String(t.placement_time).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+    placement_time:   t.placement_time ? dayjs.tz(t.placement_time) : null,
     pickup_location:  t.pickup_location,
     special_remarks:  t.special_remarks,
   })) || [{}],
@@ -95,12 +95,12 @@ export const mapJobToFormValues = (data) => ({
   booking_voyage:  data.approval_details?.booking_voyage,
   vessel_eta:      data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
   booking_ref_no:  data.approval_details?.booking_ref_no,
-  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs(String(data.approval_details.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs.tz(data.approval_details.ll_cut_off_datetime) : null,
   si_cut_off_date: (() => {
     const d = data.approval_details?.si_cut_off_date;
     const t = data.approval_details?.si_cut_off_time;
     if (!d) return null;
-    return t ? dayjs(`${d} ${t}`) : dayjs(d);
+    return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
   })(),
   booking_remarks: data.approval_details?.booking_remarks,
   cnf_remarks:     data.approval_details?.cnf_remarks,

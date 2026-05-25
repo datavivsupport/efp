@@ -43,7 +43,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import dayjs from "dayjs";
+import dayjs from "../../dayjs-config";
 import Styles from "./Approval.module.css";
 import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 import CategorySelect from "../SalesInput/Category";

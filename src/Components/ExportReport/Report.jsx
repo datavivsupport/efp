@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import apiClient from "../../api/apiclient";
-import dayjs from "dayjs";
+import dayjs from "../../dayjs-config";
 import { message, Tag, Select, Input, Button, DatePicker } from "antd";
 import CommonTable from "../Commontable/Commontable";
 import { Icon } from "@iconify/react";
@@ -280,7 +280,7 @@ const ExportReport = () => {
               columns={[
                 { title: "Export No", dataIndex: "export_number", key: "export_number", render: (v) => <span style={{ fontWeight: 600, color: "#0d9488" }}>{v || "N/A (Draft)"}</span> },
                 { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (v) => v ? <Tag color="geekblue">{v}</Tag> : "-" },
-                { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "-" },
+                { title: "Created Date", dataIndex: "export_created_date", key: "export_created_date", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY") : "-" },
                 { title: "Created By", dataIndex: "created_by_name", key: "created_by_name", render: (v) => v || "-" },
                 { title: "Carrier", dataIndex: "carrier_name", key: "carrier_name", render: (v) => v || "-" },
                 { title: "Customer", dataIndex: "customer_name", key: "customer_name", render: (v) => v || "-" },

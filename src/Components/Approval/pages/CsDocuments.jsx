@@ -9,7 +9,7 @@ import {
   CheckCircleOutlined, EyeOutlined,
   UploadOutlined, DeleteOutlined, PlusOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
@@ -337,12 +337,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
       vsl_etd: initialJob.vsl_etd ? dayjs(initialJob.vsl_etd) : null,
       pod_eta: initialJob.pod_eta ? dayjs(initialJob.pod_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
       })(),
     });
   }, [initialJob, form, ad]);

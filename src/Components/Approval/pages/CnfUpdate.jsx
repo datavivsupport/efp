@@ -9,7 +9,7 @@ import {
   EyeOutlined,
   UploadOutlined, DeleteOutlined, PlusOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
@@ -319,12 +319,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       other_charges_remarks: ad.other_charges_remarks || "",
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
       })(),
     });
   }, [initialJob, form, ad]);

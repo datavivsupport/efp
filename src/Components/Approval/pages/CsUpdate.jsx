@@ -32,7 +32,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";

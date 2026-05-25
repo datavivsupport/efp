@@ -4,7 +4,7 @@ import { Typography, Card, Tag, Space, Spin, message, Button } from "antd";
 import { Icon } from "@iconify/react";
 import CommonTable from "../../Commontable/Commontable";
 import apiClient from "../../../api/apiclient";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 
 const { Title } = Typography;
 
