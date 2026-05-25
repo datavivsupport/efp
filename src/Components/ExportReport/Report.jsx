@@ -142,12 +142,6 @@ const ExportReport = () => {
   return (
     <div className="px-4 py-4" style={{ maxWidth: "100%" }}>
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        {/* Header */}
-        <div style={{ backgroundColor: "#1b9cac" }} className="px-6 py-3 flex gap-4 items-center">
-          <h3 className="text-xl font-bold text-white">EXPORT REPORT</h3>
-          <p className="text-white/70 text-sm mt-1">Export forwarding status overview</p>
-        </div>
-
         <div className="p-6 space-y-4">
 
           {/* Always-visible default filters + toggle */}
@@ -185,6 +179,24 @@ const ExportReport = () => {
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
+            {/* Default filter 5 — Sales Name */}
+            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+              <label className={labelCls}>Sales Name</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+            </div>
+
+            {/* Default filter 6 — POL */}
+            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+              <label className={labelCls}>POL</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={pol} onChange={(e) => setPol(e.target.value)} />
+            </div>
+
+            {/* Default filter 7 — FPOD */}
+            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+              <label className={labelCls}>FPOD</label>
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={fpod} onChange={(e) => setFpod(e.target.value)} />
+            </div>
+
             {/* More filters toggle */}
             <div className={colCls} style={{ flexShrink: 0 }}>
               <label className={labelCls} style={{ visibility: "hidden" }}>.</label>
@@ -196,7 +208,7 @@ const ExportReport = () => {
                 >
                   {(() => {
                     const extra = [jobType, createdAtFrom, createdAtTo, createdBy,
-                      afsysJobNo, bookingRef, salesName, pol, fpod].filter(Boolean).length;
+                      afsysJobNo, bookingRef].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
                         marginLeft: 4, background: "#1b9cac", color: "#fff",
@@ -248,21 +260,6 @@ const ExportReport = () => {
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
                 </div>
 
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
-                  <label className={labelCls}>Sales Name</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={salesName} onChange={(e) => setSalesName(e.target.value)} />
-                </div>
-
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
-                  <label className={labelCls}>POL</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={pol} onChange={(e) => setPol(e.target.value)} />
-                </div>
-
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
-                  <label className={labelCls}>FPOD</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={fpod} onChange={(e) => setFpod(e.target.value)} />
-                </div>
-
                 <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
                   <label className={labelCls}>Created Date (From)</label>
                   <DatePicker value={createdAtFrom} onChange={setCreatedAtFrom} format="DD-MM-YYYY" placeholder="From date" style={{ width: "100%" }} />
@@ -279,13 +276,6 @@ const ExportReport = () => {
 
           {/* Table */}
           <section>
-            <div className="flex mb-4 pb-2 border-b-2 border-gray-200 justify-between items-center">
-              <h4 className="text-lg font-semibold text-gray-800">EXPORT DETAILS</h4>
-              {total > 0 && (
-                <span className="text-sm text-gray-500">{total} record{total !== 1 ? "s" : ""} found</span>
-              )}
-            </div>
-
             <CommonTable
               columns={[
                 { title: "Export No", dataIndex: "export_number", key: "export_number", render: (v) => <span style={{ fontWeight: 600, color: "#0d9488" }}>{v || "N/A (Draft)"}</span> },
