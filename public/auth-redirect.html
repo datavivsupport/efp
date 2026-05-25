@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+  </head>
+  <body>
+    <script>
+      new window.msal.PublicClientApplication({ auth: { clientId: "" } })
+        .handleRedirectPromise()
+        .catch(console.error);
+    </script>
+  </body>
+</html>

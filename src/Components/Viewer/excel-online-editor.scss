@@ -1,0 +1,229 @@
+.excel-online-editor {
+  --bg: #0c0e14;
+  --surface: #151822;
+  --surface-2: #1c2030;
+  --border: #2a2f42;
+  --text: #e2e5f0;
+  --text-dim: #7c829e;
+  --accent: #22c55e;
+  --accent-glow: rgba(34, 197, 94, 0.15);
+  --accent-2: #3b82f6;
+  --accent-2-glow: rgba(59, 130, 246, 0.12);
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --mono: "JetBrains Mono", monospace;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  color: var(--text);
+  font-family: "DM Sans", system-ui, sans-serif;
+
+  // ─── Header ───
+  .eoe-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    gap: 8px;
+    flex-shrink: 0;
+
+    &-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    &-right {
+      display: flex;
+      gap: 5px;
+      flex-shrink: 0;
+      align-items: center;
+    }
+  }
+
+  .eoe-badge-ext {
+    background: var(--accent-glow);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.04em;
+  }
+
+  .eoe-filename {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .eoe-badge-editing {
+    font-size: 11px;
+    color: var(--accent-2);
+    font-weight: 600;
+    animation: eoe-pulse 1.6s infinite;
+  }
+
+  @keyframes eoe-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+
+  // ─── Buttons ───
+  .eoe-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+
+    &-dl {
+      background: var(--accent-glow);
+      color: var(--accent);
+      &:hover {
+        background: rgba(34, 197, 94, 0.22);
+      }
+    }
+
+    &-open {
+      background: var(--accent-2-glow);
+      color: var(--accent-2);
+      &:hover {
+        background: rgba(59, 130, 246, 0.22);
+      }
+    }
+
+    &-edit {
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff;
+      box-shadow: 0 2px 14px rgba(59, 130, 246, 0.3);
+      &:hover {
+        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+      }
+      &:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+    }
+
+    &-save {
+      background: linear-gradient(135deg, #15803d, #22c55e);
+      color: #fff;
+      box-shadow: 0 2px 14px rgba(34, 197, 94, 0.3);
+      &:hover {
+        box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+      }
+      &:disabled {
+        opacity: 0.55;
+        cursor: wait;
+      }
+    }
+
+    &-close {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 50%;
+      &:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+    }
+  }
+
+  // ─── Status bars ───
+  .eoe-bar {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+
+    &-error {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--danger);
+      border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    &-success {
+      background: rgba(59, 130, 246, 0.08);
+      color: var(--accent-2);
+      border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+
+      strong {
+        color: #fff;
+      }
+    }
+  }
+
+  // ─── Viewer ───
+  .eoe-viewer-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+
+  .eoe-viewer {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  // ─── Footer ───
+  .eoe-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  .eoe-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    margin-right: 5px;
+    animation: eoe-pulse 2s infinite;
+  }
+}
