@@ -163,6 +163,7 @@ const DocUploadField = ({
   isAdmin
 }) => {
   const uploadActivity = useContext(UploadActivityContext);
+  const pendingCountRef = useRef(0);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
       message.error(restrictionMessage);
@@ -176,7 +177,11 @@ const DocUploadField = ({
       message.warning("Save the draft first before uploading documents");
       return false;
     }
-
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', docType);
@@ -212,6 +217,7 @@ const DocUploadField = ({
       const errMsg = err.response?.data?.message || "Upload failed. Please check your connection.";
       message.error(errMsg);
     } finally {
+      pendingCountRef.current -= 1;
       uploadActivity?.dec?.();
     }
     return false;
@@ -267,9 +273,17 @@ const DocUploadField = ({
           color={color}
           onRemove={(i) => {
             const docId = files[i]?.id;
-            if (docId) {
-              setFiles((p) => p.filter((f) => f.id !== docId));
-            }
+            if (!docId) return;
+            Modal.confirm({
+              title: "Delete attachment?",
+              content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+              okText: "Delete",
+              okType: "danger",
+              cancelText: "Cancel",
+              onOk: () => {
+                setFiles((p) => p.filter((f) => f.id !== docId));
+              },
+            });
           }}
           onPreview={(i) => onPreview(files, i)}
           onRemarkChange={handleRemarkChange}
@@ -1730,7 +1744,7 @@ const Approval = () => {
               : <MultiFileViewer
                   files={previewUrls.map((item) => {
                     const url = typeof item === "string" ? item : item.url || item.file_url || "";
-                    const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+                    const name = typeof url === "string" ? decodeURIComponent(url.split("/").pop()) : "unknown";
                     return { url, name, mimeType: item?.mimeType };
                   })}
                   defaultIndex={previewIndex || 0}

@@ -51,6 +51,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, disabled, user, isAdmin }) => {
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) return false;
+    if (files.length >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     const formData = new FormData();
     formData.append("file", file);
     formData.append("doc_type", docType);
@@ -109,7 +110,17 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           files={files}
           onRemove={(i) => {
             const docId = files[i]?.id;
-            if (docId) setFiles((p) => p.filter((f) => f.id !== docId));
+            if (!docId) return;
+            Modal.confirm({
+              title: "Delete attachment?",
+              content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+              okText: "Delete",
+              okType: "danger",
+              cancelText: "Cancel",
+              onOk: () => {
+                setFiles((p) => p.filter((f) => f.id !== docId));
+              },
+            });
           }}
           onPreview={(i) => onPreview(files, i)}
           onRemarkChange={handleRemarkChange}
@@ -443,7 +454,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
             <MultiFileViewer
               files={previewUrls.map((item) => {
                 const url = typeof item === "string" ? item : item.url || item.file_url || "";
-                const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+                const name = typeof url === "string" ? decodeURIComponent(url.split("/").pop()) : "unknown";
                 return {
                   url,
                   name,

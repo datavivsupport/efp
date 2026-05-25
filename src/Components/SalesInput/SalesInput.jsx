@@ -109,6 +109,7 @@ const DocUploadField = ({
   isOthers
 }) => {
   const [uploading, setUploading] = useState(false);
+  const pendingCountRef = useRef(0);
   const buildTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) {
@@ -119,6 +120,11 @@ const DocUploadField = ({
       message.warning("Uploads are disabled in View-Only Mode");
       return false;
     }
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
 
     setUploading(true);
     // ⏳ Fake delay to make it "feel" like it's uploading
@@ -168,6 +174,7 @@ const DocUploadField = ({
         }
       ]);
 
+      pendingCountRef.current -= 1;
       setUploading(false);
       return false;
     }
@@ -205,6 +212,7 @@ const DocUploadField = ({
       console.error(err);
       // message.error("Upload failed. please check your connection.");
     } finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
     }
     return false;
@@ -265,10 +273,18 @@ const DocUploadField = ({
             color={color}
             onRemove={(i) => {
               const docId = files[i]?.id;
-              if (docId) {
-                setFiles((p) => p.filter((f) => f.id !== docId));
-                setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
-              }
+              if (!docId) return;
+              Modal.confirm({
+                title: "Delete attachment?",
+                content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                okText: "Delete",
+                okType: "danger",
+                cancelText: "Cancel",
+                onOk: () => {
+                  setFiles((p) => p.filter((f) => f.id !== docId));
+                  setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                },
+              });
             }}
             onPreview={(i) => onPreview(files, i)}
             onRemarkChange={handleRemarkChange}
@@ -1945,7 +1961,7 @@ const SalesInput = () => {
           <MultiFileViewer
             files={previewUrls.map((item) => {
               const url = typeof item === "string" ? item : item.url || item.file_url || "";
-              const name = typeof url === "string" ? url.split("/").pop() : "unknown";
+              const name = typeof url === "string" ? decodeURIComponent(url.split("/").pop()) : "unknown";
               return {
                 url,
                 name,

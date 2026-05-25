@@ -105,12 +105,15 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── DocUploadField ── */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
   const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
+    if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
+    pendingCountRef.current += 1;
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', docType);
@@ -126,6 +129,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
     finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
       uploadActivity?.dec?.();
     }
@@ -153,19 +157,28 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           <FileChipList
             files={files}
             color={color}
-            onRemove={async (i) => {
+            onRemove={(i) => {
               const f = files[i];
               if (!f) return;
               if (f?.id && !f.pending) {
-                const prev = files;
-                setFiles((p) => p.filter((ff) => ff.id !== f.id));
-                try {
-                  await deleteDocument(salesInputId, f.id);
-                  message.success("Attachment deleted");
-                } catch (err) {
-                  setFiles(prev);
-                  message.error(err.response?.data?.message || "Failed to delete attachment");
-                }
+                Modal.confirm({
+                  title: "Delete attachment?",
+                  content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                  okText: "Delete",
+                  okType: "danger",
+                  cancelText: "Cancel",
+                  onOk: async () => {
+                    const prev = files;
+                    setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                    try {
+                      await deleteDocument(salesInputId, f.id);
+                      message.success("Attachment deleted");
+                    } catch (err) {
+                      setFiles(prev);
+                      message.error(err.response?.data?.message || "Failed to delete attachment");
+                    }
+                  },
+                });
               } else {
                 setFiles((p) => p.filter((_, j) => j !== i));
               }

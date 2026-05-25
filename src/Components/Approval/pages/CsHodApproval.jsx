@@ -84,10 +84,13 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
   const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
+    if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
+    pendingCountRef.current += 1;
     const formData = new FormData();
     formData.append("file", file);
     formData.append("doc_type", docType);
@@ -103,6 +106,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       } else { message.error(res.data.message || "Upload failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
     finally {
+      pendingCountRef.current -= 1;
       setUploading(false);
       uploadActivity?.dec?.();
     }
@@ -736,7 +740,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <MultiFileViewer
             files={previewUrls.map((item) => {
               const url = typeof item === "string" ? item : item.url || item.file_url || "";
-              const name = url.split("/").pop() || "unknown";
+              const name = decodeURIComponent(url.split("/").pop() || "unknown");
               return { url, name, mimeType: item?.mimeType };
             })}
             defaultIndex={previewIndex || 0}

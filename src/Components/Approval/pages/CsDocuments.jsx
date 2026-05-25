@@ -56,6 +56,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
       const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner || isPending);
+      const isHodApproved = !!file.is_cs_hod_approved;
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -71,7 +72,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>}
-              <Tooltip title="Delete">{canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
+              <Tooltip title="Delete">{canEditFile && !isHodApproved && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
             </Space>
           </div>
           {canEditFile ? (
@@ -88,6 +89,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── Upload field wrapper ── */
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
   const debounceTimerField = useRef(null);
+  const pendingCountRef = useRef(0);
 
   const handleBeforeUpload = async (file) => {
     if (!file) {
@@ -102,6 +104,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       message.error("Document type or category is missing");
       return false;
     }
+    if (files.length + pendingCountRef.current >= 20) {
+      message.warning("Maximum 20 files allowed per section.");
+      return false;
+    }
+    pendingCountRef.current += 1;
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     setFiles((prev) => [...prev, {
       pending: true,
@@ -138,6 +145,8 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
     } catch (err) {
       setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
       message.error(`Failed to upload ${file.name}`);
+    } finally {
+      pendingCountRef.current -= 1;
     }
     return false;
   };
@@ -162,19 +171,28 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       {files.length > 0 && (
         <FileChipList
           files={files}
-          onRemove={async (i) => {
+          onRemove={(i) => {
             const f = files[i];
             if (!f) return;
             if (f?.id && !f.pending) {
-              const prev = files;
-              setFiles((p) => p.filter((ff) => ff.id !== f.id));
-              try {
-                await deleteDocument(salesInputId, f.id);
-                message.success("Attachment deleted");
-              } catch (err) {
-                setFiles(prev);
-                message.error(err.response?.data?.message || "Failed to delete attachment");
-              }
+              Modal.confirm({
+                title: "Delete attachment?",
+                content: "Are you sure you want to delete this attachment? This action cannot be undone.",
+                okText: "Delete",
+                okType: "danger",
+                cancelText: "Cancel",
+                onOk: async () => {
+                  const prev = files;
+                  setFiles((p) => p.filter((ff) => ff.id !== f.id));
+                  try {
+                    await deleteDocument(salesInputId, f.id);
+                    message.success("Attachment deleted");
+                  } catch (err) {
+                    setFiles(prev);
+                    message.error(err.response?.data?.message || "Failed to delete attachment");
+                  }
+                },
+              });
             } else {
               setFiles((p) => p.filter((_, j) => j !== i));
             }
