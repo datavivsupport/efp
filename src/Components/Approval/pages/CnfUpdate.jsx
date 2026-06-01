@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, Space, Spin, Modal, message, Tooltip, Form, Upload, Checkbox, DatePicker, Select
+  Input, InputNumber, Space, Spin, Modal, message, Tooltip, Form, Upload, Checkbox, DatePicker, Select
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
@@ -715,7 +715,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {fields.map(({ key, name, ...restField }) => (
                       <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber precision={0} min={0} style={{ width: "100%" }} disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>

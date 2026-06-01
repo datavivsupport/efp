@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import {
   Form,
   Input,
+  InputNumber,
   Button,
   Row,
   Col,
@@ -1318,7 +1319,7 @@ const SalesInput = () => {
                               name={[name, "quantity"]}
                               label="Volume"
                             >
-                              <Input placeholder="Qty" disabled={isReadOnly} />
+                              <InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
@@ -1667,7 +1668,7 @@ const SalesInput = () => {
                             name={[name, "no_of_containers"]}
                             label="No. Of Containers"
                           >
-                            <Input placeholder="Qty" disabled={isReadOnly} />
+                            <InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={isReadOnly} />
                           </Form.Item>
                         </Col>
                         <Col xs={24} md={4}>
