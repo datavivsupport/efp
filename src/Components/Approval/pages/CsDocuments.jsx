@@ -706,6 +706,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {haulageCostFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {haulierNoteFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {loadListFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
@@ -720,7 +721,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} salesInputId={id} docType="FAC" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
             </div>
