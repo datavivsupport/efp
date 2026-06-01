@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, Space, Spin, Modal, message, Tooltip, Form, Upload, Checkbox, DatePicker, Select
+  Input, InputNumber, Space, Spin, Modal, message, Tooltip, Form, Upload, Checkbox, DatePicker, Select
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
   EyeOutlined,
   UploadOutlined, DeleteOutlined, PlusOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
@@ -319,12 +319,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       other_charges_remarks: ad.other_charges_remarks || "",
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
       })(),
     });
   }, [initialJob, form, ad]);
@@ -694,7 +694,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
                 <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>FAC</span></Checkbox></Form.Item></Col>
+                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
               </Row>
@@ -715,7 +715,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {fields.map(({ key, name, ...restField }) => (
                       <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber precision={0} min={0} style={{ width: "100%" }} disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>

@@ -8,7 +8,7 @@ import CommonTable from "../Commontable/Commontable";
 import "../Commontable/InvoiceTable.scss";
 import { Icon } from "@iconify/react";
 import apiClient from "../../api/apiclient";
-import dayjs from "dayjs";
+import dayjs from "../../dayjs-config";
 
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
 

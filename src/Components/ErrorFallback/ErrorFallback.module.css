@@ -8,22 +8,11 @@
   overflow: hidden;
   position: relative;
 }
-.cloud {
+.cloudcloud1 {
   position: absolute;
   background: rgba(255, 255, 255, 0.3);
   border-radius: 100px;
   animation: float 20s ease-in-out infinite;
-}
-
-.cloud::before,
-.cloud::after {
-  content: "";
-  position: absolute;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 100px;
-}
-
-.cloud1 {
   width: 100px;
   height: 40px;
   top: 10%;
@@ -31,21 +20,33 @@
   animation-delay: 0s;
 }
 
-.cloud1::before {
+.cloudcloud1::before {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 50px;
   height: 50px;
   top: -25px;
   left: 10px;
 }
 
-.cloud1::after {
+.cloudcloud1::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 60px;
   height: 40px;
   top: -15px;
   right: 10px;
 }
 
-.cloud2 {
+.cloudcloud2 {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
+  animation: float 20s ease-in-out infinite;
   width: 120px;
   height: 50px;
   top: 20%;
@@ -53,21 +54,33 @@
   animation-delay: 5s;
 }
 
-.cloud2::before {
+.cloudcloud2::before {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 60px;
   height: 60px;
   top: -30px;
   left: 15px;
 }
 
-.cloud2::after {
+.cloudcloud2::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 70px;
   height: 50px;
   top: -20px;
   right: 15px;
 }
 
-.cloud3 {
+.cloudcloud3 {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
+  animation: float 20s ease-in-out infinite;
   width: 90px;
   height: 35px;
   top: 15%;
@@ -75,14 +88,22 @@
   animation-delay: 10s;
 }
 
-.cloud3::before {
+.cloudcloud3::before {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 45px;
   height: 45px;
   top: -20px;
   left: 12px;
 }
 
-.cloud3::after {
+.cloudcloud3::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 100px;
   width: 55px;
   height: 35px;
   top: -12px;

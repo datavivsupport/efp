@@ -2,14 +2,14 @@ import { useState, useRef, useEffect, createContext, useContext, useMemo } from 
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, Space, Spin, Modal, message, Upload, Select, Form, Tooltip, Checkbox, DatePicker
+  Input, InputNumber, Space, Spin, Modal, message, Upload, Select, Form, Tooltip, Checkbox, DatePicker
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
   CheckCircleOutlined, EyeOutlined,
   UploadOutlined, DeleteOutlined, PlusOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
@@ -266,12 +266,12 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
       vsl_etd: initialJob.vsl_etd ? dayjs(initialJob.vsl_etd) : null,
       pod_eta: initialJob.pod_eta ? dayjs(initialJob.pod_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
       })(),
     });
   }, [initialJob, form, ad]);
@@ -539,7 +539,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 {(fields) => fields.map(({ key, name, ...restField }) => (
                   <Row key={key} gutter={16} align="middle">
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled variant="filled" /></Form.Item></Col>

@@ -1,10 +1,12 @@
-import { useNavigate } from 'react-router';
+import { useNavigate, useRouteError } from 'react-router';
 import Styles from './ErrorFallback.module.css';
 import { Icon } from "@iconify/react";
 import apiClient, { cancelAllRequests, finishLogout, startLogout } from '../../api/apiclient';
 
-const ErrorFallback = ({ error, resetErrorBoundary }) => {
+const ErrorFallback = ({ error: errorProp, resetErrorBoundary }) => {
   const navigate = useNavigate();
+  const routeError = useRouteError();
+  const error = errorProp ?? routeError;
 
   const handleLogout = async () => {
     try {

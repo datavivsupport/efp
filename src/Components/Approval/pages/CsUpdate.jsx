@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import {
   Form,
   Input,
+  InputNumber,
   Select,
   DatePicker,
   TimePicker,
@@ -32,7 +33,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";
@@ -656,7 +657,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       {fields.map(({ key, name, ...restField }) => (
                         <Row key={key} gutter={16} align="middle">
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input placeholder="Vol" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>

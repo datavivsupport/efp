@@ -5,7 +5,7 @@ import {
 } from "antd";
 import { Icon } from "@iconify/react";
 import { EyeOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import apiClient from "../../../api/apiclient";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";

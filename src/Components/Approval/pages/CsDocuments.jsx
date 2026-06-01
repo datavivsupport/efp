@@ -2,14 +2,14 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, Space, Spin, Modal, message, Upload, Select, Form, Tooltip, Checkbox, DatePicker
+  Input, InputNumber, Space, Spin, Modal, message, Upload, Select, Form, Tooltip, Checkbox, DatePicker
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
   CheckCircleOutlined, EyeOutlined,
   UploadOutlined, DeleteOutlined, PlusOutlined
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import apiClient from "../../../api/apiclient";
@@ -337,12 +337,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,
       vsl_etd: initialJob.vsl_etd ? dayjs(initialJob.vsl_etd) : null,
       pod_eta: initialJob.pod_eta ? dayjs(initialJob.pod_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(String(ad.ll_cut_off_datetime).replace(/([zZ]|[+-]\d\d:\d\d)$/, "")) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`) : dayjs(d);
+        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
       })(),
     });
   }, [initialJob, form, ad]);
@@ -664,7 +664,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {(fields) => fields.map(({ key, name, ...restField }) => (
                   <Row key={key} gutter={16} align="middle">
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><Input disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled variant="filled" /></Form.Item></Col>
@@ -706,6 +706,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {haulageCostFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {haulierNoteFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
                 {loadListFiles.length > 0 && <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>}
+                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
@@ -720,7 +721,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} salesInputId={id} docType="FAC" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
             </div>

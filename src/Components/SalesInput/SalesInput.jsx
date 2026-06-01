@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import {
   Form,
   Input,
+  InputNumber,
   Button,
   Row,
   Col,
@@ -30,7 +31,7 @@ import {
   CheckCircleOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs from "../../dayjs-config";
 import Styles from "./salesinput.module.css";
 import { Icon } from "@iconify/react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -593,7 +594,7 @@ const SalesInput = () => {
             equipment_type: tr.equipment_type,
             no_of_containers: tr.no_of_containers,
             category: tr.category,
-            placement_time: tr.placement_time ? dayjs(tr.placement_time) : null,
+            placement_time: tr.placement_time ? dayjs.tz(tr.placement_time) : null,
             pickup_location: tr.pickup_location,
             special_remarks: tr.special_remarks
           }));
@@ -1318,7 +1319,7 @@ const SalesInput = () => {
                               name={[name, "quantity"]}
                               label="Volume"
                             >
-                              <Input placeholder="Qty" disabled={isReadOnly} />
+                              <InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
@@ -1667,7 +1668,7 @@ const SalesInput = () => {
                             name={[name, "no_of_containers"]}
                             label="No. Of Containers"
                           >
-                            <Input placeholder="Qty" disabled={isReadOnly} />
+                            <InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={isReadOnly} />
                           </Form.Item>
                         </Col>
                         <Col xs={24} md={4}>

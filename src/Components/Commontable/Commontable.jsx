@@ -1,5 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { Table } from "antd";
+import "./InvoiceTable.scss";
 
 import {
   DndContext,
