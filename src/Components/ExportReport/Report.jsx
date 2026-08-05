@@ -251,7 +251,7 @@ const ExportReport = () => {
                 </div>
 
                 <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
-                  <label className={labelCls}>Afsys Job No.</label>
+                  <label className={labelCls}>AFSYS Job No.</label>
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
                 </div>
 
