@@ -164,37 +164,37 @@ const ExportReport = () => {
             {/* Default filter 2 — Customer Name */}
             <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
               <label className={labelCls}>Customer Name</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
 
             {/* Default filter 3 — Carrier */}
             <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
               <label className={labelCls}>Carrier</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
             {/* Default filter 4 — Export No */}
             <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
               <label className={labelCls}>Export No (DMS)</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
             {/* Default filter 5 — Sales Name */}
             <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
               <label className={labelCls}>Sales Name</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
             </div>
 
             {/* Default filter 6 — POL */}
             <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
               <label className={labelCls}>POL</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={pol} onChange={(e) => setPol(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
             {/* Default filter 7 — FPOD */}
             <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
               <label className={labelCls}>FPOD</label>
-              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={fpod} onChange={(e) => setFpod(e.target.value)} />
+              <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
             </div>
 
             {/* More filters toggle */}
@@ -247,17 +247,17 @@ const ExportReport = () => {
 
                 <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
                   <label className={labelCls}>Created By</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
                 </div>
 
                 <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
                   <label className={labelCls}>Afsys Job No.</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
                 </div>
 
                 <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
                   <label className={labelCls}>Booking Ref #</label>
-                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
+                  <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
                 </div>
 
                 <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
