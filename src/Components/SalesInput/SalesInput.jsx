@@ -1456,7 +1456,7 @@ const SalesInput = () => {
                       name="port_of_discharge"
                       rules={[{ required: !isOthers, message: "Required" }]}
                     >
-                      <Input placeholder="Port of Disacharge" disabled={isReadOnly} />
+                      <Input placeholder="Port of Discharge" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
 
