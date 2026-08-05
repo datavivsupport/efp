@@ -70,3 +70,9 @@
     padding: 14px !important;
   }
 }
+
+.textAreaField {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  padding: 8px 12px !important;
+}

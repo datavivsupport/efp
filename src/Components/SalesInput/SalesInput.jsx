@@ -57,7 +57,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             <Space>
               <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
               {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
-              <Typography.Text ellipsis style={{ maxWidth: 200 }}>
+              <Typography.Text ellipsis={{ tooltip: file.name || file.file_name }} style={{ maxWidth: 200 }}>
                 {file.name || file.file_name}
               </Typography.Text>
             </Space>
@@ -80,9 +80,9 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             />
           )}
           {disabled && file.remarks && (
-            <Typography.Text type="secondary" italic style={{ fontSize: '11px', paddingLeft: '4px' }}>
+            <Typography.Paragraph type="secondary" italic ellipsis={{ rows: 2, tooltip: file.remarks }} style={{ fontSize: '11px', paddingLeft: '4px', margin: 0 }}>
               Remarks: {file.remarks}
-            </Typography.Text>
+            </Typography.Paragraph>
           )}
         </div>
       ))}
@@ -119,6 +119,11 @@ const DocUploadField = ({
     }
     if (isMasterMode) {
       message.warning("Uploads are disabled in View-Only Mode");
+      return false;
+    }
+    const isPdf = file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      message.error(`${file.name} is not a PDF. Only .pdf files are allowed.`);
       return false;
     }
     if (files.length + pendingCountRef.current >= 20) {
@@ -261,11 +266,16 @@ const DocUploadField = ({
     <Spin spinning={uploading} size="small">
       <div>
         {(!disabled || restrictionMessage) && (
-          <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-            <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading} loading={uploading}>
-              {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
-            </Button>
-          </Upload>
+          <Space size={8}>
+            <Upload multiple showUploadList={false} accept=".pdf" beforeUpload={handleBeforeUpload}>
+              <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading} loading={uploading}>
+                {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
+              </Button>
+            </Upload>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              PDF only
+            </Typography.Text>
+          </Space>
         )}
 
         {files.length > 0 && (
@@ -1391,7 +1401,7 @@ const SalesInput = () => {
                       name="other_charges_remarks"
                     // rules={[{ required: true, message: "Required" }]}
                     >
-                      <TextArea placeholder="Enter any additional charges or fees" disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1585,7 +1595,7 @@ const SalesInput = () => {
                       label="SPECIAL INSTRUCTION IF ANY"
                       name="special_instructions"
                     >
-                      <TextArea placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1788,7 +1798,9 @@ const SalesInput = () => {
                       </div>
                       {item.remarks && item.remarks !== "N/A" && (
                         <div style={{ marginTop: "8px", backgroundColor: "#f9fafb", padding: "8px 12px", borderRadius: "6px", border: "1px solid #f0f0f0", fontSize: "13px" }}>
-                          {item.remarks}
+                          <Typography.Paragraph ellipsis={{ rows: 3, tooltip: item.remarks }} style={{ margin: 0, fontSize: "13px" }}>
+                            {item.remarks}
+                          </Typography.Paragraph>
                         </div>
                       )}
                     </div>
@@ -1828,7 +1840,7 @@ const SalesInput = () => {
                           style={{ position: "absolute", top: 6, right: 6 }}
                           onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
                         />
-                        <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</p>
+                        <Typography.Paragraph ellipsis={{ rows: 3, tooltip: typeof r === 'object' ? r.text : r }} style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</Typography.Paragraph>
                         {typeof r === 'object' && r.user_name && (
                           <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>
                             — {r.user_name} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}
