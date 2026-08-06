@@ -258,7 +258,7 @@ const ExportReport = () => {
                 </div>
 
                 <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
-                  <label className={labelCls}>Booking Ref #</label>
+                  <label className={labelCls}>Booking Ref</label>
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
                 </div>
 

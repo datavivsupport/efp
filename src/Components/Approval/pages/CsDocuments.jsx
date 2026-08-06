@@ -66,7 +66,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               {isPending
                 ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>uploading...</Tag>
                 : file.uploaded_by_user_name && (
-                  <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: '10px', minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
                 )
               }
             </div>
