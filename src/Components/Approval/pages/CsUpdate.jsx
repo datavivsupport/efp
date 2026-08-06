@@ -94,7 +94,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
           </div>
           {canEditFile ? (
-            <TextArea   className={Styles.remarkInput} size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1, maxRows: 3 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }} />
+            <TextArea   className={Styles.remarkInput} size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }} />
           ) : (
             file.remarks && <Typography.Text   className={Styles.remarkInput} type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.remarks}</Typography.Text>
           )}
@@ -496,7 +496,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
-    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => (<Tooltip title={value || "N/A"}><span style={{ display: "inline-block", maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{value || "N/A"}</span></Tooltip>) },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => (<Typography.Paragraph ellipsis={{ rows: 2, tooltip: value || "N/A" }} style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{value || "N/A"}</Typography.Paragraph>) },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm") : "N/A" },
   ];
 
