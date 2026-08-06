@@ -60,9 +60,9 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474' }} />
-              <Typography.Text ellipsis style={{ maxWidth: 150 }}>{file.name || file.file_name}</Typography.Text>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+              <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474', flexShrink: 0 }} />
+              <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
               {isPending
                 ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>uploading...</Tag>
                 : file.uploaded_by_user_name && (
@@ -76,9 +76,9 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
           </div>
           {canEditFile ? (
-            <Input   className={Styles.remarkInput} size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
+            <TextArea   className={Styles.remarkInput} size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }} />
           ) : (
-            file.remarks && <Typography.Text   className={Styles.remarkInput} type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px' }}>{file.remarks}</Typography.Text>
+            file.remarks && <Typography.Text   className={Styles.remarkInput} type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.remarks}</Typography.Text>
           )}
         </div>
       );
@@ -742,7 +742,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
-                          <p style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{text}</p>
+                          <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>— {authorName} {r.date ? `on ${dayjs(r.date).format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );

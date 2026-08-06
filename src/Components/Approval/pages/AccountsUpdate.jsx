@@ -24,9 +24,9 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex" }}>
-              <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
-              <Typography.Text ellipsis style={{ maxWidth: 150 }}>{file.name || file.file_name}</Typography.Text>
+            <div style={{ display: "flex", flex: 1, minWidth: 0 }}>
+              <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0 }} />
+              <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
               {file.uploaded_by_user_name && (
                 <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
               )}
@@ -39,7 +39,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
           {canEditFile ? (
             <Input size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} className={Styles.remarkInput} style={{ marginTop: '2px', padding: "7px" }} />
           ) : (
-            file.remarks && <Typography.Text className={Styles.remarkText}>{file.remarks}</Typography.Text>
+            file.remarks && <Typography.Text className={Styles.remarkText} style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.remarks}</Typography.Text>
           )}
         </div>
       );
