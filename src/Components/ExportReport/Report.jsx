@@ -240,7 +240,9 @@ const ExportReport = () => {
                   <label className={labelCls}>Job Type</label>
                   <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="LINER">LINER</Option>
+                     
                     <Option value="FORWARDING">FORWARDING</Option>
+                    <Option value="CROSS TRADE">CROSS-TRADE</Option>
                     <Option value="OTHERS">OTHERS</Option>
                   </Select>
                 </div>
