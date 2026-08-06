@@ -17,12 +17,30 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
-/* ===== HOVER ROW EFFECT ===== */
-.ant-table-wrapper .ant-table-tbody>tr:hover>td {
-  background-color: #f9fafb !important;
-}
-
 /* ===== FIXED RIGHT COLUMN BACKGROUND ===== */
 .ant-table-wrapper .ant-table-cell-fix-right {
   background-color: #ffffff !important;
+}
+
+/* ===== ZEBRA STRIPING (opt-in via rowClassName) ===== */
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row>td {
+  background-color: #f8fafc !important;
+}
+
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row>td.ant-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row>td.ant-table-cell-fix-left {
+  background-color: #f8fafc !important;
+}
+
+/* ===== HOVER ROW EFFECT (must follow zebra to win) ===== */
+.ant-table-wrapper .ant-table-tbody>tr:hover>td,
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row:hover>td {
+  background-color: #eff8ff !important;
+}
+
+.ant-table-wrapper .ant-table-tbody>tr:hover>td.ant-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody>tr:hover>td.ant-table-cell-fix-left,
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row:hover>td.ant-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody>tr.zebra-row:hover>td.ant-table-cell-fix-left {
+  background-color: #eff8ff !important;
 }

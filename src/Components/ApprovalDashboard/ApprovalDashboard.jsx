@@ -51,6 +51,7 @@ const ApprovalDashboard = () => {
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
   const [jobTypeFilter, setJobTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -66,11 +67,12 @@ const ApprovalDashboard = () => {
     { label: "OTHERS", icon: "mdi:package-variant", color: "#6b7280" },
   ];
 
-  const fetchReports = async (page = 1, size = 10, jobType = null) => {
+  const fetchReports = async (page = 1, size = 10, jobType = null, status = statusFilter) => {
     setReportsLoading(true);
     try {
       const params = { page, page_size: size };
       if (jobType) params.job_type = jobType;
+      if (status) params.status = status;
       const reportsRes = await apiClient.get("/liner/sales-input/reports/", { params });
       if (reportsRes.data?.status === "success") {
         const responseData = reportsRes.data.data;
@@ -142,7 +144,14 @@ useEffect(() => {
     const newSize = pagination.pageSize;
     setCurrentPage(newPage);
     setPageSize(newSize);
-    fetchReports(newPage, newSize, jobTypeFilter);
+    fetchReports(newPage, newSize, jobTypeFilter, statusFilter);
+  };
+
+  const handleStatusSelect = (status) => {
+    const next = statusFilter === status ? "" : status;
+    setStatusFilter(next);
+    setCurrentPage(1);
+    fetchReports(1, pageSize, jobTypeFilter, next);
   };
 
   const handleDraftTableChange = (pagination) => {
@@ -473,7 +482,7 @@ useEffect(() => {
           <Typography.Title level={4} style={{ margin: 0 }}>Dashboard Overview</Typography.Title>
         </div> */}
 
-        <StatusCards stats={stats} />
+        <StatusCards stats={stats} activeStatus={statusFilter} onSelect={handleStatusSelect} />
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
@@ -522,6 +531,7 @@ useEffect(() => {
             <Tag color="orange">{draftTotal} Drafts</Tag>
           </div>
           <CommonTable
+            rowClassName={(_, index) => (index % 2 === 1 ? "zebra-row" : "")}
             columns={[
               { title: "Customer", dataIndex: "customer_name", key: "customer", render: (text) => text || "-" },
               { title: "Carrier", dataIndex: "carrier_name", key: "carrier", render: (text) => text || "-" },
@@ -619,6 +629,7 @@ useEffect(() => {
           </div>
           <CommonTable
             columns={columns}
+            rowClassName={(_, index) => (index % 2 === 1 ? "zebra-row" : "")}
             data={data}
             loading={reportsLoading}
             yescomp={true}
