@@ -621,6 +621,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24}>
                   <Form.Item className={Styles.formLabel} label="Other Charges">
                     <Input.TextArea
+                      className={Styles.textAreaField}
                       value={otherChargesDisplay}
                       placeholder="No other charges"
                       disabled
@@ -642,7 +643,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea className={Styles.textAreaField} disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 {executiveDocs.length > 0 ? (
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 ) : null}

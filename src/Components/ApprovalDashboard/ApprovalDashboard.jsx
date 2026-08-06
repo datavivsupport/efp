@@ -83,18 +83,30 @@ const ApprovalDashboard = () => {
           commodities_display: item.commodities?.map(c => c.name).join(", ") || "-",
           contact_details: item.phone_no || "-",
         })));
-        setStats(prev => ({
-          ...prev,
-          approved: results.filter(i => i.status === 'approved').length,
-          pending: results.filter(i => i.status === 'submitted').length,
-          rejected: results.filter(i => i.status === 'rejected').length,
-          total: count
-        }));
       }
     } catch (error) {
       console.error("Error fetching reports:", error);
     } finally {
       setReportsLoading(false);
+    }
+  };
+
+  const fetchReportsOverview = async () => {
+    try {
+      const res = await apiClient.get("/liner/sales-input/get_reports_overview/");
+      if (res.data?.status === "success") {
+        const { total = 0, status_counts = {} } = res.data.data || {};
+        setStats(prev => ({
+          ...prev,
+          approved: status_counts.approved ?? 0,
+          pending: status_counts.submitted ?? 0,
+          rejected: status_counts.rejected ?? 0,
+          overdue: status_counts.draft ?? 0,
+          total,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching reports overview:", error);
     }
   };
 
@@ -111,10 +123,6 @@ const ApprovalDashboard = () => {
           ...item,
           key: item.id.toString(),
         })));
-        setStats(prev => ({
-          ...prev,
-          overdue: count,
-        }));
       }
     } catch (error) {
       console.error("Error fetching drafts:", error);
@@ -126,6 +134,7 @@ const ApprovalDashboard = () => {
 useEffect(() => {
     fetchReports(1, pageSize, jobTypeFilter);
     fetchDrafts(1, draftPageSize);
+    fetchReportsOverview();
   }, []);
 
   const handleTableChange = (pagination) => {
@@ -247,11 +256,11 @@ useEffect(() => {
       statusChart = new Chart(statusCtx, {
         type: "doughnut",
         data: {
-          labels: ["Approved", "Pending", "Rejected", "In Progress"],
+          labels: ["Approved", "AWAITING REVIEW", "Rejected"],
           datasets: [
             {
-              data: [156, 3, 2, 12],
-              backgroundColor: ["#10b981", "#f59e0b", "#ef4444", "#3b82f6"],
+              data: [stats.approved, stats.pending, stats.rejected],
+              backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
             },
           ],
         },
@@ -300,7 +309,7 @@ useEffect(() => {
       if (statusChart) statusChart.destroy();
       if (carrierChart) carrierChart.destroy();
     };
-  }, []);
+  }, [stats]);
 
   // const dummyData = [
   //   ...

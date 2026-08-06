@@ -65,7 +65,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               {isPending
                 ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>uploading...</Tag>
                 : file.uploaded_by_user_name && (
-                  <Typography.Text type="secondary" style={{ fontSize: '10px' }}>({file.uploaded_by_user_name})</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: '10px', minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
                 )
               }
             </div>
@@ -75,7 +75,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
           </div>
           {canEditFile ? (
-            <TextArea size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1, maxRows: 3 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}   className={Styles.remarkInput}/>
+            <TextArea size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}   className={Styles.remarkInput}/>
           ) : (
             file.remarks && <Typography.Text type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}   className={Styles.remarkInput}>{file.remarks}</Typography.Text>
           )}
@@ -656,6 +656,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24}>
                   <Form.Item className={Styles.formLabel} label="Other Charges">
                     <Input.TextArea
+                      className={Styles.textAreaField}
                       value={otherChargesDisplay}
                       placeholder="No other charges"
                       disabled
@@ -685,7 +686,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <Input placeholder="Haulier Code" disabled={!(isForwarding && currentStage === "3")} />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea className={Styles.textAreaField} disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col> */}
                 {executiveDocs.length > 0 ? (
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
