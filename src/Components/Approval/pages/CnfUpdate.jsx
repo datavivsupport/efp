@@ -587,10 +587,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       title: "Remarks",
       dataIndex: "remarks",
       key: "remarks",
+      width: 320,
       render: (value) => (
-        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+        <Typography.Paragraph
+          ellipsis={{ rows: 2, tooltip: value || "N/A" }}
+          style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}
+        >
           {value || "N/A"}
-        </span>
+        </Typography.Paragraph>
       ),
     },
     {
