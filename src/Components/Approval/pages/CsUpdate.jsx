@@ -602,7 +602,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                           {otherCharges.map((c, i) => (<Tag key={i} closable color="cyan" onClose={() => setOtherCharges((p) => p.filter((_, j) => j !== i))}>{c}</Tag>))}
                         </Space>
                         {isSalesSectionLocked && otherCharges.length === 0 && chargeInput ? (
-                          <Typography.Text type="secondary">{chargeInput}</Typography.Text>
+                          <Typography.Text style={{ color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{chargeInput}</Typography.Text>
                         ) : (
                           <Input bordered={false} placeholder={isSalesSectionLocked ? "" : "Type a charge and press Enter…"} value={chargeInput} disabled={isSalesSectionLocked} onChange={(e) => setChargeInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); const v = chargeInput.trim(); if (v && !otherCharges.includes(v)) { setOtherCharges(p => [...p, v]); setChargeInput(""); } } }} style={{ padding: 0 }} />
                         )}
@@ -628,7 +628,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   )}
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}><Option value="prepaid">Prepaid</Option><Option value="collect">Collect</Option></Select></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea className={Styles.textAreaField} placeholder="Enter any special instructions…" autoSize={{ minRows: 2 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   {salesExecutiveFiles.length > 0 && (
                     <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>

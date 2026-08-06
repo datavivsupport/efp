@@ -767,7 +767,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 { title: "Pending With", dataIndex: "pending_with" },
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
-                { title: "Remarks", dataIndex: "remarks", render: (value) => (<span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{value || "N/A"}</span>) },
+                { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => (<Typography.Paragraph ellipsis={{ rows: 2, tooltip: value || "N/A" }} style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{value || "N/A"}</Typography.Paragraph>) },
                 { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
