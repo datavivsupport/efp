@@ -75,7 +75,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
           </div>
           {canEditFile ? (
-            <Input size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }}   className={Styles.remarkInput}/>
+            <TextArea size="large" placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} autoSize={{ minRows: 1, maxRows: 3 }} style={{ fontSize: '12px', marginTop: '2px', padding: "7px", whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}   className={Styles.remarkInput}/>
           ) : (
             file.remarks && <Typography.Text type="secondary" italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}   className={Styles.remarkInput}>{file.remarks}</Typography.Text>
           )}
@@ -850,7 +850,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} />
                   <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
