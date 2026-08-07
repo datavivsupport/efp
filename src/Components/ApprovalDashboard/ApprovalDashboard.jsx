@@ -306,8 +306,36 @@ useEffect(() => {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => items[0]?.label ?? "",
+                label: (item) => ` ${item.formattedValue} bookings`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: "#374151",
+                font: { size: 12, weight: 500 },
+                autoSkip: false,
+                maxRotation: 30,
+                minRotation: 0,
+                callback: function (value) {
+                  const label = this.getLabelForValue(value);
+                  return label.length > 14 ? `${label.slice(0, 13)}…` : label;
+                },
+              },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f1f5f9" },
+              ticks: { color: "#374151", font: { size: 12 }, precision: 0 },
+            },
+          },
         },
       });
     }
@@ -397,7 +425,7 @@ useEffect(() => {
       dataIndex: "status",
       key: "status",
       render: (s) => (
-        <Tag color={s === 'approved' ? 'success' : s === 'submitted' ? 'processing' : s === 'draft' ? 'default' : s === 'STOPPED' ? 'error' : 'error'}>
+        <Tag color={s === 'approved' ? 'success' : s === 'submitted' ? 'warning' : s === 'draft' ? 'default' : s === 'STOPPED' ? 'error' : 'error'}>
           {s === 'submitted' ? 'PENDING' : s?.toUpperCase()}
         </Tag>
       )
@@ -542,11 +570,11 @@ useEffect(() => {
                 key: "actions",
                 align: "center",
                 render: (_, record) => (
-                  <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                     <Button
-                      size="small"
                       type="primary"
-                      icon={<Icon icon="mdi:eye" />}
+                      icon={<Icon icon="mdi:eye" width="16" height="16" />}
+                      style={{ minWidth: 92, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                       onClick={(e) => {
                         e.preventDefault();
                         const url = `${window.location.origin}/sales-input?id=${record.id}`;
@@ -573,9 +601,10 @@ useEffect(() => {
                       Submit
                     </Button> */}
                     <Button
-                      size="small"
                       type="primary"
-                      icon={<Icon icon="mdi:delete" />}
+                      danger
+                      icon={<Icon icon="mdi:delete" width="16" height="16" />}
+                      style={{ minWidth: 92, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                       onClick={() => {
                         Modal.confirm({
                           title: "Delete Draft",
