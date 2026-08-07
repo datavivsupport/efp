@@ -71,6 +71,12 @@
   }
 }
 
+.checkboxSpaced :global(.ant-checkbox-label),
+.checkboxSpaced :global(.ant-checkbox + span) {
+  padding-inline-start: 8px;
+  padding-inline-end: 0;
+}
+
 .rowTextArea.rowTextArea {
   height: 32px !important;
   min-height: 32px !important;

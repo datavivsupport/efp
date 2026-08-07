@@ -879,6 +879,12 @@ const SalesInput = () => {
       },
     ]);
     setAdditionalService(prev => ({ ...prev, showTransportation: false }));
+    setAttachments([]);
+    setFreightManifestFiles([]);
+    setPendingFiles([]);
+    setRemarks([]);
+    setNewRemark("");
+    setCommodityInput("");
   };
 
   const navigate = useNavigate();
@@ -1365,26 +1371,28 @@ const SalesInput = () => {
                           </Col>
 
                           <Col xs={24} md={1}>
-                            {!isReadOnly && (
-                              <Button
-                                danger
-                                style={{ marginTop: "1rem" }}
-                                disabled={fields.length <= 1}
-                                icon={<DeleteOutlined />}
-                                onClick={() => remove(name)}
-                              />
-                            )}
+                            <Form.Item className={Styles.formLabel} label=" " colon={false}>
+                              {!isReadOnly && (
+                                <Button
+                                  danger
+                                  disabled={fields.length <= 1}
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => remove(name)}
+                                />
+                              )}
+                            </Form.Item>
                           </Col>
                           <Col xs={24} md={1}>
-                            {!isReadOnly && (
-                              <Button
-                                type="primary"
-                                style={{ marginTop: "1rem" }}
-                                icon={<PlusOutlined />}
-                                onClick={() => add()}
-                                block
-                              />
-                            )}
+                            <Form.Item className={Styles.formLabel} label=" " colon={false}>
+                              {!isReadOnly && (
+                                <Button
+                                  type="primary"
+                                  icon={<PlusOutlined />}
+                                  onClick={() => add()}
+                                  block
+                                />
+                              )}
+                            </Form.Item>
                           </Col>
                         </Row>
                       ))}
@@ -1522,6 +1530,7 @@ const SalesInput = () => {
                   {jobTypeWatch !== 'LINER' && jobTypeWatch !== 'liner' && (
                     <Col xs={24} md={3}>
                       <Checkbox
+                        className={Styles.checkboxSpaced}
                         disabled={isReadOnly}
                         checked={additionalService.hbl}
                         onChange={(e) =>
@@ -1537,6 +1546,7 @@ const SalesInput = () => {
                   )}
                   <Col xs={24} md={3}>
                     <Checkbox
+                      className={Styles.checkboxSpaced}
                       disabled={isReadOnly}
                       checked={additionalService.fac}
                       onChange={(e) =>
@@ -1551,6 +1561,7 @@ const SalesInput = () => {
                   </Col>
                   <Col xs={24} md={6}>
                     <Checkbox
+                      className={Styles.checkboxSpaced}
                       disabled={isReadOnly}
                       checked={additionalService.documentation}
                       onChange={(e) =>
@@ -1565,6 +1576,7 @@ const SalesInput = () => {
                   </Col>
                   <Col xs={24} md={6}>
                     <Checkbox
+                      className={Styles.checkboxSpaced}
                       disabled={isReadOnly}
                       checked={additionalService.showTransportation}
                       onChange={(e) => {
