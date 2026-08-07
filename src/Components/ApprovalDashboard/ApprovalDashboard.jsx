@@ -253,8 +253,27 @@ useEffect(() => {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } },
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => items[0]?.label ?? "",
+                label: (item) => ` ${item.formattedValue} exports`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: "#374151", font: { size: 12, weight: 500 } },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "#f1f5f9" },
+              ticks: { color: "#374151", font: { size: 12 }, precision: 0 },
+            },
+          },
         },
       });
     }
@@ -270,13 +289,30 @@ useEffect(() => {
             {
               data: [stats.approved, stats.pending, stats.rejected],
               backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
+              borderWidth: 0,
+              hoverOffset: 10,
+              hoverBorderWidth: 2,
+              hoverBorderColor: "#ffffff",
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: "bottom" } },
+          cutout: "45%",
+          interaction: { mode: "nearest", intersect: false },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (item) => {
+                  const total = item.dataset.data.reduce((a, b) => a + (b || 0), 0);
+                  const pct = total ? Math.round((item.parsed / total) * 100) : 0;
+                  return ` ${item.label}: ${item.parsed} (${pct}%)`;
+                },
+              },
+            },
+          },
         },
       });
     }
