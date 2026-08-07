@@ -11,7 +11,7 @@ import {
 import { useNavigate, useLocation } from "react-router";
 import { Chart, registerables } from "chart.js";
 import { ChevronDown, User, Menu } from "lucide-react";
-import sharafLogo from "../../assets/sharaf-logo.png";
+import sharafLogo from "../../assets/SSA_Logo_1_SVG.svg";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
 import { useSelector } from "react-redux";

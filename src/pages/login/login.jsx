@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Divider } from "antd";
 import { Icon } from "@iconify/react";
-import sharafLogo from "../../assets/sharaf-logo.png";
+import sharafLogo from "../../assets/SSA_Logo_1_SVG.svg";
 import { useLocation, useNavigate } from "react-router";
 import ForgotPasswordModal from "../ForgotPassword/ForgotPasswordModal";
 import styles from "./login.module.css";
