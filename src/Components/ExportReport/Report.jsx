@@ -145,10 +145,10 @@ const ExportReport = () => {
         <div className="p-6 space-y-4">
 
           {/* Always-visible default filters + toggle */}
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
 
             {/* Default filter 1 — Pending With */}
-            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+            <div className={colCls}>
               <label className={labelCls}>Pending With</label>
               <Select value={pendingWith} onChange={setPendingWith} style={{ width: "100%" }}>
                 <Option value="all">All</Option>
@@ -162,37 +162,37 @@ const ExportReport = () => {
             </div>
 
             {/* Default filter 2 — Customer Name */}
-            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+            <div className={colCls}>
               <label className={labelCls}>Customer Name</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
 
             {/* Default filter 3 — Carrier */}
-            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+            <div className={colCls}>
               <label className={labelCls}>Carrier</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
             {/* Default filter 4 — Export No */}
-            <div className={colCls} style={{ minWidth: 160, flex: "1 1 160px" }}>
+            <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
             {/* Default filter 5 — Sales Name */}
-            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+            <div className={colCls}>
               <label className={labelCls}>Sales Name</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
             </div>
 
             {/* Default filter 6 — POL */}
-            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+            <div className={colCls}>
               <label className={labelCls}>POL</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
             {/* Default filter 7 — FPOD */}
-            <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+            <div className={colCls}>
               <label className={labelCls}>FPOD</label>
               <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
             </div>
@@ -226,6 +226,7 @@ const ExportReport = () => {
                 )}
               </div>
             </div>
+
           </div>
 
           {/* Collapsible extra filters */}
@@ -234,9 +235,9 @@ const ExportReport = () => {
               padding: "10px", background: "#fafafa", borderRadius: "8px",
               border: "1px solid #f0f0f0", width: "100%",
             }}>
-              <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
 
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>Job Type</label>
                   <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="LINER">LINER</Option>
@@ -247,27 +248,27 @@ const ExportReport = () => {
                   </Select>
                 </div>
 
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>Created By</label>
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
                 </div>
 
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>AFSYS Job No.</label>
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
                 </div>
 
-                <div className={colCls} style={{ minWidth: 140, flex: "1 1 140px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>Booking Ref</label>
                   <Input prefix={<Icon icon="cil:search" width={14} color="#aaa" />} placeholder="Search..." allowClear value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
                 </div>
 
-                <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>Created Date (From)</label>
                   <DatePicker value={createdAtFrom} onChange={setCreatedAtFrom} format="DD-MM-YYYY" placeholder="From date" style={{ width: "100%" }} />
                 </div>
 
-                <div className={colCls} style={{ minWidth: 150, flex: "1 1 150px" }}>
+                <div className={colCls}>
                   <label className={labelCls}>Created Date (To)</label>
                   <DatePicker value={createdAtTo} onChange={setCreatedAtTo} format="DD-MM-YYYY" placeholder="To date" style={{ width: "100%" }} />
                 </div>
