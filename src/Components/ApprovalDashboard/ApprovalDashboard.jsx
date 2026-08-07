@@ -265,7 +265,7 @@ useEffect(() => {
           },
           scales: {
             x: {
-              grid: { display: false },
+              grid: { color: "#f1f5f9" },
               ticks: { color: "#374151", font: { size: 12, weight: 500 } },
             },
             y: {
