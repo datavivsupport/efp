@@ -1206,8 +1206,6 @@ const SalesInput = () => {
                       <Input placeholder="Person in Charge" disabled={isReadOnly} />
                     </Form.Item>
                   </Col>
-                </Row>
-                <Row gutter={16}>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Commodity">
                       <Input
@@ -1351,7 +1349,7 @@ const SalesInput = () => {
                               name={[name, "quote"]}
                               label="Quote"
                             >
-                              <TextArea placeholder="Quote" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
+                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Quote" disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
@@ -1362,7 +1360,7 @@ const SalesInput = () => {
                               name={[name, "cost"]}
                               label="Cost"
                             >
-                              <TextArea placeholder="Cost" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
+                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Cost" disabled={isReadOnly} />
                             </Form.Item>
                           </Col>
 
