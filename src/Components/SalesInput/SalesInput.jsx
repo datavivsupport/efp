@@ -45,9 +45,7 @@ import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewe
 // const { Title } = Typography;
 const { TextArea } = Input;
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FileChipList — shared chip renderer for every upload field
-───────────────────────────────────────────────────────────────────────────── */
+ 
 const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled }) => {
   return (
     <div style={{ marginTop: 8 }}>
@@ -878,7 +876,7 @@ const SalesInput = () => {
         special_remarks: "",
       },
     ]);
-    setAdditionalService(prev => ({ ...prev, showTransportation: false }));
+    setAdditionalService({ showTransportation: false, hbl: false, fac: false, documentation: false });
     setAttachments([]);
     setFreightManifestFiles([]);
     setPendingFiles([]);
