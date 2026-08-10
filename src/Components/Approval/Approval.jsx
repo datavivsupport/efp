@@ -1641,7 +1641,7 @@ const Approval = () => {
                          
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && (
-                            <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>
+                            <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
                               — {authorName} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}
                             </Typography.Text>
                           )}
