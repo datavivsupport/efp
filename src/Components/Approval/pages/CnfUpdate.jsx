@@ -588,14 +588,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       dataIndex: "remarks",
       key: "remarks",
       width: 320,
-      render: (value) => (
-        <Typography.Paragraph
-          ellipsis={{ rows: 2, tooltip: value || "N/A" }}
-          style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}
-        >
-          {value || "N/A"}
-        </Typography.Paragraph>
-      ),
+      render: (value) => {
+        const text = value || "N/A";
+        return (
+          <Tooltip title={text} placement="topLeft" overlayStyle={{ maxWidth: 480 }} overlayInnerStyle={{ maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            <span style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere", maxWidth: 320, cursor: "default" }}>
+              {text}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Updated Date",
