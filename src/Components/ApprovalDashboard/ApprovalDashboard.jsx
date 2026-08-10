@@ -50,6 +50,7 @@ const ApprovalDashboard = () => {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
+  const [topCarriers, setTopCarriers] = useState([]);
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -112,6 +113,17 @@ const ApprovalDashboard = () => {
     }
   };
 
+  const fetchTopCarriers = async () => {
+    try {
+      const res = await apiClient.get("/liner/sales-input/top-carriers/");
+      if (res.data?.status === "success") {
+        setTopCarriers(res.data.data?.carriers || []);
+      }
+    } catch (error) {
+      console.error("Error fetching top carriers:", error);
+    }
+  };
+
   const fetchDrafts = async (page = 1, size = 10) => {
     setDraftsLoading(true);
     try {
@@ -137,6 +149,7 @@ useEffect(() => {
     fetchReports(1, pageSize, jobTypeFilter);
     fetchDrafts(1, draftPageSize);
     fetchReportsOverview();
+    fetchTopCarriers();
   }, []);
 
   const handleTableChange = (pagination) => {
@@ -323,18 +336,11 @@ useEffect(() => {
       carrierChart = new Chart(carrierCtx, {
         type: "bar",
         data: {
-          labels: [
-            "Maersk",
-            "MSC",
-            "CMA CGM",
-            "Hapag-Lloyd",
-            "COSCO",
-            "Evergreen",
-          ],
+          labels: topCarriers.map((c) => c.carrier_name || "-"),
           datasets: [
             {
               label: "Bookings",
-              data: [45, 38, 32, 28, 25, 22],
+              data: topCarriers.map((c) => c.job_count ?? 0),
               backgroundColor: "#17a2b8",
             },
           ],
@@ -382,7 +388,7 @@ useEffect(() => {
       if (statusChart) statusChart.destroy();
       if (carrierChart) carrierChart.destroy();
     };
-  }, [stats]);
+  }, [stats, topCarriers]);
 
   // const dummyData = [
   //   ...
