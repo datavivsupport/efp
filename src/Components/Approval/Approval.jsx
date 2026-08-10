@@ -742,11 +742,17 @@ const Approval = () => {
       title: "Remarks",
       dataIndex: "remarks",
       key: "remarks",
-      render: (value) => (
-        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-          {value || "N/A"}
-        </span>
-      ),
+      width: 320,
+      render: (value) => {
+        const text = value || "N/A";
+        return (
+          <Tooltip title={text} placement="topLeft" overlayStyle={{ maxWidth: 480 }} overlayInnerStyle={{ maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            <span style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal", wordBreak: "break-word", maxWidth: 320, cursor: "default" }}>
+              {text}
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Updated Date",
