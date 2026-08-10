@@ -103,14 +103,14 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
         return (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: "flex", flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
                 <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0 }} />
                 {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
                 <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   {file.name || file.file_name}
                 </Typography.Text>
                 {file.uploaded_by_user_name && (
-                  <Typography.Text type="secondary" style={{ fontSize: '10px' }}>
+                  <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     ({file.uploaded_by_user_name})
                   </Typography.Text>
                 )}
