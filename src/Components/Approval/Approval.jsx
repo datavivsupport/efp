@@ -90,9 +90,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FileChipList — shared chip renderer for every upload field
-───────────────────────────────────────────────────────────────────────────── */
+
 const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => {
   return (
     <div style={{ marginTop: 8 }}>

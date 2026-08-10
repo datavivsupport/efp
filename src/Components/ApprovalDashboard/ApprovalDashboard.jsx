@@ -51,6 +51,7 @@ const ApprovalDashboard = () => {
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
   const [topCarriers, setTopCarriers] = useState([]);
+  const [exportTrends, setExportTrends] = useState({ labels: [], exports: [] });
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -124,6 +125,18 @@ const ApprovalDashboard = () => {
     }
   };
 
+  const fetchExportTrends = async () => {
+    try {
+      const res = await apiClient.get("/liner/sales-input/export-trends/");
+      if (res.data?.status === "success") {
+        const { labels = [], exports = [] } = res.data.data || {};
+        setExportTrends({ labels, exports });
+      }
+    } catch (error) {
+      console.error("Error fetching export trends:", error);
+    }
+  };
+
   const fetchDrafts = async (page = 1, size = 10) => {
     setDraftsLoading(true);
     try {
@@ -150,6 +163,7 @@ useEffect(() => {
     fetchDrafts(1, draftPageSize);
     fetchReportsOverview();
     fetchTopCarriers();
+    fetchExportTrends();
   }, []);
 
   const handleTableChange = (pagination) => {
@@ -251,11 +265,11 @@ useEffect(() => {
       trendChart = new Chart(trendCtx, {
         type: "line",
         data: {
-          labels: ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan"],
+          labels: exportTrends.labels,
           datasets: [
             {
               label: "Exports",
-              data: [85, 92, 78, 98, 105, 112, 115],
+              data: exportTrends.exports,
               borderColor: "#17a2b8",
               backgroundColor: "rgba(23, 162, 184, 0.1)",
               tension: 0.4,
@@ -388,7 +402,7 @@ useEffect(() => {
       if (statusChart) statusChart.destroy();
       if (carrierChart) carrierChart.destroy();
     };
-  }, [stats, topCarriers]);
+  }, [stats, topCarriers, exportTrends]);
 
   // const dummyData = [
   //   ...
