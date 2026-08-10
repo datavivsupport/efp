@@ -60,13 +60,13 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
               <Icon icon="famicons:document-attach" style={{ color: isPending ? '#faad14' : '#747474', flexShrink: 0 }} />
               <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
               {isPending
                 ? <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>uploading...</Tag>
                 : file.uploaded_by_user_name && (
-                  <Typography.Text type="secondary" style={{ fontSize: '10px', minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
+                  <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
                 )
               }
             </div>
