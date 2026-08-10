@@ -744,7 +744,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                          {authorName && <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>— {authorName} {r.date ? `on ${dayjs(r.date).format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
+                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );
                     })}
