@@ -1850,7 +1850,7 @@ const SalesInput = () => {
                         />
                         <Typography.Paragraph ellipsis={{ rows: 3, tooltip: typeof r === 'object' ? r.text : r }} style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</Typography.Paragraph>
                         {typeof r === 'object' && r.user_name && (
-                          <Typography.Text type="secondary" style={{ fontSize: '10px', display: 'block', marginTop: 4 }}>
+                          <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
                             — {r.user_name} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}
                           </Typography.Text>
                         )}
