@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, InputNumber, Space, Spin, Modal, message, Upload, Select, Form, Tooltip, Checkbox, DatePicker
+  Input, InputNumber, Space, Spin, Modal, message, Upload, Select, Form, Checkbox, DatePicker
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
@@ -12,6 +12,7 @@ import {
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
+import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
@@ -71,8 +72,8 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               }
             </div>
             <Space>
-              {!isPending && <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>}
-              <Tooltip title="Delete">{canEditFile && !isHodApproved && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
+              {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !isHodApproved && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -767,7 +768,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 { title: "Pending With", dataIndex: "pending_with" },
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
-                { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => (<Typography.Paragraph ellipsis={{ rows: 2, tooltip: value || "N/A" }} style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{value || "N/A"}</Typography.Paragraph>) },
+                { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
                 { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>

@@ -22,7 +22,6 @@ import {
   Alert,
   Checkbox,
   message,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -46,6 +45,7 @@ import { validateApprovalAction } from "../utils/approvalValidations";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
+import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
@@ -89,8 +89,8 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               )}
             </div>
             <Space>
-              <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>
-              <Tooltip title="Delete">{canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
+              <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
+              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -496,7 +496,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
-    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => (<Typography.Paragraph ellipsis={{ rows: 2, tooltip: value || "N/A" }} style={{ margin: 0, maxWidth: 320, whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere" }}>{value || "N/A"}</Typography.Paragraph>) },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm") : "N/A" },
   ];
 

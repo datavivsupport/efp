@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
-  Card, Row, Col, Typography, Form, Input, DatePicker, Button, Space, Spin, message, Modal, Tag, Tooltip, Table, Tabs
+  Card, Row, Col, Typography, Form, Input, DatePicker, Button, Space, Spin, message, Modal, Tag, Table, Tabs
 } from "antd";
 import { Icon } from "@iconify/react";
 import { EyeOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
@@ -10,6 +10,7 @@ import apiClient from "../../../api/apiclient";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
+import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import Styles from "../Approval.module.css";
 
@@ -32,8 +33,8 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
               )}
             </div>
             <Space>
-              <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>
-              <Tooltip title="Delete">{canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}</Tooltip>
+              <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
+              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -321,11 +322,8 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       title: "Remarks",
       dataIndex: "remarks",
       key: "remarks",
-      render: (value) => (
-        <span style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-          {value || "N/A"}
-        </span>
-      ),
+      width: 320,
+      render: (value) => <RemarksCell value={value} />,
     },
     {
       title: "Updated Date",

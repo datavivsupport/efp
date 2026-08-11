@@ -20,7 +20,6 @@ import {
   Timeline,
   Modal,
   Spin,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -41,6 +40,7 @@ import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
+import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -55,17 +55,19 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             <Space>
               <Icon icon="famicons:document-attach" style={{ color: '#747474' }} />
               {/* <PaperClipOutlined style={{ color: '#1890ff' }} /> */}
-              <Typography.Text ellipsis={{ tooltip: file.name || file.file_name }} style={{ maxWidth: 200 }}>
+              <ClampedText rows={1} maxWidth={200}>
                 {file.name || file.file_name}
-              </Typography.Text>
+              </ClampedText>
             </Space>
             <Space>
-              <Tooltip title="Preview">
+              <ScrollSafeTooltip title="Preview">
                 <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
-              </Tooltip>
-              <Tooltip title="Delete">
-              {!disabled && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}
-              </Tooltip>
+              </ScrollSafeTooltip>
+              {!disabled && (
+                <ScrollSafeTooltip title="Delete">
+                  <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />
+                </ScrollSafeTooltip>
+              )}
             </Space>
           </div>
           {!disabled && (
@@ -78,9 +80,9 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             />
           )}
           {disabled && file.remarks && (
-            <Typography.Paragraph type="secondary" italic ellipsis={{ rows: 2, tooltip: file.remarks }} style={{ fontSize: '11px', paddingLeft: '4px', margin: 0 }}>
+            <ClampedText title={file.remarks} style={{ fontSize: '11px', paddingLeft: '4px', color: 'rgba(0, 0, 0, 0.45)', fontStyle: 'italic' }}>
               Remarks: {file.remarks}
-            </Typography.Paragraph>
+            </ClampedText>
           )}
         </div>
       ))}
@@ -1806,9 +1808,9 @@ const SalesInput = () => {
                       </div>
                       {item.remarks && item.remarks !== "N/A" && (
                         <div style={{ marginTop: "8px", backgroundColor: "#f9fafb", padding: "8px 12px", borderRadius: "6px", border: "1px solid #f0f0f0", fontSize: "13px" }}>
-                          <Typography.Paragraph ellipsis={{ rows: 3, tooltip: item.remarks }} style={{ margin: 0, fontSize: "13px" }}>
+                          <ClampedText rows={3} style={{ fontSize: "13px" }}>
                             {item.remarks}
-                          </Typography.Paragraph>
+                          </ClampedText>
                         </div>
                       )}
                     </div>
@@ -1848,7 +1850,7 @@ const SalesInput = () => {
                           style={{ position: "absolute", top: 6, right: 6 }}
                           onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
                         />
-                        <Typography.Paragraph ellipsis={{ rows: 3, tooltip: typeof r === 'object' ? r.text : r }} style={{ margin: 0, fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</Typography.Paragraph>
+                        <ClampedText rows={3} style={{ fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</ClampedText>
                         {typeof r === 'object' && r.user_name && (
                           <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
                             — {r.user_name} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}

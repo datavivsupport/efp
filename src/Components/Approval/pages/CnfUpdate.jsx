@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
-  Input, InputNumber, Space, Spin, Modal, message, Tooltip, Form, Upload, Checkbox, DatePicker, Select
+  Input, InputNumber, Space, Spin, Modal, message, Form, Upload, Checkbox, DatePicker, Select
 } from "antd";
 import { Icon } from "@iconify/react";
 import {
@@ -12,6 +12,7 @@ import {
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
+import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -70,8 +71,8 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               }
             </div>
             <Space>
-              {!isPending && <Tooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></Tooltip>}
-              {canEditFile && <Tooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></Tooltip>}
+              {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
+              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -588,16 +589,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       dataIndex: "remarks",
       key: "remarks",
       width: 320,
-      render: (value) => {
-        const text = value || "N/A";
-        return (
-          <Tooltip title={text} placement="topLeft" overlayStyle={{ maxWidth: 480 }} overlayInnerStyle={{ maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}>
-            <span style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "anywhere", maxWidth: 320, cursor: "default" }}>
-              {text}
-            </span>
-          </Tooltip>
-        );
-      },
+      render: (value) => <RemarksCell value={value} />,
     },
     {
       title: "Updated Date",

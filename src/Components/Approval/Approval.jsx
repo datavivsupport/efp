@@ -32,7 +32,6 @@ import {
   Checkbox,
   message,
   Steps,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -50,6 +49,7 @@ import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 import CategorySelect from "../SalesInput/Category";
 import { uploadFile } from "../Viewer/UploadUtil";
 import MultiFileViewer from "../Viewer/MultiFileViewer";
+import ScrollSafeTooltip, { RemarksCell } from "../ScrollSafeTooltip";
 import apiClient from "../../api/apiclient";
 
 const { TextArea } = Input;
@@ -114,12 +114,14 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
                 )}
               </div>
               <Space>
-                <Tooltip title="Preview">
+                <ScrollSafeTooltip title="Preview">
                 <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
-                </Tooltip>
-                <Tooltip title="Delete">
-                {canEditFile && <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />}
-                </Tooltip>
+                </ScrollSafeTooltip>
+                {canEditFile && (
+                <ScrollSafeTooltip title="Delete">
+                <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />
+                </ScrollSafeTooltip>
+                )}
               </Space>
             </div>
             {canEditFile ? (
@@ -741,16 +743,7 @@ const Approval = () => {
       dataIndex: "remarks",
       key: "remarks",
       width: 320,
-      render: (value) => {
-        const text = value || "N/A";
-        return (
-          <Tooltip title={text} placement="topLeft" overlayStyle={{ maxWidth: 480 }} overlayInnerStyle={{ maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}>
-            <span style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal", wordBreak: "break-word", maxWidth: 320, cursor: "default" }}>
-              {text}
-            </span>
-          </Tooltip>
-        );
-      },
+      render: (value) => <RemarksCell value={value} />,
     },
     {
       title: "Updated Date",
