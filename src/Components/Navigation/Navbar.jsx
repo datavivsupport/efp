@@ -65,13 +65,14 @@ const Navigation = () => {
     navigate("/login");
   };
 
+  const goToProfile = () => {
+    setPopoverOpen(false);
+    setDrawerVisible(false);
+    navigate("/profile");
+  };
+
   const popoverContent = (
-    <div style={{ minWidth: 220 }}>
-      <div style={{ fontWeight: 600, fontSize: 15 }}>
-        {user?.first_name || ""} {user?.last_name || ""}
-      </div>
-      <div style={{ fontSize: 12, color: "#888" }}>{user?.email || ""}</div>
-    </div>
+    <div style={{ fontSize: 13, color: "#888" }}>{user?.email || ""}</div>
   );
 
   const logoutmodal = () => {
@@ -124,6 +125,12 @@ const Navigation = () => {
             className="hidden md:flex items-center space-x-3"
             ref={popoverRef}
           >
+            {/* Profile Button */}
+            <Tooltip title="My Profile">
+              <button onClick={goToProfile} className={styles.buttonnew}>
+                <Icon height="20" width="20" icon="mdi:account-circle" />
+              </button>
+            </Tooltip>
             {/* Logout Button */}
             <Tooltip title="Log Out">
               <button
@@ -139,7 +146,7 @@ const Navigation = () => {
               trigger="hover"
               placement="bottomRight"
             >
-              <div className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full cursor-pointer hover:bg-gray-200 transition">
+              <div className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full hover:bg-gray-200 transition">
                 <span className="flex items-center space-x-2 bg-gray-400 px-1 py-1 rounded-full">
                   <User
                     style={{ color: "#fff" }}
@@ -170,7 +177,7 @@ const Navigation = () => {
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <button
             className={styles.navTab}
-            onClick={popoverContent}
+            onClick={goToProfile}
             style={{
               display: "flex",
               width: "100%",
@@ -207,6 +214,14 @@ const Navigation = () => {
               {tab.label}
             </button>
           ))}
+
+          <button
+            className={styles.navTab}
+            style={{ width: "100%", textAlign: "left" }}
+            onClick={goToProfile}
+          >
+            Profile
+          </button>
 
           <button
             className={styles.navTab}

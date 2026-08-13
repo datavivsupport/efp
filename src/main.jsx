@@ -28,6 +28,7 @@ const AccountsDashboard = lazy(() => import("./Components/Approval/pages/Account
 const SalesInput = lazy(() => import("./Components/SalesInput/SalesInput.jsx"));
 const ExportReport = lazy(() => import("./Components/ExportReport/Report.jsx"));
 const MFA = lazy(() => import("./pages/login/MFA.jsx"));
+const UpdateProfile = lazy(() => import("./pages/Profile/UpdateProfile.jsx"));
 
 /* -----------------------------
    COOKIE BASED AUTH LOADER
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
       { path: "accounts-dashboard",           element: <AccountsDashboard /> },
       { path: "sales-input", element: <SalesInput /> },
       { path: "export-report", element: <ExportReport /> },
+      { path: "profile", element: <UpdateProfile /> },
     ],
   },
   { path: "/login", element: <Login /> },
