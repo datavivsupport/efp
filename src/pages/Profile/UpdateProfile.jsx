@@ -64,8 +64,7 @@ const UpdateProfile = () => {
   }, []);
 
 
-  // Fills the form and summary from a user payload. Shared by the store
-  // hydration below and by the refetch that follows a save or MFA change.
+   
   const applyProfile = (data) => {
     if (!data) return;
 
@@ -140,11 +139,7 @@ const UpdateProfile = () => {
     }
   };
 
-  // main.jsx's authLoader already fetched /accounts/me and put the user in the
-  // store before this route could render, so reuse that instead of asking for
-  // the same payload again. Guarded by a ref so StrictMode's double-invoke —
-  // and any later store update, e.g. the dispatch after a save — can't re-run
-  // it and stomp on whatever is currently in the form.
+ 
   useEffect(() => {
     if (hydratedRef.current) return;
     hydratedRef.current = true;

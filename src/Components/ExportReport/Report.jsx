@@ -166,32 +166,31 @@ const ExportReport = () => {
               <label className={labelCls}>Customer Name</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
-
-            {/* Default filter 3 — Carrier */}
+ 
             <div className={colCls}>
               <label className={labelCls}>Carrier</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
-            {/* Default filter 4 — Export No */}
+            
             <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
-            {/* Default filter 5 — Sales Name */}
+       
             <div className={colCls}>
               <label className={labelCls}>Sales Name</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
             </div>
 
-            {/* Default filter 6 — POL */}
+        
             <div className={colCls}>
               <label className={labelCls}>POL</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
-            {/* Default filter 7 — FPOD */}
+       
             <div className={colCls}>
               <label className={labelCls}>FPOD</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />

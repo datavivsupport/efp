@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import StatusCards from "../StatsCard/StatsCard";
-import { Button, message, Tag, Select, Modal, Card as AntCard, Typography, Space } from "antd";
+import { Button, message, Tag, Select, Modal, Card as AntCard, Typography, Space, DatePicker } from "antd";
 import { Chart } from "chart.js";
 import CommonTable from "../Commontable/Commontable";
 import "../Commontable/InvoiceTable.scss";
@@ -11,6 +11,79 @@ import apiClient from "../../api/apiclient";
 import dayjs from "../../dayjs-config";
 
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
+
+const { RangePicker } = DatePicker;
+
+const DATE_PRESETS = [
+  { label: "All Time", value: "all" },
+  { label: "Last 30 Days", value: "30d" },
+  { label: "Last 3 Months", value: "3m" },
+  { label: "Last 6 Months", value: "6m" },
+  { label: "Last 12 Months", value: "12m" },
+  { label: "This Year", value: "ytd" },
+  { label: "Custom Range", value: "custom" },
+];
+
+ 
+const resolvePresetRange = (preset) => {
+  const today = dayjs();
+  switch (preset) {
+    case "30d": return [today.subtract(29, "day"), today];
+    case "3m": return [today.subtract(3, "month").add(1, "day"), today];
+    case "6m": return [today.subtract(6, "month").add(1, "day"), today];
+    case "12m": return [today.subtract(12, "month").add(1, "day"), today];
+    case "ytd": return [today.startOf("year"), today];
+    default: return null; // "all", and "custom" until both dates are picked
+  }
+};
+
+const GRANULARITY_LABEL = { day: "Daily", week: "Weekly", month: "Monthly" };
+
+// One of these per chart — each graph carries its own independent date window.
+const useDateFilter = () => {
+  const [preset, setPreset] = useState("all");
+  const [range, setRange] = useState(null);
+
+  // `created_at_gte` / `created_at_lte` — omitted entirely for "All Time", which is what
+  // the dashboard sent before this filter existed.
+  const params = useMemo(() => {
+    const resolved = preset === "custom" ? range : resolvePresetRange(preset);
+    if (!resolved?.[0] || !resolved?.[1]) return {};
+    return {
+      created_at_gte: dayjs(resolved[0]).format("YYYY-MM-DD"),
+      created_at_lte: dayjs(resolved[1]).format("YYYY-MM-DD"),
+    };
+  }, [preset, range]);
+
+  const onPresetChange = (value) => {
+    setPreset(value);
+    if (value !== "custom") setRange(null);
+  };
+
+  return { preset, range, params, onPresetChange, onRangeChange: setRange };
+};
+
+const ChartDateFilter = ({ filter }) => (
+  <div className="flex flex-wrap items-center gap-2">
+    <Select
+      size="small"
+      style={{ width: 150 }}
+      value={filter.preset}
+      onChange={filter.onPresetChange}
+      options={DATE_PRESETS}
+    />
+    {filter.preset === "custom" && (
+      <RangePicker
+        size="small"
+        value={filter.range}
+        onChange={filter.onRangeChange}
+        format="DD-MM-YYYY"
+        placeholder={["From date", "To date"]}
+        disabledDate={(d) => d && d > dayjs().endOf("day")}
+      />
+    )}
+  </div>
+);
 
 const ApprovalDashboard = () => {
   const location = useLocation();
@@ -50,8 +123,15 @@ const ApprovalDashboard = () => {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0, total: 0 });
+ 
+  const [statusDist, setStatusDist] = useState({ approved: 0, pending: 0, rejected: 0 });
   const [topCarriers, setTopCarriers] = useState([]);
-  const [exportTrends, setExportTrends] = useState({ labels: [], exports: [] });
+  const [exportTrends, setExportTrends] = useState({
+    labels: [], exports: [], granularity: null, start_date: null, end_date: null, total: 0,
+  });
+  const trendDate = useDateFilter();
+  const statusDate = useDateFilter();
+  const carrierDate = useDateFilter();
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -68,6 +148,10 @@ const ApprovalDashboard = () => {
     { label: "CROSS TRADE", icon: "mdi:swap-horizontal", color: "#f59e0b" },
     { label: "OTHERS", icon: "mdi:package-variant", color: "#6b7280" },
   ];
+
+ 
+  const statusDateApplied = Boolean(statusDate.params.created_at_gte);
+  const distribution = statusDateApplied ? statusDist : stats;
 
   const fetchReports = async (page = 1, size = 10, jobType = null, status = statusFilter) => {
     setReportsLoading(true);
@@ -95,28 +179,40 @@ const ApprovalDashboard = () => {
     }
   };
 
+  const fetchStatusCounts = async (params = {}) => {
+    const res = await apiClient.get("/liner/sales-input/get_reports_overview/", { params });
+    if (res.data?.status !== "success") return null;
+    const { total = 0, status_counts = {} } = res.data.data || {};
+    return {
+      approved: status_counts.approved ?? 0,
+      pending: status_counts.submitted ?? 0,
+      rejected: status_counts.rejected ?? 0,
+      overdue: status_counts.draft ?? 0,
+      total,
+    };
+  };
+
   const fetchReportsOverview = async () => {
     try {
-      const res = await apiClient.get("/liner/sales-input/get_reports_overview/");
-      if (res.data?.status === "success") {
-        const { total = 0, status_counts = {} } = res.data.data || {};
-        setStats(prev => ({
-          ...prev,
-          approved: status_counts.approved ?? 0,
-          pending: status_counts.submitted ?? 0,
-          rejected: status_counts.rejected ?? 0,
-          overdue: status_counts.draft ?? 0,
-          total,
-        }));
-      }
+      const counts = await fetchStatusCounts();
+      if (counts) setStats(prev => ({ ...prev, ...counts }));
     } catch (error) {
       console.error("Error fetching reports overview:", error);
     }
   };
 
-  const fetchTopCarriers = async () => {
+  const fetchStatusDistribution = async (params = {}) => {
     try {
-      const res = await apiClient.get("/liner/sales-input/top-carriers/");
+      const counts = await fetchStatusCounts(params);
+      if (counts) setStatusDist(counts);
+    } catch (error) {
+      console.error("Error fetching status distribution:", error);
+    }
+  };
+
+  const fetchTopCarriers = async (params = {}) => {
+    try {
+      const res = await apiClient.get("/liner/sales-input/top-carriers/", { params });
       if (res.data?.status === "success") {
         setTopCarriers(res.data.data?.carriers || []);
       }
@@ -125,12 +221,15 @@ const ApprovalDashboard = () => {
     }
   };
 
-  const fetchExportTrends = async () => {
+  const fetchExportTrends = async (params = {}) => {
     try {
-      const res = await apiClient.get("/liner/sales-input/export-trends/");
+      const res = await apiClient.get("/liner/sales-input/export-trends/", { params });
       if (res.data?.status === "success") {
-        const { labels = [], exports = [] } = res.data.data || {};
-        setExportTrends({ labels, exports });
+        const {
+          labels = [], exports = [], granularity = null,
+          start_date = null, end_date = null, total = 0,
+        } = res.data.data || {};
+        setExportTrends({ labels, exports, granularity, start_date, end_date, total });
       }
     } catch (error) {
       console.error("Error fetching export trends:", error);
@@ -162,9 +261,19 @@ useEffect(() => {
     fetchReports(1, pageSize, jobTypeFilter);
     fetchDrafts(1, draftPageSize);
     fetchReportsOverview();
-    fetchTopCarriers();
-    fetchExportTrends();
   }, []);
+
+  useEffect(() => {
+    fetchExportTrends(trendDate.params);
+  }, [trendDate.params]);
+
+  useEffect(() => {
+    if (statusDateApplied) fetchStatusDistribution(statusDate.params);
+  }, [statusDate.params, statusDateApplied]);
+
+  useEffect(() => {
+    fetchTopCarriers(carrierDate.params);
+  }, [carrierDate.params]);
 
   const handleTableChange = (pagination) => {
     const newPage = pagination.current;
@@ -314,7 +423,7 @@ useEffect(() => {
           labels: ["Approved", "AWAITING REVIEW", "Rejected"],
           datasets: [
             {
-              data: [stats.approved, stats.pending, stats.rejected],
+              data: [distribution.approved, distribution.pending, distribution.rejected],
               backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
               borderWidth: 0,
               hoverOffset: 10,
@@ -402,7 +511,7 @@ useEffect(() => {
       if (statusChart) statusChart.destroy();
       if (carrierChart) carrierChart.destroy();
     };
-  }, [stats, topCarriers, exportTrends]);
+  }, [distribution, topCarriers, exportTrends]);
 
   // const dummyData = [
   //   ...
@@ -567,14 +676,24 @@ useEffect(() => {
         </div> */}
 
         <StatusCards stats={stats} activeStatus={statusFilter} onSelect={handleStatusSelect} />
+
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <Icon icon="mdi:chart-line" color="#6366f1" />
-                Export Trends (Monthly)
-              </h2>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Icon icon="mdi:chart-line" color="#6366f1" />
+                  Export Trends ({GRANULARITY_LABEL[exportTrends.granularity] || "Monthly"})
+                </h2>
+                {exportTrends.start_date && exportTrends.end_date && (
+                  <span className="text-xs text-gray-500">
+                    {dayjs(exportTrends.start_date).format("DD MMM YYYY")} – {dayjs(exportTrends.end_date).format("DD MMM YYYY")}
+                    {" · "}{exportTrends.total} exports
+                  </span>
+                )}
+              </div>
+              <ChartDateFilter filter={trendDate} />
             </div>
             <div className="h-64">
               <canvas id="trendChart" />
@@ -582,11 +701,12 @@ useEffect(() => {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Icon icon="mdi:chart-pie" color="#10b981" />
                 Status Distribution
               </h2>
+              <ChartDateFilter filter={statusDate} />
             </div>
             <div className="h-64">
               <canvas id="statusChart" />
@@ -595,11 +715,12 @@ useEffect(() => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 mb-8">
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Icon icon="mdi:trophy-outline" color="#3b82f6" />
               Top Carriers Performance
             </h2>
+            <ChartDateFilter filter={carrierDate} />
           </div>
           <div className="h-72">
             <canvas id="carrierChart" />
