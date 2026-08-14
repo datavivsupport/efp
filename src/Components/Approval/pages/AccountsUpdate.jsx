@@ -74,7 +74,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me"
         }]);
-        message.success(`${file.name} uploaded`);
+        message.success(res.data.message || `${file.name} uploaded`);
       }
     } catch (err) {
       message.error("Upload failed");

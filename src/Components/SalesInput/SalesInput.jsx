@@ -210,7 +210,7 @@ const DocUploadField = ({
           uploaded_by_user: user?.id,
           uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me"
         }]);
-        message.success(`${file.name} uploaded successfully to S3`);
+        message.success(response.data.message || `${file.name} uploaded successfully`);
       } else {
         message.error("Upload failed: " + response.data.message);
       }

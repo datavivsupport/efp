@@ -15,7 +15,7 @@ import {
   message,
 } from "antd";
 import { Icon } from "@iconify/react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiclient";
 import { uploadFile } from "../../Components/Viewer/UploadUtil";
@@ -32,6 +32,7 @@ const UpdateProfile = () => {
   const [form] = Form.useForm();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const storedUser = useSelector((state) => state.auth.user);
 
   const [profile, setProfileData] = useState(null);
   const [divisionName, setDivisionName] = useState("");
@@ -48,6 +49,7 @@ const UpdateProfile = () => {
   const [verifying, setVerifying] = useState(false);
 
   const previewUrlRef = useRef("");
+  const hydratedRef = useRef(false);
 
   const setPreview = (url) => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -62,24 +64,32 @@ const UpdateProfile = () => {
   }, []);
 
 
+  // Fills the form and summary from a user payload. Shared by the store
+  // hydration below and by the refetch that follows a save or MFA change.
+  const applyProfile = (data) => {
+    if (!data) return;
+
+    form.setFieldsValue({
+      ...data,
+      roles: getRoleNamesWithComma(data.roles),
+    });
+
+    setProfileData(data);
+    setIsMfaVerified(Boolean(data.is_mfa_verified));
+
+    if (data.profile_picture) setPreview(data.profile_picture);
+
+    resolveDepartments(data.departments_assigned);
+    resolveDivision(data.divison ?? data.division);
+  };
+
   const getProfile = async (syncStore = false) => {
     try {
       const res = await apiClient.get("/accounts/me");
       const data = res.data?.data;
       if (!data) return;
 
-      form.setFieldsValue({
-        ...data,
-        roles: getRoleNamesWithComma(data.roles),
-      });
-
-      setProfileData(data);
-      setIsMfaVerified(Boolean(data.is_mfa_verified));
-
-      if (data.profile_picture) setPreview(data.profile_picture);
-
-      resolveDepartments(data.departments_assigned);
-      resolveDivision(data.divison ?? data.division);
+      applyProfile(data);
 
       if (syncStore) dispatch(setUser(data));
     } catch {
@@ -130,9 +140,18 @@ const UpdateProfile = () => {
     }
   };
 
+  // main.jsx's authLoader already fetched /accounts/me and put the user in the
+  // store before this route could render, so reuse that instead of asking for
+  // the same payload again. Guarded by a ref so StrictMode's double-invoke —
+  // and any later store update, e.g. the dispatch after a save — can't re-run
+  // it and stomp on whatever is currently in the form.
   useEffect(() => {
-    getProfile();
-  }, []);
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    if (storedUser) applyProfile(storedUser);
+    else getProfile(); // defensive: loader guarantees a user, but don't render an empty form
+  }, [storedUser]);
 
 
   const onFinish = async (values) => {
@@ -221,7 +240,9 @@ const UpdateProfile = () => {
       await apiClient.post("/accounts/verify_mfa", { token: value });
       message.success("MFA setup successful!");
       setMfaModal(false);
-      getProfile();
+      // syncStore, or the store keeps is_mfa_verified: false and a later
+      // remount hydrates the page back to "MFA not set up".
+      await getProfile(true);
     } catch {
       // handled by the interceptor
     } finally {

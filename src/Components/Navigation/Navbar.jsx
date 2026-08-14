@@ -14,12 +14,18 @@ import { ChevronDown, User, Menu } from "lucide-react";
 import sharafLogo from "../../assets/SSA_Logo_1_SVG.svg";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
-import { useSelector } from "react-redux";
-import apiClient from "../../api/apiclient";
+import { useDispatch, useSelector } from "react-redux";
+import apiClient, {
+  cancelAllRequests,
+  finishLogout,
+  startLogout,
+} from "../../api/apiclient";
+import { logout } from "../../store/authSlice";
 import { computeUserRoles } from "../Approval/utils/roleUtils";
 
 const Navigation = () => {
   const user = useSelector((state) => state.auth.user);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,12 +63,28 @@ const Navigation = () => {
 
   const handleOpenPopover = () => setPopoverOpen(true);
 
-  const handleLogout = () => {
+ 
+  const handleLogout = async () => {
     setPopoverOpen(false);
     setDrawerVisible(false);
-    localStorage.removeItem("token");
-    message.success("Logout successfully.");
-    navigate("/login");
+
+    try {
+      startLogout();
+      cancelAllRequests();
+      await apiClient.get("/accounts/logout");
+    } catch {
+      // log out locally regardless
+    } finally {
+      localStorage.removeItem("open_tabs");
+      finishLogout();
+      dispatch(logout());
+      message.success("Logout successfully.");
+      navigate("/login", { replace: true });
+    }
+  };
+
+  const goToTab = (key) => {
+    if (location.pathname !== key) navigate(key);
   };
 
   const goToProfile = () => {
@@ -108,7 +130,7 @@ const Navigation = () => {
                 className={`${styles.navTab} ${
                   location.pathname === tab.key ? styles.active : ""
                 }`}
-                onClick={() => navigate(tab.key)}
+                onClick={() => goToTab(tab.key)}
               >
                 {tab.label}
               </button>
@@ -206,7 +228,7 @@ const Navigation = () => {
                 location.pathname === tab.key ? styles.active : ""
               }`}
               onClick={() => {
-                navigate(tab.key);
+                goToTab(tab.key);
                 setDrawerVisible(false);
               }}
               style={{ width: "100%", textAlign: "left" }}

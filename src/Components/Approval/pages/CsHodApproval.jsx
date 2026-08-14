@@ -103,7 +103,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       if (res.data.status === "success") {
         const d = res.data.data;
         setFiles((prev) => [...prev, { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
-        message.success(`${file.name} uploaded`);
+        message.success(res.data.message || `${file.name} uploaded`);
       } else { message.error(res.data.message || "Upload failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
     finally {

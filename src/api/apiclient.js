@@ -18,9 +18,7 @@ export const finishLogout = () => {
   isLoggingOut = false;
 };
 
-/* ================================
-   GLOBAL ERROR NOTIFICATION
-================================ */
+ 
 
 export const showError = (title, description) => {
   const key = "global_error_notification";

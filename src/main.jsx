@@ -30,10 +30,11 @@ const ExportReport = lazy(() => import("./Components/ExportReport/Report.jsx"));
 const MFA = lazy(() => import("./pages/login/MFA.jsx"));
 const UpdateProfile = lazy(() => import("./pages/Profile/UpdateProfile.jsx"));
 
-/* -----------------------------
-   COOKIE BASED AUTH LOADER
------------------------------- */
+ 
 const authLoader = async () => {
+  
+  if (store.getState().auth.isAuthenticated) return null;
+
   try {
     const res = await apiClient.get("/accounts/me", {
       withCredentials: true, // VERY IMPORTANT
@@ -50,6 +51,8 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     loader: authLoader,
+ 
+    shouldRevalidate: () => false,
     errorElement: <ErrorFallback />,
     children: [
       { index: true, element: <ApprovalDashboard /> },

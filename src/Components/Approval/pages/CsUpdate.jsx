@@ -127,7 +127,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       if (response.data.status === "success") {
         const uploadedDoc = response.data.data;
         setFiles((prev) => [...prev, { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
-        message.success(`${file.name} uploaded successfully to S3`);
+        message.success(response.data.message || `${file.name} uploaded successfully`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
     finally {

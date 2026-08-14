@@ -125,7 +125,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
-        message.success(`${file.name} uploaded successfully`);
+        message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
         message.error(res.data.message || "Upload failed");
