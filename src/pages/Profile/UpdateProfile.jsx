@@ -71,6 +71,8 @@ const UpdateProfile = () => {
     form.setFieldsValue({
       ...data,
       roles: getRoleNamesWithComma(data.roles),
+   
+      is_leave: data.is_leave ?? false,
     });
 
     setProfileData(data);

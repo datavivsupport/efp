@@ -15,25 +15,20 @@ import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
 const { RangePicker } = DatePicker;
 
 const DATE_PRESETS = [
-  { label: "All Time", value: "all" },
-  { label: "Last 30 Days", value: "30d" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 1 Month", value: "1m" },
   { label: "Last 3 Months", value: "3m" },
-  { label: "Last 6 Months", value: "6m" },
-  { label: "Last 12 Months", value: "12m" },
-  { label: "This Year", value: "ytd" },
-  { label: "Custom Range", value: "custom" },
 ];
 
- 
+const DEFAULT_PRESET = "1m";
+
 const resolvePresetRange = (preset) => {
   const today = dayjs();
   switch (preset) {
-    case "30d": return [today.subtract(29, "day"), today];
+    case "7d": return [today.subtract(6, "day"), today];
+    case "1m": return [today.subtract(1, "month").add(1, "day"), today];
     case "3m": return [today.subtract(3, "month").add(1, "day"), today];
-    case "6m": return [today.subtract(6, "month").add(1, "day"), today];
-    case "12m": return [today.subtract(12, "month").add(1, "day"), today];
-    case "ytd": return [today.startOf("year"), today];
-    default: return null; // "all", and "custom" until both dates are picked
+    default: return null;
   }
 };
 
@@ -41,7 +36,7 @@ const GRANULARITY_LABEL = { day: "Daily", week: "Weekly", month: "Monthly" };
 
 // One of these per chart — each graph carries its own independent date window.
 const useDateFilter = () => {
-  const [preset, setPreset] = useState("all");
+  const [preset, setPreset] = useState(DEFAULT_PRESET);
   const [range, setRange] = useState(null);
 
   // `created_at_gte` / `created_at_lte` — omitted entirely for "All Time", which is what
