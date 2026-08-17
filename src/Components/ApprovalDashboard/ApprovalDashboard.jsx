@@ -57,6 +57,11 @@ const TREND_LINES = [
 
 const TREND_POINT_WIDTH = 90;
 
+ 
+const CARRIER_MODAL_LIMIT = 50;
+ 
+const CARRIER_ROW_HEIGHT = 34;
+
 
 const buildTrendConfig = ({ labels, data, showFullLabels = false }) => ({
   type: "line",
@@ -204,12 +209,11 @@ const ApprovalDashboard = () => {
 
   const hasShownMessage = useRef(false);
 
-  // Each chart's filter can be changed faster than the previous request returns,
-  // and a wider window (3 months) is slower than a narrow one (7 days). Without
-  // these, a superseded response can land last and overwrite the current period.
+ 
   const trendReqRef = useRef(0);
   const statusDistReqRef = useRef(0);
   const carrierReqRef = useRef(0);
+  const allCarrierReqRef = useRef(0);
 
   const [data, setData] = useState([]);
   const [draftsData, setDraftsData] = useState([]);
@@ -230,6 +234,13 @@ const ApprovalDashboard = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [trendModalOpen, setTrendModalOpen] = useState(false);
   const [trendModalHeight, setTrendModalHeight] = useState(500);
+  const [carrierModalOpen, setCarrierModalOpen] = useState(false);
+  const [carrierModalHeight, setCarrierModalHeight] = useState(500);
+  const [allCarriersLoading, setAllCarriersLoading] = useState(false);
+  // Kept apart from `topCarriers` so opening the modal never disturbs the card.
+  const [allCarriers, setAllCarriers] = useState({
+    carriers: [], total_carriers: 0, total_jobs: 0, others: null, unspecified: 0,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -261,9 +272,7 @@ const ApprovalDashboard = () => {
     };
   }, [exportTrends.series, exportTrends.exports]);
 
-  // The card already holds every bucket the API returned for the active filter,
-  // so the modal needs no second fetch — it reads the same state, which is why
-  // the selected period stays applied when it opens.
+ 
   const openTrendModal = () => {
     setTrendModalHeight(Math.floor(window.innerHeight * 0.9) - 220);
     setTrendModalOpen(true);
@@ -276,6 +285,24 @@ const ApprovalDashboard = () => {
     return () => window.removeEventListener("resize", recalc);
   }, [trendModalOpen]);
 
+ 
+  const openCarrierModal = () => {
+    setCarrierModalHeight(Math.floor(window.innerHeight * 0.9) - 220);
+    setCarrierModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!carrierModalOpen) return;
+    fetchAllCarriers(carrierDate.params);
+  }, [carrierModalOpen, carrierDate.params]);
+
+  useEffect(() => {
+    if (!carrierModalOpen) return;
+    const recalc = () => setCarrierModalHeight(Math.floor(window.innerHeight * 0.9) - 220);
+    window.addEventListener("resize", recalc);
+    return () => window.removeEventListener("resize", recalc);
+  }, [carrierModalOpen]);
+
   const trendTotals = useMemo(
     () => ({
       created: trendData.created.reduce((a, b) => a + b, 0),
@@ -285,9 +312,14 @@ const ApprovalDashboard = () => {
     [trendData],
   );
 
-  // Chart takes the upper ~60% of the modal body, the data table the remainder.
+  
   const trendChartHeight = Math.max(280, Math.round(trendModalHeight * 0.62));
   const trendTableHeight = Math.max(160, trendModalHeight - trendChartHeight - 48);
+
+   
+  const carrierPlotHeight = Math.max(320, allCarriers.carriers.length * CARRIER_ROW_HEIGHT);
+  const carrierViewportHeight = Math.max(280, Math.round(carrierModalHeight * 0.6));
+  const carrierTableHeight = Math.max(160, carrierModalHeight - carrierViewportHeight - 48);
 
   // Every bucket the API returned, flattened for the detail table.
   const trendRows = useMemo(
@@ -375,6 +407,32 @@ const ApprovalDashboard = () => {
       }
     } catch (error) {
       if (reqId === carrierReqRef.current) console.error("Error fetching top carriers:", error);
+    }
+  };
+
+  // Full carrier list for the modal only — the card keeps its top 6 untouched.
+  const fetchAllCarriers = async (params = {}) => {
+    const reqId = ++allCarrierReqRef.current;
+    setAllCarriersLoading(true);
+    try {
+      const res = await apiClient.get("/liner/sales-input/top-carriers/", {
+        params: { ...params, limit: CARRIER_MODAL_LIMIT },
+      });
+      if (reqId !== allCarrierReqRef.current) return; // superseded
+      if (res.data?.status === "success") {
+        const payload = res.data.data || {};
+        setAllCarriers({
+          carriers: payload.carriers || [],
+          total_carriers: payload.total_carriers ?? 0,
+          total_jobs: payload.total_jobs ?? 0,
+          others: payload.others || null,
+          unspecified: payload.unspecified ?? 0,
+        });
+      }
+    } catch (error) {
+      if (reqId === allCarrierReqRef.current) console.error("Error fetching all carriers:", error);
+    } finally {
+      if (reqId === allCarrierReqRef.current) setAllCarriersLoading(false);
     }
   };
 
@@ -524,9 +582,7 @@ useEffect(() => {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // One effect per chart. Sharing a single effect made every chart rebuild
-  // whenever any one filter changed, so touching Status Distribution replayed
-  // the Top Carriers and Export Trends animations for no reason.
+  
   useEffect(() => {
     const trendCtx = document.getElementById("trendChart");
     if (!trendCtx) return;
@@ -632,8 +688,7 @@ useEffect(() => {
     }
   }, [topCarriers]);
 
-  // Expanded trend chart — its own Chart.js instance, built once the modal has
-  // mounted its canvas and rebuilt whenever the filter changes underneath it.
+ 
   useEffect(() => {
     if (!trendModalOpen) return;
     const ctx = document.getElementById("trendChartModal");
@@ -649,6 +704,58 @@ useEffect(() => {
     );
     return () => chart.destroy();
   }, [trendModalOpen, exportTrends, trendData, trendModalHeight]);
+
+ 
+  useEffect(() => {
+    if (!carrierModalOpen) return;
+    const ctx = document.getElementById("carrierChartModal");
+    if (!ctx) return;
+
+    const rows = allCarriers.carriers;
+    const chart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: rows.map((c) => c.carrier_name || "-"),
+        datasets: [
+          {
+            label: "Jobs",
+            data: rows.map((c) => c.job_count ?? 0),
+            backgroundColor: "#17a2b8",
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => items[0]?.label ?? "",
+              label: (item) =>
+                ` ${item.formattedValue} jobs · ${rows[item.dataIndex]?.share_percent ?? 0}% of total`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            title: { display: true, text: "Jobs", color: "#475569", font: { size: 12, weight: 600 } },
+            grid: { color: "#f1f5f9" },
+            ticks: { color: "#374151", font: { size: 12 }, precision: 0 },
+          },
+          y: {
+            title: { display: true, text: "Carrier", color: "#475569", font: { size: 12, weight: 600 } },
+            grid: { display: false },
+            ticks: { color: "#374151", font: { size: 12 }, autoSkip: false },
+          },
+        },
+      },
+    });
+    return () => chart.destroy();
+  }, [carrierModalOpen, allCarriers, carrierModalHeight]);
 
   // const dummyData = [
   //   ...
@@ -869,8 +976,19 @@ useEffect(() => {
             <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Icon icon="mdi:trophy-outline" color="#3b82f6" />
               Top Carriers Performance
+              <span className="text-xs font-normal text-gray-500">(Top 6)</span>
             </h2>
-            <ChartDateFilter filter={carrierDate} />
+            <div className="flex items-center gap-2">
+              <ChartDateFilter filter={carrierDate} />
+              <Button
+                size="small"
+                onClick={openCarrierModal}
+                title="View all carriers"
+                icon={<Icon icon="mdi:arrow-expand-all" width="16" height="16" />}
+              >
+                View All
+              </Button>
+            </div>
           </div>
           <div className="h-72">
             <canvas id="carrierChart" />
@@ -996,6 +1114,121 @@ useEffect(() => {
           />
         </div>
       </main>
+
+      {/* All carriers — the card is capped at the API's default top 6 */}
+      <Modal
+        open={carrierModalOpen}
+        onCancel={() => setCarrierModalOpen(false)}
+        footer={null}
+        width="98vw"
+        style={{ top: 20 }}
+        title={
+          <span className="flex items-center gap-2">
+            <Icon icon="mdi:trophy-outline" color="#3b82f6" />
+            Carrier Performance — All Carriers
+          </span>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-gray-800">
+                Showing {allCarriers.carriers.length}
+                {allCarriers.total_carriers > allCarriers.carriers.length
+                  ? ` of ${allCarriers.total_carriers}`
+                  : ""}{" "}
+                carriers
+              </div>
+              <span className="text-xs text-gray-500">
+                {allCarriers.total_jobs} jobs in the selected period
+                {allCarriers.total_carriers > CARRIER_MODAL_LIMIT && (
+                  <> · capped at the server maximum of {CARRIER_MODAL_LIMIT}</>
+                )}
+              </span>
+            </div>
+            <ChartDateFilter filter={carrierDate} />
+          </div>
+
+          {/* Scrolls vertically as carriers grow, horizontally on narrow screens */}
+          <div
+            style={{
+              height: carrierViewportHeight,
+              overflow: "auto",
+              border: "1px solid #f1f5f9",
+              borderRadius: 8,
+              padding: 8,
+            }}
+          >
+            <div style={{ height: carrierPlotHeight, minWidth: 720 }}>
+              <canvas id="carrierChartModal" />
+            </div>
+          </div>
+
+          {/* Exact figures, including what fell outside the ranked list */}
+          <div
+            style={{
+              maxHeight: carrierTableHeight,
+              overflow: "auto",
+              border: "1px solid #f1f5f9",
+              borderRadius: 8,
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ position: "sticky", top: 0, zIndex: 1, background: "#f8fafc" }}>
+                  {["#", "Carrier", "Jobs", "Share"].map((heading, i) => (
+                    <th
+                      key={heading}
+                      style={{
+                        textAlign: i >= 2 ? "right" : "left",
+                        padding: "8px 14px", color: "#475569", fontWeight: 600,
+                        whiteSpace: "nowrap", borderBottom: "1px solid #e2e8f0",
+                      }}
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allCarriers.carriers.map((row, index) => (
+                  <tr key={`${row.carrier_name}-${index}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "7px 14px", color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{index + 1}</td>
+                    <td style={{ padding: "7px 14px", fontWeight: 600, color: "#1f2937" }}>{row.carrier_name || "-"}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#17a2b8", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.job_count}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#64748b", fontVariantNumeric: "tabular-nums" }}>{row.share_percent}%</td>
+                  </tr>
+                ))}
+                {allCarriers.others?.carrier_count > 0 && (
+                  <tr style={{ borderBottom: "1px solid #f1f5f9", background: "#fafafa" }}>
+                    <td style={{ padding: "7px 14px", color: "#94a3b8" }}>—</td>
+                    <td style={{ padding: "7px 14px", color: "#64748b", fontStyle: "italic" }}>
+                      Other carriers ({allCarriers.others.carrier_count})
+                    </td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#64748b", fontVariantNumeric: "tabular-nums" }}>{allCarriers.others.job_count}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#94a3b8" }}>—</td>
+                  </tr>
+                )}
+                {allCarriers.unspecified > 0 && (
+                  <tr style={{ background: "#fafafa" }}>
+                    <td style={{ padding: "7px 14px", color: "#94a3b8" }}>—</td>
+                    <td style={{ padding: "7px 14px", color: "#64748b", fontStyle: "italic" }}>No carrier recorded</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#64748b", fontVariantNumeric: "tabular-nums" }}>{allCarriers.unspecified}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#94a3b8" }}>—</td>
+                  </tr>
+                )}
+                {!allCarriersLoading && allCarriers.carriers.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#94a3b8" }}>
+                      No carrier data for the selected period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Modal>
 
       {/* Expanded Export Trends — enlarged chart + the full bucket dataset */}
       <Modal
