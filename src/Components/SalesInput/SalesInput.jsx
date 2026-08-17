@@ -39,6 +39,7 @@ import EquipmentTypeSelect from "./EquipmentType";
 import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
+import { renderUserOption, renderUserLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 
@@ -517,6 +518,7 @@ const SalesInput = () => {
         setHodOptions(hodData.map((item) => ({
            label: `${item.first_name} ${item.last_name}  |  (${item.email})`,
            value: `${item.first_name} ${item.last_name}`,
+           isOnLeave: !!item.is_leave,
         })));
       } catch (err) {
         console.warn("Failed to load HOD selection data (permissions?)", err);
@@ -1634,6 +1636,8 @@ const SalesInput = () => {
                         options={hodOptions}
                         showSearch
                         optionFilterProp="label"
+                        optionRender={renderUserOption}
+                        labelRender={renderUserLabel(hodOptions)}
                       />
                     </Form.Item>
                   </Col>

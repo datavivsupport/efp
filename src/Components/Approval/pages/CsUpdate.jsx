@@ -34,6 +34,7 @@ import {
 import { Icon } from "@iconify/react";
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
+import { renderUserOption, renderUserLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";
 import { computeSectionLocks } from "../utils/sectionLocks";
@@ -360,7 +361,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}` })));
+      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}`, isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 
@@ -749,7 +750,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HBL"><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
                   )}
                   {!isLiner && (
-                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice, message: "Required" }]}><Select placeholder="Select CS HOD" allowClear showSearch optionFilterProp="label" options={csHodOptions} disabled={isCSUploadLocked || isMasterMode} /></Form.Item></Col>
+                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice, message: "Required" }]}><Select placeholder="Select CS HOD" allowClear showSearch optionFilterProp="label" options={csHodOptions} optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} disabled={isCSUploadLocked || isMasterMode} /></Form.Item></Col>
                   )}
                   {facFlag && (
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HCS"><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>

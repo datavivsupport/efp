@@ -11,6 +11,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
+import { renderUserLabel } from "../../StatusDot";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
@@ -232,7 +233,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}` })));
+      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}`, isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 
@@ -603,7 +604,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={8}>
                   <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
                   <Form.Item name="cs_hod" noStyle>
-                    <Select disabled options={csHodOptions} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
+                    <Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
                   </Form.Item>
                 </Col>
                 {[
