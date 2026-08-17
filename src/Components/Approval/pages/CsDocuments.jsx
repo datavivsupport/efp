@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
-import { renderUserOption, renderUserLabel } from "../../StatusDot";
+import { renderUserOption, renderUserLabel, userOptionLabel } from "../../StatusDot";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
@@ -298,7 +298,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}`, isOnLeave: !!item.is_leave })));
+      setCsHodOptions(data.map((item) => ({ value: item.id, label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 

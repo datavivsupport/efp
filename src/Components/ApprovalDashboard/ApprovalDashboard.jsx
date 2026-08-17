@@ -54,18 +54,10 @@ const TREND_LINES = [
   { key: "rejected", label: "Rejected", color: "#ef4444" },
 ];
 
-// Horizontal room each bucket needs in the expanded view before the plot starts
-// scrolling — the Chart.js equivalent of Apex's scrollablePlotArea.minWidth.
+
 const TREND_POINT_WIDTH = 90;
 
-/**
- * One config for both the dashboard card and the expanded modal, so the two can
- * never drift apart.
- *
- * `showFullLabels` mirrors the admin invoice chart: larger type, more padding
- * and angled x labels for the enlarged view. The modal pins its own HTML legend
- * above the scroll area, so the built-in legend is turned off there.
- */
+
 const buildTrendConfig = ({ labels, data, showFullLabels = false }) => ({
   type: "line",
   data: {
@@ -139,8 +131,7 @@ const useDateFilter = () => {
   const [preset, setPreset] = useState(DEFAULT_PRESET);
   const [range, setRange] = useState(null);
 
-  // `created_at_gte` / `created_at_lte` — omitted entirely for "All Time", which is what
-  // the dashboard sent before this filter existed.
+ 
   const params = useMemo(() => {
     const resolved = preset === "custom" ? range : resolvePresetRange(preset);
     if (!resolved?.[0] || !resolved?.[1]) return {};
@@ -212,6 +203,13 @@ const ApprovalDashboard = () => {
   // }, [location]);
 
   const hasShownMessage = useRef(false);
+
+  // Each chart's filter can be changed faster than the previous request returns,
+  // and a wider window (3 months) is slower than a narrow one (7 days). Without
+  // these, a superseded response can land last and overwrite the current period.
+  const trendReqRef = useRef(0);
+  const statusDistReqRef = useRef(0);
+  const carrierReqRef = useRef(0);
 
   const [data, setData] = useState([]);
   const [draftsData, setDraftsData] = useState([]);
@@ -357,28 +355,34 @@ const ApprovalDashboard = () => {
   };
 
   const fetchStatusDistribution = async (params = {}) => {
+    const reqId = ++statusDistReqRef.current;
     try {
       const counts = await fetchStatusCounts(params);
+      if (reqId !== statusDistReqRef.current) return; // superseded
       if (counts) setStatusDist(counts);
     } catch (error) {
-      console.error("Error fetching status distribution:", error);
+      if (reqId === statusDistReqRef.current) console.error("Error fetching status distribution:", error);
     }
   };
 
   const fetchTopCarriers = async (params = {}) => {
+    const reqId = ++carrierReqRef.current;
     try {
       const res = await apiClient.get("/liner/sales-input/top-carriers/", { params });
+      if (reqId !== carrierReqRef.current) return; // superseded
       if (res.data?.status === "success") {
         setTopCarriers(res.data.data?.carriers || []);
       }
     } catch (error) {
-      console.error("Error fetching top carriers:", error);
+      if (reqId === carrierReqRef.current) console.error("Error fetching top carriers:", error);
     }
   };
 
   const fetchExportTrends = async (params = {}) => {
+    const reqId = ++trendReqRef.current;
     try {
       const res = await apiClient.get("/liner/sales-input/export-trends/", { params });
+      if (reqId !== trendReqRef.current) return; // superseded by a newer period
       if (res.data?.status === "success") {
         const {
           labels = [], exports = [], series = [], granularity = null,
@@ -387,7 +391,7 @@ const ApprovalDashboard = () => {
         setExportTrends({ labels, exports, series, granularity, start_date, end_date, total });
       }
     } catch (error) {
-      console.error("Error fetching export trends:", error);
+      if (reqId === trendReqRef.current) console.error("Error fetching export trends:", error);
     }
   };
 
@@ -520,22 +524,23 @@ useEffect(() => {
     }
   }, [location.state, navigate, location.pathname]);
 
+  // One effect per chart. Sharing a single effect made every chart rebuild
+  // whenever any one filter changed, so touching Status Distribution replayed
+  // the Top Carriers and Export Trends animations for no reason.
   useEffect(() => {
-    let trendChart, statusChart, carrierChart;
-
-    // Trend Chart
     const trendCtx = document.getElementById("trendChart");
-    if (trendCtx) {
-      trendChart = new Chart(
-        trendCtx,
-        buildTrendConfig({ labels: exportTrends.labels, data: trendData }),
-      );
-    }
+    if (!trendCtx) return;
+    const trendChart = new Chart(
+      trendCtx,
+      buildTrendConfig({ labels: exportTrends.labels, data: trendData }),
+    );
+    return () => trendChart.destroy();
+  }, [exportTrends.labels, trendData]);
 
-    // Status Chart
+  useEffect(() => {
     const statusCtx = document.getElementById("statusChart");
     if (statusCtx) {
-      statusChart = new Chart(statusCtx, {
+      const statusChart = new Chart(statusCtx, {
         type: "doughnut",
         data: {
           labels: ["Approved", "AWAITING REVIEW", "Rejected"],
@@ -569,12 +574,14 @@ useEffect(() => {
           },
         },
       });
+      return () => statusChart.destroy();
     }
+  }, [distribution]);
 
-    // Carrier Chart
+  useEffect(() => {
     const carrierCtx = document.getElementById("carrierChart");
     if (carrierCtx) {
-      carrierChart = new Chart(carrierCtx, {
+      const carrierChart = new Chart(carrierCtx, {
         type: "bar",
         data: {
           labels: topCarriers.map((c) => c.carrier_name || "-"),
@@ -621,15 +628,9 @@ useEffect(() => {
           },
         },
       });
+      return () => carrierChart.destroy();
     }
-
-    
-    return () => {
-      if (trendChart) trendChart.destroy();
-      if (statusChart) statusChart.destroy();
-      if (carrierChart) carrierChart.destroy();
-    };
-  }, [distribution, topCarriers, exportTrends, trendData]);
+  }, [topCarriers]);
 
   // Expanded trend chart — its own Chart.js instance, built once the modal has
   // mounted its canvas and rebuilt whenever the filter changes underneath it.

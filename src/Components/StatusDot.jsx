@@ -31,4 +31,12 @@ export const renderUserLabel = (options) => ({ label, value }) => (
   </span>
 );
 
+ 
+export const userOptionLabel = (user) => {
+  const name = `${user?.first_name || ""} ${user?.last_name || ""}`.trim();
+  const email = user?.email || "";
+  if (name && email) return `${name} | (${email})`;
+  return name || email;
+};
+
 export default StatusDot;

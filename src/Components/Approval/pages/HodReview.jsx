@@ -34,6 +34,7 @@ import {
 import { Icon } from "@iconify/react";
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
+import { userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";
 import { computeCanApprove } from "../utils/canApprove";
@@ -347,7 +348,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: item.get_full_name || item.email || `${item.first_name} ${item.last_name}` })));
+      setCsHodOptions(data.map((item) => ({ value: item.id, label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 

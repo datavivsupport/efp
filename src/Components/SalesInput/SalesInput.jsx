@@ -39,7 +39,7 @@ import EquipmentTypeSelect from "./EquipmentType";
 import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
-import { renderUserOption, renderUserLabel } from "../StatusDot";
+import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 
@@ -516,7 +516,7 @@ const SalesInput = () => {
         const hodData = hodRes.data?.results ?? hodRes.data ?? [];
 
         setHodOptions(hodData.map((item) => ({
-           label: `${item.first_name} ${item.last_name}  |  (${item.email})`,
+           label: userOptionLabel(item),
            value: `${item.first_name} ${item.last_name}`,
            isOnLeave: !!item.is_leave,
         })));
