@@ -34,6 +34,106 @@ const resolvePresetRange = (preset) => {
 
 const GRANULARITY_LABEL = { day: "Daily", week: "Weekly", month: "Monthly" };
 
+ 
+const REJECTED_STATUSES = [
+  "rejected",
+  "CS-REJECTED",
+  "CNF-REJECTED",
+  "CSHOD-REJECTED",
+  "ACCOUNTS-REJECTED",
+  "REJECTED-CLOSED",
+];
+const COMPLETED_STATUSES = ["approved"];
+
+const sumStatuses = (counts, keys) =>
+  keys.reduce((total, key) => total + (counts?.[key] || 0), 0);
+
+const TREND_LINES = [
+  { key: "created", label: "Created", color: "#6366f1" },
+  { key: "completed", label: "Completed", color: "#10b981" },
+  { key: "rejected", label: "Rejected", color: "#ef4444" },
+];
+
+// Horizontal room each bucket needs in the expanded view before the plot starts
+// scrolling — the Chart.js equivalent of Apex's scrollablePlotArea.minWidth.
+const TREND_POINT_WIDTH = 90;
+
+/**
+ * One config for both the dashboard card and the expanded modal, so the two can
+ * never drift apart.
+ *
+ * `showFullLabels` mirrors the admin invoice chart: larger type, more padding
+ * and angled x labels for the enlarged view. The modal pins its own HTML legend
+ * above the scroll area, so the built-in legend is turned off there.
+ */
+const buildTrendConfig = ({ labels, data, showFullLabels = false }) => ({
+  type: "line",
+  data: {
+    labels,
+    datasets: TREND_LINES.map(({ key, label, color }) => ({
+      label,
+      data: data[key],
+      borderColor: color,
+      backgroundColor: color,
+      pointBackgroundColor: color,
+      pointRadius: showFullLabels ? 4 : 3,
+      pointHoverRadius: showFullLabels ? 6 : 5,
+      borderWidth: 2,
+      tension: 0.4,
+      fill: false,
+    })),
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    layout: showFullLabels ? { padding: { left: 12, right: 24, bottom: 12 } } : {},
+    plugins: {
+      legend: showFullLabels
+        ? { display: false }
+        : {
+            display: true,
+            position: "bottom",
+            labels: {
+              usePointStyle: true,
+              pointStyle: "circle",
+              boxWidth: 8,
+              padding: 16,
+              color: "#374151",
+              font: { size: 12, weight: 500 },
+            },
+          },
+      tooltip: {
+        callbacks: {
+          title: (items) => items[0]?.label ?? "",
+          label: (item) => ` ${item.dataset.label}: ${item.formattedValue}`,
+          footer: (items) => {
+            const created = items.find((i) => i.dataset.label === "Created");
+            return created ? `Total created: ${created.formattedValue}` : "";
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: "#f1f5f9" },
+        ticks: {
+          color: "#374151",
+          font: { size: showFullLabels ? 12 : 12, weight: 500 },
+          maxRotation: showFullLabels ? 45 : 0,
+          minRotation: showFullLabels ? 45 : 0,
+          autoSkip: !showFullLabels,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: "#f1f5f9" },
+        ticks: { color: "#374151", font: { size: 12 }, precision: 0 },
+      },
+    },
+  },
+});
+
 // One of these per chart — each graph carries its own independent date window.
 const useDateFilter = () => {
   const [preset, setPreset] = useState(DEFAULT_PRESET);
@@ -122,7 +222,7 @@ const ApprovalDashboard = () => {
   const [statusDist, setStatusDist] = useState({ approved: 0, pending: 0, rejected: 0 });
   const [topCarriers, setTopCarriers] = useState([]);
   const [exportTrends, setExportTrends] = useState({
-    labels: [], exports: [], granularity: null, start_date: null, end_date: null, total: 0,
+    labels: [], exports: [], series: [], granularity: null, start_date: null, end_date: null, total: 0,
   });
   const trendDate = useDateFilter();
   const statusDate = useDateFilter();
@@ -130,6 +230,8 @@ const ApprovalDashboard = () => {
   const [jobTypeFilter, setJobTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [trendModalOpen, setTrendModalOpen] = useState(false);
+  const [trendModalHeight, setTrendModalHeight] = useState(500);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -147,6 +249,64 @@ const ApprovalDashboard = () => {
  
   const statusDateApplied = Boolean(statusDate.params.created_at_gte);
   const distribution = statusDateApplied ? statusDist : stats;
+
+ 
+  const trendData = useMemo(() => {
+    const rows = exportTrends.series || [];
+    if (!rows.length) {
+      return { created: exportTrends.exports || [], completed: [], rejected: [] };
+    }
+    return {
+      created: rows.map((r) => r.exports ?? 0),
+      completed: rows.map((r) => sumStatuses(r.status_counts, COMPLETED_STATUSES)),
+      rejected: rows.map((r) => sumStatuses(r.status_counts, REJECTED_STATUSES)),
+    };
+  }, [exportTrends.series, exportTrends.exports]);
+
+  // The card already holds every bucket the API returned for the active filter,
+  // so the modal needs no second fetch — it reads the same state, which is why
+  // the selected period stays applied when it opens.
+  const openTrendModal = () => {
+    setTrendModalHeight(Math.floor(window.innerHeight * 0.9) - 220);
+    setTrendModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!trendModalOpen) return;
+    const recalc = () => setTrendModalHeight(Math.floor(window.innerHeight * 0.9) - 220);
+    window.addEventListener("resize", recalc);
+    return () => window.removeEventListener("resize", recalc);
+  }, [trendModalOpen]);
+
+  const trendTotals = useMemo(
+    () => ({
+      created: trendData.created.reduce((a, b) => a + b, 0),
+      completed: trendData.completed.reduce((a, b) => a + b, 0),
+      rejected: trendData.rejected.reduce((a, b) => a + b, 0),
+    }),
+    [trendData],
+  );
+
+  // Chart takes the upper ~60% of the modal body, the data table the remainder.
+  const trendChartHeight = Math.max(280, Math.round(trendModalHeight * 0.62));
+  const trendTableHeight = Math.max(160, trendModalHeight - trendChartHeight - 48);
+
+  // Every bucket the API returned, flattened for the detail table.
+  const trendRows = useMemo(
+    () =>
+      (exportTrends.series || []).map((row, index) => ({
+        key: index,
+        label: row.label,
+        range:
+          row.bucket_start && row.bucket_end
+            ? `${dayjs(row.bucket_start).format("DD MMM")} – ${dayjs(row.bucket_end).format("DD MMM YYYY")}`
+            : "",
+        created: row.exports ?? 0,
+        completed: sumStatuses(row.status_counts, COMPLETED_STATUSES),
+        rejected: sumStatuses(row.status_counts, REJECTED_STATUSES),
+      })),
+    [exportTrends.series],
+  );
 
   const fetchReports = async (page = 1, size = 10, jobType = null, status = statusFilter) => {
     setReportsLoading(true);
@@ -221,10 +381,10 @@ const ApprovalDashboard = () => {
       const res = await apiClient.get("/liner/sales-input/export-trends/", { params });
       if (res.data?.status === "success") {
         const {
-          labels = [], exports = [], granularity = null,
+          labels = [], exports = [], series = [], granularity = null,
           start_date = null, end_date = null, total = 0,
         } = res.data.data || {};
-        setExportTrends({ labels, exports, granularity, start_date, end_date, total });
+        setExportTrends({ labels, exports, series, granularity, start_date, end_date, total });
       }
     } catch (error) {
       console.error("Error fetching export trends:", error);
@@ -366,47 +526,10 @@ useEffect(() => {
     // Trend Chart
     const trendCtx = document.getElementById("trendChart");
     if (trendCtx) {
-      trendChart = new Chart(trendCtx, {
-        type: "line",
-        data: {
-          labels: exportTrends.labels,
-          datasets: [
-            {
-              label: "Exports",
-              data: exportTrends.exports,
-              borderColor: "#17a2b8",
-              backgroundColor: "rgba(23, 162, 184, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: (items) => items[0]?.label ?? "",
-                label: (item) => ` ${item.formattedValue} exports`,
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { color: "#f1f5f9" },
-              ticks: { color: "#374151", font: { size: 12, weight: 500 } },
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: "#f1f5f9" },
-              ticks: { color: "#374151", font: { size: 12 }, precision: 0 },
-            },
-          },
-        },
-      });
+      trendChart = new Chart(
+        trendCtx,
+        buildTrendConfig({ labels: exportTrends.labels, data: trendData }),
+      );
     }
 
     // Status Chart
@@ -500,13 +623,31 @@ useEffect(() => {
       });
     }
 
-    // Cleanup function to destroy charts when component unmounts
+    
     return () => {
       if (trendChart) trendChart.destroy();
       if (statusChart) statusChart.destroy();
       if (carrierChart) carrierChart.destroy();
     };
-  }, [distribution, topCarriers, exportTrends]);
+  }, [distribution, topCarriers, exportTrends, trendData]);
+
+  // Expanded trend chart — its own Chart.js instance, built once the modal has
+  // mounted its canvas and rebuilt whenever the filter changes underneath it.
+  useEffect(() => {
+    if (!trendModalOpen) return;
+    const ctx = document.getElementById("trendChartModal");
+    if (!ctx) return;
+
+    const chart = new Chart(
+      ctx,
+      buildTrendConfig({
+        labels: exportTrends.labels,
+        data: trendData,
+        showFullLabels: true,
+      }),
+    );
+    return () => chart.destroy();
+  }, [trendModalOpen, exportTrends, trendData, trendModalHeight]);
 
   // const dummyData = [
   //   ...
@@ -673,8 +814,8 @@ useEffect(() => {
         <StatusCards stats={stats} activeStatus={statusFilter} onSelect={handleStatusSelect} />
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
             <div className="mb-6 flex flex-wrap items-start justify-between gap-2">
               <div>
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -684,13 +825,26 @@ useEffect(() => {
                 {exportTrends.start_date && exportTrends.end_date && (
                   <span className="text-xs text-gray-500">
                     {dayjs(exportTrends.start_date).format("DD MMM YYYY")} – {dayjs(exportTrends.end_date).format("DD MMM YYYY")}
-                    {" · "}{exportTrends.total} exports
+                    {" · "}
+                    <span style={{ color: "#6366f1", fontWeight: 600 }}>{trendTotals.created} created</span>
+                    {" · "}
+                    <span style={{ color: "#10b981", fontWeight: 600 }}>{trendTotals.completed} completed</span>
+                    {" · "}
+                    <span style={{ color: "#ef4444", fontWeight: 600 }}>{trendTotals.rejected} rejected</span>
                   </span>
                 )}
               </div>
-              <ChartDateFilter filter={trendDate} />
+              <div className="flex items-center gap-2">
+                <ChartDateFilter filter={trendDate} />
+                <Button
+                  size="small"
+                  onClick={openTrendModal}
+                  title="View detailed data"
+                  icon={<Icon icon="mdi:arrow-expand-all" width="16" height="16" />}
+                />
+              </div>
             </div>
-            <div className="h-64">
+            <div className="h-80">
               <canvas id="trendChart" />
             </div>
           </div>
@@ -703,7 +857,7 @@ useEffect(() => {
               </h2>
               <ChartDateFilter filter={statusDate} />
             </div>
-            <div className="h-64">
+            <div className="h-56">
               <canvas id="statusChart" />
             </div>
           </div>
@@ -841,6 +995,121 @@ useEffect(() => {
           />
         </div>
       </main>
+
+      {/* Expanded Export Trends — enlarged chart + the full bucket dataset */}
+      <Modal
+        open={trendModalOpen}
+        onCancel={() => setTrendModalOpen(false)}
+        footer={null}
+        width="98vw"
+        style={{ top: 20 }}
+        title={
+          <span className="flex items-center gap-2">
+            <Icon icon="mdi:chart-line" color="#6366f1" />
+            Export Trends — Detailed Data
+          </span>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Active period + the same filter instance, so the selection carries in */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-gray-800">
+                {GRANULARITY_LABEL[exportTrends.granularity] || "Monthly"} view
+                {exportTrends.labels.length > 0 && (
+                  <span className="text-gray-500 font-normal">
+                    {" · "}{exportTrends.labels.length} data points
+                  </span>
+                )}
+              </div>
+              {exportTrends.start_date && exportTrends.end_date && (
+                <span className="text-xs text-gray-500">
+                  {dayjs(exportTrends.start_date).format("DD MMM YYYY")} – {dayjs(exportTrends.end_date).format("DD MMM YYYY")}
+                </span>
+              )}
+            </div>
+            <ChartDateFilter filter={trendDate} />
+          </div>
+
+          {/* Legend lives outside the scroll area so it stays visible */}
+          <div className="flex flex-wrap items-center gap-6 border-y border-gray-100 py-2">
+            {TREND_LINES.map(({ key, label, color }) => (
+              <span key={key} className="flex items-center gap-2 text-sm">
+                <span
+                  style={{
+                    width: 10, height: 10, borderRadius: "50%",
+                    background: color, display: "inline-block", flex: "none",
+                  }}
+                />
+                <span style={{ color: "#374151", fontWeight: 500 }}>{label}</span>
+                <span style={{ color, fontWeight: 700 }}>{trendTotals[key]}</span>
+              </span>
+            ))}
+          </div>
+
+          {/* Scrolls horizontally once the buckets outgrow the width */}
+          <div
+            style={{
+              overflowX: "auto", overflowY: "hidden",
+              border: "1px solid #f1f5f9", borderRadius: 8, padding: 8,
+            }}
+          >
+            <div
+              style={{
+                height: trendChartHeight,
+                minWidth: Math.max(640, exportTrends.labels.length * TREND_POINT_WIDTH),
+              }}
+            >
+              <canvas id="trendChartModal" />
+            </div>
+          </div>
+
+          {/* Complete dataset, scrolls vertically with a sticky header */}
+          <div
+            style={{
+              maxHeight: trendTableHeight, overflow: "auto",
+              border: "1px solid #f1f5f9", borderRadius: 8,
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ position: "sticky", top: 0, zIndex: 1, background: "#f8fafc" }}>
+                  {["Period", "Date range", "Created", "Completed", "Rejected"].map((heading, i) => (
+                    <th
+                      key={heading}
+                      style={{
+                        textAlign: i > 1 ? "right" : "left",
+                        padding: "8px 14px", color: "#475569", fontWeight: 600,
+                        whiteSpace: "nowrap", borderBottom: "1px solid #e2e8f0",
+                      }}
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {trendRows.map((row) => (
+                  <tr key={row.key} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={{ padding: "7px 14px", fontWeight: 600, color: "#1f2937", whiteSpace: "nowrap" }}>{row.label}</td>
+                    <td style={{ padding: "7px 14px", color: "#64748b", whiteSpace: "nowrap" }}>{row.range}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#6366f1", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.created}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#10b981", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.completed}</td>
+                    <td style={{ padding: "7px 14px", textAlign: "right", color: "#ef4444", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{row.rejected}</td>
+                  </tr>
+                ))}
+                {trendRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#94a3b8" }}>
+                      No export data for the selected period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         title={null}
