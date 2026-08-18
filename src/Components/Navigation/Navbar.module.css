@@ -137,3 +137,244 @@
   color: #ffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
+
+/* ==============================
+   NOTIFICATIONS
+============================== */
+.notfiPopover {
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+.notfiEmpty {
+  padding: 16px 8px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Scroll container — pulls the next page when scrolled near the bottom */
+.notfiList {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Toolbar: "X unread" + "Clear all" */
+.notfiToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 8px;
+}
+
+.notfiToolbarCount {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.notfiClearAllBtn {
+  border: none;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  background: linear-gradient(to right, #003a75, #19d0c6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.notfiClearAllBtn:hover {
+  opacity: 0.75;
+}
+
+/* Per-item dismiss button */
+.notfiClearBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.notfiClearBtn:hover {
+  color: #ff4d4f;
+}
+
+/* Each notification item */
+.notfiItem {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  position: relative;
+  border: 1px solid #f0f0f0;
+  transition: border 0.3s;
+  word-wrap: break-word;
+}
+
+/* Top row: icon + badge + unread dot */
+.notfiHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.notfiIcon {
+  font-size: 20px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.notfiBadge {
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-right: 6px;
+  margin-top: 2px;
+  user-select: none;
+}
+
+.notfiUnreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00aea6;
+  margin-left: 4px;
+}
+
+.badgenavnoti {
+  border-radius: 50%;
+  line-height: 20px;
+  padding: 0 2px;
+}
+
+.badgenavnoti :global(.ant-badge-count) {
+  background: linear-gradient(to right, #003a75, #19d0c6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  border: none !important;
+  height: 25px;
+  width: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Title and body */
+.notfiTitle {
+  font-weight: 600;
+  font-size: 15px;
+  color: #111827;
+  margin-bottom: 6px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.notfiBody {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Timestamp */
+.notfiTime {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 6px;
+  user-select: none;
+}
+
+/* View Details link — revealed on item hover */
+.notfiViewDetails {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in;
+  max-width: calc(100% - 32px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+
+  background: linear-gradient(to right, #003a75, #19d0c6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.notfiItemHover .notfiViewDetails {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Touch devices have no hover — keep the link permanently visible */
+@media (hover: none) and (pointer: coarse) {
+  .notfiViewDetails {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    position: relative;
+    display: inline-block;
+    margin-top: 1rem;
+    right: auto;
+    bottom: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .notfiPopover {
+    max-width: 95vw;
+    padding: 4px;
+  }
+
+  .notfiItem {
+    padding: 10px 12px;
+  }
+
+  .notfiViewDetails {
+    font-size: 11px;
+    right: auto;
+    bottom: auto;
+  }
+
+  .notfiBadge {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  .notfiTitle {
+    font-size: 14px;
+  }
+
+  .notfiBody {
+    font-size: 12px;
+  }
+}

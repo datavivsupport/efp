@@ -1,12 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Modal, Form, Input, Button, Typography, message } from "antd";
 import { Icon } from "@iconify/react";
+import axios from "axios";
+import { useSelector } from "react-redux";
 import styles from "./ForgotPasswordModal.module.css";
-import apiClient from "../../api/apiclient";
+import apiClient, { errorHandle } from "../../api/apiclient";
 
 const { Title, Text, Paragraph } = Typography;
 
 const ForgotPasswordModal = ({ visible, onClose, change }) => {
+  const user = useSelector((state) => state.auth.user);
   const [formEmail] = Form.useForm();
   const [formReset] = Form.useForm();
   const [formOtp] = Form.useForm();
@@ -59,7 +62,13 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
       setOtpValue("");
       setVerifiedEmail("");
     }
-  }, [visible]);
+
+    // Change mode is reached from the header while signed in, so the user
+    // should not have to type their own address
+    if (change && user?.email) {
+      formEmail.setFieldsValue({ email: user.email });
+    }
+  }, [visible, change, user?.email]);
 
   // Send OTP (Fake)
   const handleSendOtp = async () => {
