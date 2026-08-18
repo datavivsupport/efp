@@ -79,8 +79,11 @@ const App = () => {
     }
   };
 
-  // Fires on mount and on every route change
+  // Fires on mount and on every route change. The lint rule below assumes any
+  // setState reached from an effect body is synchronous; here it happens after
+  // an awaited request, so it can't cascade renders.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     getNotification(1);
   }, [location.pathname, getNotification]);
 

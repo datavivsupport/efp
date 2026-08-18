@@ -94,7 +94,7 @@ const UpdateProfile = () => {
 
       if (syncStore) dispatch(setUser(data));
     } catch {
-      
+      // Error toast already raised by the apiClient interceptor
     }
   };
 
@@ -147,7 +147,7 @@ const UpdateProfile = () => {
     hydratedRef.current = true;
 
     if (storedUser) applyProfile(storedUser);
-    else getProfile(); // defensive: loader guarantees a user, but don't render an empty form
+    else getProfile(); 
   }, [storedUser]);
 
 
@@ -222,7 +222,7 @@ const UpdateProfile = () => {
       const res = await apiClient.get("/accounts/get_mfa");
       setQrCode("data:image/png;base64," + res.data.image);
     } catch {
-      
+      // Error toast already raised by the apiClient interceptor
     }
   };
 

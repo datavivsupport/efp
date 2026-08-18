@@ -13,30 +13,21 @@ import {
 } from "antd";
 import { useNavigate, useLocation } from "react-router";
 import { Chart, registerables } from "chart.js";
-<<<<<<< HEAD
-import { ChevronDown, User, Menu } from "lucide-react";
-import sharafLogo from "../../assets/SSA_Logo_1_SVG.svg";
+import { ChevronDown, User, Menu, Type } from "lucide-react";
+import sharafLogo from "../../assets/sharaf-logo.png";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import apiClient, {
   cancelAllRequests,
   finishLogout,
   startLogout,
 } from "../../api/apiclient";
-import { logout } from "../../store/authSlice";
-=======
-import { ChevronDown, User, Menu, Type } from "lucide-react";
-import sharafLogo from "../../assets/sharaf-logo.png";
-import styles from "./Navbar.module.css";
-import { Icon } from "@iconify/react";
-import { useSelector } from "react-redux";
-import apiClient from "../../api/apiclient";
 import dayjs from "../../dayjs-config";
-import { FONT_SIZES, useFontSize } from "../FontSizeProvider";
+import { FONT_SIZES, useFontSize } from "../fontSize";
 import ForgotPasswordModal from "../../pages/ForgotPassword/ForgotPasswordModal";
->>>>>>> added-notificcaiton-and-password
 import { computeUserRoles } from "../Approval/utils/roleUtils";
+import { logout } from "../../store/authSlice";
 
 const NOTIF_STYLES = {
   info: { label: "INFO", color: "#00aea6" },
@@ -106,9 +97,6 @@ const Navigation = ({
     };
   }, [popoverOpen]);
 
-  const handleOpenPopover = () => setPopoverOpen(true);
-
- 
   const handleLogout = async () => {
     setPopoverOpen(false);
     setDrawerVisible(false);
@@ -117,8 +105,10 @@ const Navigation = ({
       startLogout();
       cancelAllRequests();
       await apiClient.get("/accounts/logout");
-    } catch {
-      // log out locally regardless
+    } catch (error) {
+      // Server-side logout failed — still clear the session locally.
+      // Logged rather than swallowed, so a real fault stays visible.
+      console.error("Logout request failed:", error);
     } finally {
       localStorage.removeItem("open_tabs");
       finishLogout();
@@ -440,14 +430,16 @@ const Navigation = ({
             onClick={goToProfile}
           >
             Profile
+          </button>
+
+          <button
+            className={styles.navTab}
+            style={{ width: "100%", textAlign: "left" }}
             onClick={() => {
               setChangePasswordVisible(true);
               setDrawerVisible(false);
             }}
-          
-          </button>
-          <button className={styles.navTab} style={{ width: "100%", textAlign: "left" }} onClick={() => setChangePasswordVisible(true)}>
-
+          >
             Change Password
           </button>
 

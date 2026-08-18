@@ -1,39 +1,11 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ConfigProvider } from "antd";
-
-/* Same storage key and size names as the admin app's TopBar. */
-const STORAGE_KEY = "ui-zoom";
-
-/*
-  Two numbers per size, because EFP scales on two tracks:
-   - rootFontSize drives rem-based Tailwind utilities via <html>
-   - antdFontSize drives the antd theme token, which is px and would
-     otherwise ignore the root size entirely
-
-  "medium" reproduces the previous hardcoded defaults (browser-default root
-  + antd fontSize 15), so the app looks unchanged until a user opts in.
-*/
-export const FONT_SIZES = {
-  small: { label: "Small", rootFontSize: "14px", antdFontSize: 13 },
-  medium: { label: "Medium", rootFontSize: "16px", antdFontSize: 15 },
-  large: { label: "Large", rootFontSize: "18px", antdFontSize: 17 },
-};
-
-const DEFAULT_SIZE = "medium";
-
-const FontSizeContext = createContext({
-  fontSize: DEFAULT_SIZE,
-  setFontSize: () => {},
-});
-
-export const useFontSize = () => useContext(FontSizeContext);
+import {
+  DEFAULT_SIZE,
+  FONT_SIZES,
+  FontSizeContext,
+  STORAGE_KEY,
+} from "./fontSize";
 
 const readStoredSize = () => {
   try {

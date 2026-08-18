@@ -41,7 +41,7 @@ const authLoader = async () => {
     });
     store.dispatch(setUser(res.data.data));
     return null; // user authenticated
-  } catch (error) {
+  } catch {
     throw redirect("/login");
   }
 };
