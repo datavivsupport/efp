@@ -11,14 +11,12 @@ import {
   Select,
   Space,
   Typography,
-  Upload,
   message,
 } from "antd";
 import { Icon } from "@iconify/react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiclient";
-import { uploadFile } from "../../Components/Viewer/UploadUtil";
 import { setUser } from "../../store/authSlice";
 import {
   getRoleNamesWithComma,
@@ -27,6 +25,32 @@ import {
 } from "../../utils/roleFormat";
 
 const { Text, Title } = Typography;
+
+/* Digits, optionally led by "+", with spaces / hyphens / brackets as separators */
+const PHONE_SHAPE = /^\+?[\d\s\-()]+$/;
+
+/*
+  The column is nullable and blank-allowed, so an empty phone is valid — a user
+  with no number on record must still be able to change their Status. A value
+  that is present has to look like a real number: 7-15 digits, the E.164 range.
+*/
+const validatePhone = (_, value) => {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return Promise.resolve();
+
+  if (!PHONE_SHAPE.test(trimmed)) {
+    return Promise.reject(
+      new Error("Use digits only, with an optional leading + and - ( ) separators"),
+    );
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15) {
+    return Promise.reject(new Error("Phone number must be 7 to 15 digits"));
+  }
+
+  return Promise.resolve();
+};
 
 const UpdateProfile = () => {
   const [form] = Form.useForm();
@@ -38,7 +62,6 @@ const UpdateProfile = () => {
   const [divisionName, setDivisionName] = useState("");
   const [departmentNames, setDepartmentNames] = useState([]);
   const [profilePic, setProfilePic] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isMfaVerified, setIsMfaVerified] = useState(false);
 
@@ -48,20 +71,7 @@ const UpdateProfile = () => {
   const [otp, setOtp] = useState("");
   const [verifying, setVerifying] = useState(false);
 
-  const previewUrlRef = useRef("");
   const hydratedRef = useRef(false);
-
-  const setPreview = (url) => {
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    previewUrlRef.current = url.startsWith("blob:") ? url : "";
-    setProfilePic(url);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
-    };
-  }, []);
 
 
    
@@ -78,7 +88,7 @@ const UpdateProfile = () => {
     setProfileData(data);
     setIsMfaVerified(Boolean(data.is_mfa_verified));
 
-    if (data.profile_picture) setPreview(data.profile_picture);
+    if (data.profile_picture) setProfilePic(data.profile_picture);
 
     resolveDepartments(data.departments_assigned);
     resolveDivision(data.divison ?? data.division);
@@ -151,66 +161,35 @@ const UpdateProfile = () => {
   }, [storedUser]);
 
 
+  // Phone and Status are the only user-editable fields. PATCH, not POST:
+  // the POST handler assigns every field unconditionally from request.data,
+  // so omitting the read-only ones would null out name and profile picture.
+  // PATCH only touches keys that are actually present.
   const onFinish = async (values) => {
     try {
       setLoading(true);
 
-      let uploadedUrl = profilePic;
-      if (selectedFile) {
-        uploadedUrl = await uploadFile([selectedFile]);
-      }
-
-
-      const { ids: departmentIds } = normalizeDepartments(
-        values.departments_assigned,
-      );
-      const { id: divisionId } = normalizeDivision(
-        values.divison ?? values.division,
-      );
-
-      await apiClient.post("/accounts/me", {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        profile_picture: uploadedUrl,
+      const res = await apiClient.patch("/accounts/me", {
+        phone: values.phone?.trim() || null,
         is_leave: values.is_leave,
-        phone: values.phone,
-        departments_assigned: departmentIds,
-        divisions: divisionId,
       });
 
-      setPreview(uploadedUrl || "");
-      setSelectedFile(null);
+      // PATCH echoes the saved profile back, so the page and the store both
+      // refresh without a second round-trip.
+      const data = res.data?.data;
+      if (data) {
+        applyProfile(data);
+        dispatch(setUser(data));
+      } else {
+        await getProfile(true);
+      }
 
-      await getProfile(true);
       message.success("Profile updated successfully!");
     } catch {
       // handled by the interceptor
     } finally {
       setLoading(false);
     }
-  };
-
-
-  const beforeUpload = (file) => {
-    if (!file.type.startsWith("image/")) {
-      message.error("You can only upload image files!");
-      return Upload.LIST_IGNORE;
-    }
-    if (file.size / 1024 / 1024 >= 5) {
-      message.error("Image must be smaller than 5MB!");
-      return Upload.LIST_IGNORE;
-    }
-    return false;
-  };
-
-  const handleChange = (info) => {
-    const file = info.fileList.slice(-1)[0];
-    if (!file) return;
-
-    setSelectedFile(file);
-    setPreview(
-      file.originFileObj ? URL.createObjectURL(file.originFileObj) : "",
-    );
   };
 
 
@@ -302,7 +281,8 @@ const UpdateProfile = () => {
                 flexWrap: "wrap",
               }}
             >
-              <div style={{ position: "relative" }}>
+              {/* Display only — the photo is not user-editable */}
+              <div>
                 <Avatar
                   size={128}
                   src={profilePic || undefined}
@@ -316,26 +296,6 @@ const UpdateProfile = () => {
                     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                   }}
                 />
-                <Upload
-                  maxCount={1}
-                  showUploadList={false}
-                  beforeUpload={beforeUpload}
-                  onChange={handleChange}
-                  accept="image/jpeg,image/png"
-                >
-                  <Button
-                    type="primary"
-                    shape="circle"
-                    size="large"
-                    icon={<Icon icon="mdi:camera" width="18" height="18" />}
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      right: 0,
-                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
-                    }}
-                  />
-                </Upload>
               </div>
 
               <div style={{ flex: 1, minWidth: 240 }}>
@@ -400,22 +360,14 @@ const UpdateProfile = () => {
 
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
-                      <Form.Item
-                        name="first_name"
-                        label="First Name"
-                        rules={[{ required: true, message: "Enter First Name" }]}
-                      >
-                        <Input size="large" placeholder="Enter First Name" />
+                      <Form.Item name="first_name" label="First Name">
+                        <Input size="large" disabled style={disabledFieldStyle} />
                       </Form.Item>
                     </Col>
 
                     <Col xs={24} md={12}>
-                      <Form.Item
-                        name="last_name"
-                        label="Last Name"
-                        rules={[{ required: true, message: "Enter Last Name" }]}
-                      >
-                        <Input size="large" placeholder="Enter Last Name" />
+                      <Form.Item name="last_name" label="Last Name">
+                        <Input size="large" disabled style={disabledFieldStyle} />
                       </Form.Item>
                     </Col>
 
@@ -454,12 +406,18 @@ const UpdateProfile = () => {
                     </Col>
 
                     <Col xs={24} md={12}>
-                      <Form.Item name="phone" label="Phone No.">
+                      <Form.Item
+                        name="phone"
+                        label="Phone No."
+                        validateTrigger={["onBlur", "onSubmit"]}
+                        rules={[{ validator: validatePhone }]}
+                      >
                         <Input
                           size="large"
                           prefix={<Icon icon="mdi:phone" />}
-                          placeholder="Phone No."
-                          style={disabledFieldStyle}
+                          placeholder="e.g. +971 50 123 4567"
+                          maxLength={20}
+                          allowClear
                         />
                       </Form.Item>
                     </Col>
