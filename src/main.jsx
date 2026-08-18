@@ -3,8 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./dayjs-config";
 import "./index.css";
 import { createBrowserRouter, redirect, RouterProvider } from "react-router";
-import { ConfigProvider } from "antd";
 import App from "./App.jsx";
+import FontSizeProvider from "./Components/FontSizeProvider.jsx";
 import apiClient from "./api/apiclient";
 import { setUser } from "./store/authSlice.js";
 import { store } from "./store/store.js";
@@ -78,16 +78,10 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>
-      <ConfigProvider
-        theme={{
-          token: {
-            fontSize: 15,
-            colorTextPlaceholder: "rgba(0, 0, 0, 0.85)",
-          },
-        }}
-      >
+      {/* Owns the antd theme token so the font-size control can drive it */}
+      <FontSizeProvider>
         <RouterProvider router={router} />
-      </ConfigProvider>
+      </FontSizeProvider>
     </Provider>
   </StrictMode>,
 );
