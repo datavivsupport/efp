@@ -11,12 +11,14 @@ import {
   Select,
   Space,
   Typography,
+  Upload,
   message,
 } from "antd";
 import { Icon } from "@iconify/react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import apiClient from "../../api/apiclient";
+import { uploadFile } from "../../Components/Viewer/UploadUtil";
 import { setUser } from "../../store/authSlice";
 import {
   getRoleNamesWithComma,
@@ -25,6 +27,13 @@ import {
 } from "../../utils/roleFormat";
 
 const { Text, Title } = Typography;
+
+/*
+  The upload endpoint tops out at 30MB, but a profile photo has no business
+  being that big — hold it to 5MB so a mistaken pick fails fast in the browser
+  instead of after a long round-trip.
+*/
+const MAX_AVATAR_MB = 5;
 
 /* Digits, optionally led by "+", with spaces / hyphens / brackets as separators */
 const PHONE_SHAPE = /^\+?[\d\s\-()]+$/;
@@ -62,6 +71,8 @@ const UpdateProfile = () => {
   const [divisionName, setDivisionName] = useState("");
   const [departmentNames, setDepartmentNames] = useState([]);
   const [profilePic, setProfilePic] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isMfaVerified, setIsMfaVerified] = useState(false);
 
@@ -73,8 +84,30 @@ const UpdateProfile = () => {
 
   const hydratedRef = useRef(false);
 
+  // Held in a ref as well as state: the revoke has to reach the URL being
+  // replaced, and a ref is the only copy that is current inside the cleanup.
+  const previewUrlRef = useRef("");
 
-   
+  const showPreview = (url) => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = url;
+    setPreviewUrl(url);
+  };
+
+  const clearPreview = () => {
+    showPreview("");
+    setSelectedFile(null);
+  };
+
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    [],
+  );
+
+
+
   const applyProfile = (data) => {
     if (!data) return;
 
@@ -161,18 +194,67 @@ const UpdateProfile = () => {
   }, [storedUser]);
 
 
-  // Phone and Status are the only user-editable fields. PATCH, not POST:
-  // the POST handler assigns every field unconditionally from request.data,
-  // so omitting the read-only ones would null out name and profile picture.
+  // Returning false keeps the file in hand instead of firing antd's own
+  // uploader — the photo goes to S3 on Save, together with the rest of the form.
+  const beforeUpload = (file) => {
+    if (!file.type?.startsWith("image/")) {
+      message.error("You can only upload image files!");
+      return Upload.LIST_IGNORE;
+    }
+
+    if (file.size / 1024 / 1024 >= MAX_AVATAR_MB) {
+      message.error(`Image must be smaller than ${MAX_AVATAR_MB}MB!`);
+      return Upload.LIST_IGNORE;
+    }
+
+    return false;
+  };
+
+  const handlePick = ({ fileList }) => {
+    const file = fileList[fileList.length - 1];
+    if (!file?.originFileObj) return;
+
+    setSelectedFile(file);
+    showPreview(URL.createObjectURL(file.originFileObj));
+  };
+
+  // Phone, Status and the photo are the only user-editable fields. PATCH, not
+  // POST: the POST handler assigns every field unconditionally from
+  // request.data, so omitting the read-only ones would null out the name.
   // PATCH only touches keys that are actually present.
   const onFinish = async (values) => {
     try {
       setLoading(true);
 
-      const res = await apiClient.patch("/accounts/me", {
+      const payload = {
         phone: values.phone?.trim() || null,
         is_leave: values.is_leave,
-      });
+      };
+
+      // Only send profile_picture when a new photo was picked — a PATCH without
+      // the key leaves the stored one alone.
+      if (selectedFile) {
+        let uploadedUrl = "";
+        try {
+          uploadedUrl = await uploadFile([selectedFile]);
+        } catch {
+          // Toast raised below — the interceptor's own one only covers HTTP
+          // failures, not the local "no file" cases uploadFile throws on.
+        }
+
+        // A 200 that came back without an s3_url counts as a failure too:
+        // letting it through would report success with the old photo intact.
+        if (!uploadedUrl) {
+          message.error(
+            "Profile picture upload failed. Your changes were not saved.",
+          );
+          return;
+        }
+
+        payload.profile_picture = uploadedUrl;
+      }
+
+      const res = await apiClient.patch("/accounts/me", payload);
 
       // PATCH echoes the saved profile back, so the page and the store both
       // refresh without a second round-trip.
@@ -183,6 +265,10 @@ const UpdateProfile = () => {
       } else {
         await getProfile(true);
       }
+
+      // Dropped only once the saved URL is in place, so the avatar swaps from
+      // the local preview to the stored photo without blanking in between.
+      clearPreview();
 
       message.success("Profile updated successfully!");
     } catch {
@@ -227,6 +313,10 @@ const UpdateProfile = () => {
   };
 
   const disabledFieldStyle = { backgroundColor: "#f8fafc" };
+
+  // An unsaved pick wins over the stored photo, so the avatar shows what Save
+  // is about to upload.
+  const avatarSrc = previewUrl || profilePic;
 
   return (
     <div style={{ padding: "20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
@@ -281,13 +371,12 @@ const UpdateProfile = () => {
                 flexWrap: "wrap",
               }}
             >
-              {/* Display only — the photo is not user-editable */}
-              <div>
+              <div style={{ position: "relative" }}>
                 <Avatar
                   size={128}
-                  src={profilePic || undefined}
+                  src={avatarSrc || undefined}
                   icon={
-                    !profilePic ? (
+                    !avatarSrc ? (
                       <Icon icon="mdi:account" width="64" height="64" />
                     ) : undefined
                   }
@@ -296,6 +385,29 @@ const UpdateProfile = () => {
                     boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
                   }}
                 />
+                <Upload
+                  maxCount={1}
+                  showUploadList={false}
+                  disabled={loading}
+                  beforeUpload={beforeUpload}
+                  onChange={handlePick}
+                  accept="image/jpeg,image/png"
+                >
+                  <Button
+                    type="primary"
+                    shape="circle"
+                    size="large"
+                    disabled={loading}
+                    title="Change profile photo"
+                    icon={<Icon icon="mdi:camera" width="18" height="18" />}
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                    }}
+                  />
+                </Upload>
               </div>
 
               <div style={{ flex: 1, minWidth: 240 }}>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
+  Avatar,
   Badge,
   Button,
   Drawer,
@@ -13,7 +14,7 @@ import {
 } from "antd";
 import { useNavigate, useLocation } from "react-router";
 import { Chart, registerables } from "chart.js";
-import { ChevronDown, User, Menu, Type } from "lucide-react";
+import { ChevronDown, Menu, Type } from "lucide-react";
 import sharafLogo from "../../assets/sharaf-logo.png";
 import styles from "./Navbar.module.css";
 import { Icon } from "@iconify/react";
@@ -128,8 +129,15 @@ const Navigation = ({
     navigate("/profile");
   };
 
+  const fullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim();
+
   const popoverContent = (
-    <div style={{ fontSize: 13, color: "#888" }}>{user?.email || ""}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {fullName && <span style={{ fontWeight: 600 }}>{fullName}</span>}
+      {user?.email && (
+        <span style={{ fontSize: 13, color: "#888" }}>{user.email}</span>
+      )}
+    </div>
   );
 
   const logoutmodal = () => {
@@ -281,9 +289,29 @@ const Navigation = ({
           </div>
         </div>
 
-        {/* Right side */}
+        {/* Right side — icon order mirrors the main frontend's navbar:
+            profile, password, font size, logout, bell, avatar */}
         <div className="flex items-center space-x-3">
-     
+          <div className="hidden md:flex items-center space-x-3">
+            {/* Profile Button */}
+            <Tooltip title="My Profile">
+              <button onClick={goToProfile} className={styles.buttonnew}>
+                <Icon height="20" width="20" icon="mdi:account-circle" />
+              </button>
+            </Tooltip>
+
+            {/* Change Password */}
+            <Tooltip title="Change Password">
+              <button
+                onClick={() => setChangePasswordVisible(true)}
+                className={styles.buttonnew}
+              >
+                <Icon height="20" width="20" icon="mdi:lock" />
+              </button>
+            </Tooltip>
+          </div>
+
+          {/* Font size — kept outside the desktop-only blocks so mobile keeps it */}
           <Dropdown
             trigger={["click"]}
             placement="bottomRight"
@@ -298,6 +326,18 @@ const Navigation = ({
               <Type size={20} />
             </button>
           </Dropdown>
+
+          <div className="hidden md:flex items-center space-x-3">
+            {/* Logout Button */}
+            <Tooltip title="Log Out">
+              <button
+                onClick={() => logoutmodal()}
+                className={styles.buttonnew}
+              >
+                <Icon height="20" width="20" icon="mdi:logout" />
+              </button>
+            </Tooltip>
+          </div>
 
           {/* Notifications — kept outside the desktop-only block so mobile keeps the bell */}
           <Popover
@@ -319,49 +359,27 @@ const Navigation = ({
             </Badge>
           </Popover>
 
-          {/* User + Logout */}
+          {/* Profile Info — the photo comes straight from the store, so a new
+              upload on the profile page shows here without a reload */}
           <div
             className="hidden md:flex items-center space-x-3"
             ref={popoverRef}
           >
-            {/* Profile Button */}
-            <Tooltip title="My Profile">
-              <button onClick={goToProfile} className={styles.buttonnew}>
-                <Icon height="20" width="20" icon="mdi:account-circle" />
-              </button>
-            </Tooltip>
-            {/* Change Password */}
-            <Tooltip title="Change Password">
-              <button
-                onClick={() => setChangePasswordVisible(true)}
-                className={styles.buttonnew}
-              >
-                <Icon height="20" width="20" icon="mdi:lock" />
-              </button>
-            </Tooltip>
-
-            {/* Logout Button */}
-            <Tooltip title="Log Out">
-              <button
-                onClick={() => logoutmodal()}
-                className={styles.buttonnew}
-              >
-                <Icon height="20" width="20" icon="mdi:logout" />
-              </button>
-            </Tooltip>
-            {/* Profile Info */}
             <Popover
               content={popoverContent}
               trigger="hover"
               placement="bottomRight"
             >
-              <div className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full hover:bg-gray-200 transition">
-                <span className="flex items-center space-x-2 bg-gray-400 px-1 py-1 rounded-full">
-                  <User
-                    style={{ color: "#fff" }}
-                    className="w-5 h-5 text-gray-600"
-                  />
-                </span>
+              <div className="flex items-center bg-gray-100 px-2 py-2 rounded-full hover:bg-gray-200 transition">
+                <Avatar
+                  size={27}
+                  src={user?.profile_picture || undefined}
+                  icon={
+                    !user?.profile_picture ? (
+                      <Icon icon="mdi:account" width="18" height="18" />
+                    ) : undefined
+                  }
+                />
               </div>
             </Popover>
           </div>
@@ -397,10 +415,15 @@ const Navigation = ({
               gap: "10px",
             }}
           >
-            <span className="flex items-center space-x-2 bg-gray-100 px-2 py-2 rounded-full">
-              <User
-                style={{ color: "#00aea6" }}
-                className="w-5 h-5 text-gray-600"
+            <span className="flex items-center bg-gray-100 px-2 py-2 rounded-full">
+              <Avatar
+                size={27}
+                src={user?.profile_picture || undefined}
+                icon={
+                  !user?.profile_picture ? (
+                    <Icon icon="mdi:account" width="18" height="18" />
+                  ) : undefined
+                }
               />
             </span>{" "}
             <span style={{ fontSize: "14px" }}>
