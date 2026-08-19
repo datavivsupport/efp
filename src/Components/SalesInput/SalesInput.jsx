@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import {
   Form,
@@ -40,19 +40,11 @@ import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
-import { useHodOptions } from "../../utils/useHodOptions";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
-
-
-const mapHodOption = (item) => ({
-  label: userOptionLabel(item),
-  value: `${item.first_name} ${item.last_name}`,
-  isOnLeave: !!item.is_leave,
-});
 
  
 const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled }) => {
@@ -357,7 +349,7 @@ const SalesInput = () => {
   const [showSpecialInstructions, setShowSpecialInstructions] = useState(true);
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false);
-  const { options: hodOptions, loading: hodLoading, refresh: refreshHods } = useHodOptions(mapHodOption);
+  const [hodOptions, setHodOptions] = useState([]);
   const [currentStage, setCurrentStage] = useState("1"); // Added for read-only check
   const [pendingFiles, setPendingFiles] = useState([]);
 
@@ -368,14 +360,6 @@ const SalesInput = () => {
   const isForwarding = jobType?.toUpperCase() === "FORWARDING";
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
-
-
-  const salesHod = Form.useWatch("sales_hod", form);
-  const hodSelectOptions = useMemo(() => (
-    !salesHod || hodOptions.some((o) => o.value === salesHod)
-      ? hodOptions
-      : [...hodOptions, { value: salesHod, label: salesHod, isMissing: true }]
-  ), [hodOptions, salesHod]);
 
 
   const [workflowStatus, setWorkflowStatus] = useState({
@@ -436,6 +420,7 @@ const SalesInput = () => {
   const isCS = userDepts.some(d => d.includes("CUSTOMER SERVICE") || d.includes("CS"));
   const isCNF = userDepts.some(d => d.includes("CNF") || d.includes("OPERATIONS") || d.includes("CLEARANCE"));
 
+  // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
   const isReadOnly = false; // Removed role and terminal restrictions for SalesInput page
 
@@ -514,6 +499,34 @@ const SalesInput = () => {
   //   },
   //   { quote: 0, cost: 0, margin: 0 },
   // );
+  // Fetch master data for job type and terms of shipment dropdowns
+  useEffect(() => {
+    const fetchMasterData = async () => {
+      // 1. Core Master Data (Essential)
+      try {
+      } catch (err) {
+        console.error("Failed to load core master data", err);
+      }
+
+      // 2. Staff Selection Data (Resilient)
+      try {
+        const [hodRes] = await Promise.all([
+          apiClient.get("/accounts/liner/admin/users/hods/"),
+        ]);
+        const hodData = hodRes.data?.results ?? hodRes.data ?? [];
+
+        setHodOptions(hodData.map((item) => ({
+           label: userOptionLabel(item),
+           value: `${item.first_name} ${item.last_name}`,
+           isOnLeave: !!item.is_leave,
+        })));
+      } catch (err) {
+        console.warn("Failed to load HOD selection data (permissions?)", err);
+      }
+    };
+    fetchMasterData();
+  }, []);
+
   useEffect(() => {
     const fetchDraftData = async () => {
       if (!id) return;
@@ -1620,13 +1633,11 @@ const SalesInput = () => {
                       <Select
                         placeholder="Select Sales HOD"
                         disabled={isReadOnly}
-                        options={hodSelectOptions}
-                        loading={hodLoading}
-                        onOpenChange={(open) => { if (open) refreshHods(); }}
+                        options={hodOptions}
                         showSearch
                         optionFilterProp="label"
                         optionRender={renderUserOption}
-                        labelRender={renderUserLabel(hodSelectOptions)}
+                        labelRender={renderUserLabel(hodOptions)}
                       />
                     </Form.Item>
                   </Col>

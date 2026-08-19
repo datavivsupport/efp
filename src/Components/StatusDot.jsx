@@ -1,5 +1,5 @@
  
-const StatusDot = ({ onLeave, missing }) => (
+const StatusDot = ({ onLeave }) => (
   <span
     aria-hidden="true"
     style={{
@@ -8,44 +8,28 @@ const StatusDot = ({ onLeave, missing }) => (
       height: 8,
       borderRadius: "50%",
       flex: "none",
-      boxSizing: "border-box",
-      background: missing ? "transparent" : onLeave ? "#ff4d4f" : "#52c41a",
-      border: missing ? "1px solid #bfbfbf" : undefined,
+      background: onLeave ? "#ff4d4f" : "#52c41a",
     }}
   />
 );
  
 export const renderUserOption = ({ data }) => (
   <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-    <StatusDot onLeave={data.isOnLeave} missing={data.isMissing} />
+    <StatusDot onLeave={data.isOnLeave} />
     <span style={{ flex: 1, minWidth: 0 }}>{data.label}</span>
-    {data.isMissing && (
-      <span style={{ color: "#8c8c8c", fontSize: 12, flex: "none" }}>Not in list</span>
-    )}
-    {!data.isMissing && data.isOnLeave && (
+    {data.isOnLeave && (
       <span style={{ color: "#ff4d4f", fontSize: 12, flex: "none" }}>On leave</span>
     )}
   </span>
 );
 
  
-export const renderUserLabel = (options) => ({ label, value }) => {
-  // Nothing selected: a dot beside an empty label is just noise.
-  if (value === undefined || value === null || value === "") return label;
-
-  const option = options.find((o) => o.value === value);
-  const missing = !option || !!option.isMissing;
-
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <StatusDot onLeave={option?.isOnLeave} missing={missing} />
-      {label}
-      {missing && (
-        <span style={{ color: "#8c8c8c", fontSize: 12, flex: "none" }}>Not in list</span>
-      )}
-    </span>
-  );
-};
+export const renderUserLabel = (options) => ({ label, value }) => (
+  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <StatusDot onLeave={options.find((o) => o.value === value)?.isOnLeave} />
+    {label}
+  </span>
+);
 
  
 export const userOptionLabel = (user) => {
