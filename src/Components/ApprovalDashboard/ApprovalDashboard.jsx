@@ -27,12 +27,22 @@ const resolvePresetRange = (preset) => {
   switch (preset) {
     case "7d": return [today.subtract(6, "day"), today];
     case "1m": return [today.subtract(1, "month").add(1, "day"), today];
-    case "3m": return [today.subtract(3, "month").add(1, "day"), today];
+   
+    case "3m": return [today.subtract(2, "month").startOf("month"), today];
     default: return null;
   }
 };
 
 const GRANULARITY_LABEL = { day: "Daily", week: "Weekly", month: "Monthly" };
+ 
+const formatBucketRange = (bucketStart, bucketEnd, period) => {
+  if (!bucketStart || !bucketEnd) return "";
+  let from = dayjs(bucketStart);
+  let to = dayjs(bucketEnd);
+  if (period?.start && from.isBefore(period.start, "day")) from = period.start;
+  if (period?.end && to.isAfter(period.end, "day")) to = period.end;
+  return `${from.format("DD MMM")} – ${to.format("DD MMM YYYY")}`;
+};
 
  
 const REJECTED_STATUSES = [
@@ -130,28 +140,32 @@ const buildTrendConfig = ({ labels, data, showFullLabels = false }) => ({
     },
   },
 });
-
-// One of these per chart — each graph carries its own independent date window.
+ 
 const useDateFilter = () => {
   const [preset, setPreset] = useState(DEFAULT_PRESET);
   const [range, setRange] = useState(null);
 
  
+  const resolved = useMemo(
+    () => (preset === "custom" ? range : resolvePresetRange(preset)),
+    [preset, range],
+  );
+
+
   const params = useMemo(() => {
-    const resolved = preset === "custom" ? range : resolvePresetRange(preset);
     if (!resolved?.[0] || !resolved?.[1]) return {};
     return {
       created_at_gte: dayjs(resolved[0]).format("YYYY-MM-DD"),
       created_at_lte: dayjs(resolved[1]).format("YYYY-MM-DD"),
     };
-  }, [preset, range]);
+  }, [resolved]);
 
   const onPresetChange = (value) => {
     setPreset(value);
     if (value !== "custom") setRange(null);
   };
 
-  return { preset, range, params, onPresetChange, onRangeChange: setRange };
+  return { preset, range, resolved, params, onPresetChange, onRangeChange: setRange };
 };
 
 const ChartDateFilter = ({ filter }) => (
@@ -234,6 +248,8 @@ const ApprovalDashboard = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [trendModalOpen, setTrendModalOpen] = useState(false);
   const [trendModalHeight, setTrendModalHeight] = useState(500);
+  // Held in state, not a ref, so mounting the canvas re-triggers the chart effect.
+  const [trendModalCanvas, setTrendModalCanvas] = useState(null);
   const [carrierModalOpen, setCarrierModalOpen] = useState(false);
   const [carrierModalHeight, setCarrierModalHeight] = useState(500);
   const [allCarriersLoading, setAllCarriersLoading] = useState(false);
@@ -321,21 +337,27 @@ const ApprovalDashboard = () => {
   const carrierViewportHeight = Math.max(280, Math.round(carrierModalHeight * 0.6));
   const carrierTableHeight = Math.max(160, carrierModalHeight - carrierViewportHeight - 48);
 
+  // What the filter asked for wins over the API echo, which snaps to bucket edges.
+  const trendPeriod = useMemo(() => {
+    const [from, to] = trendDate.resolved || [];
+    return {
+      start: from ? dayjs(from) : exportTrends.start_date ? dayjs(exportTrends.start_date) : null,
+      end: to ? dayjs(to) : exportTrends.end_date ? dayjs(exportTrends.end_date) : null,
+    };
+  }, [trendDate.resolved, exportTrends.start_date, exportTrends.end_date]);
+
   // Every bucket the API returned, flattened for the detail table.
   const trendRows = useMemo(
     () =>
       (exportTrends.series || []).map((row, index) => ({
         key: index,
         label: row.label,
-        range:
-          row.bucket_start && row.bucket_end
-            ? `${dayjs(row.bucket_start).format("DD MMM")} – ${dayjs(row.bucket_end).format("DD MMM YYYY")}`
-            : "",
+        range: formatBucketRange(row.bucket_start, row.bucket_end, trendPeriod),
         created: row.exports ?? 0,
         completed: sumStatuses(row.status_counts, COMPLETED_STATUSES),
         rejected: sumStatuses(row.status_counts, REJECTED_STATUSES),
       })),
-    [exportTrends.series],
+    [exportTrends.series, trendPeriod],
   );
 
   const fetchReports = async (page = 1, size = 10, jobType = null, status = statusFilter) => {
@@ -688,14 +710,15 @@ useEffect(() => {
     }
   }, [topCarriers]);
 
- 
+  // antd keeps the dialog body out of the DOM until its open animation starts, so the
+  // canvas does not exist yet on the render that flips `trendModalOpen`. Looking it up
+  // by id here found nothing and never ran again — hence the blank expanded chart.
+  // Tracking the node itself re-runs this the moment the canvas actually mounts.
   useEffect(() => {
-    if (!trendModalOpen) return;
-    const ctx = document.getElementById("trendChartModal");
-    if (!ctx) return;
+    if (!trendModalOpen || !trendModalCanvas) return;
 
     const chart = new Chart(
-      ctx,
+      trendModalCanvas,
       buildTrendConfig({
         labels: exportTrends.labels,
         data: trendData,
@@ -703,7 +726,7 @@ useEffect(() => {
       }),
     );
     return () => chart.destroy();
-  }, [trendModalOpen, exportTrends, trendData, trendModalHeight]);
+  }, [trendModalOpen, trendModalCanvas, exportTrends.labels, trendData, trendModalHeight]);
 
  
   useEffect(() => {
@@ -930,9 +953,9 @@ useEffect(() => {
                   <Icon icon="mdi:chart-line" color="#6366f1" />
                   Export Trends ({GRANULARITY_LABEL[exportTrends.granularity] || "Monthly"})
                 </h2>
-                {exportTrends.start_date && exportTrends.end_date && (
+                {trendPeriod.start && trendPeriod.end && (
                   <span className="text-xs text-gray-500">
-                    {dayjs(exportTrends.start_date).format("DD MMM YYYY")} – {dayjs(exportTrends.end_date).format("DD MMM YYYY")}
+                    {trendPeriod.start.format("DD MMM YYYY")} – {trendPeriod.end.format("DD MMM YYYY")}
                     {" · "}
                     <span style={{ color: "#6366f1", fontWeight: 600 }}>{trendTotals.created} created</span>
                     {" · "}
@@ -1237,6 +1260,9 @@ useEffect(() => {
         footer={null}
         width="98vw"
         style={{ top: 20 }}
+        // Drop the body on close so each open remounts the canvas into a laid-out,
+        // visible container — otherwise a reopen rebuilds the chart at zero size.
+        destroyOnHidden
         title={
           <span className="flex items-center gap-2">
             <Icon icon="mdi:chart-line" color="#6366f1" />
@@ -1256,9 +1282,9 @@ useEffect(() => {
                   </span>
                 )}
               </div>
-              {exportTrends.start_date && exportTrends.end_date && (
+              {trendPeriod.start && trendPeriod.end && (
                 <span className="text-xs text-gray-500">
-                  {dayjs(exportTrends.start_date).format("DD MMM YYYY")} – {dayjs(exportTrends.end_date).format("DD MMM YYYY")}
+                  {trendPeriod.start.format("DD MMM YYYY")} – {trendPeriod.end.format("DD MMM YYYY")}
                 </span>
               )}
             </div>
@@ -1294,7 +1320,7 @@ useEffect(() => {
                 minWidth: Math.max(640, exportTrends.labels.length * TREND_POINT_WIDTH),
               }}
             >
-              <canvas id="trendChartModal" />
+              <canvas id="trendChartModal" ref={setTrendModalCanvas} />
             </div>
           </div>
 
