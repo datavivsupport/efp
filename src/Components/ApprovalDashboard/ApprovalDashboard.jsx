@@ -27,8 +27,7 @@ const resolvePresetRange = (preset) => {
   switch (preset) {
     case "7d": return [today.subtract(6, "day"), today];
     case "1m": return [today.subtract(1, "month").add(1, "day"), today];
-   
-    case "3m": return [today.subtract(2, "month").startOf("month"), today];
+    case "3m": return [today.subtract(3, "month").add(1, "day"), today];
     default: return null;
   }
 };
