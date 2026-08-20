@@ -34,14 +34,29 @@ const resolvePresetRange = (preset) => {
 };
 
 const GRANULARITY_LABEL = { day: "Daily", week: "Weekly", month: "Monthly" };
- 
+
+
+const buildBucketLabel = (row) => {
+  const fallback = row?.label ?? "";
+  if (!row?.bucket_start || !row?.bucket_end) return fallback;
+  const from = dayjs(row.bucket_start);
+  const to = dayjs(row.bucket_end);
+  if (!from.isValid() || !to.isValid()) return fallback;
+  if (from.isSame(to, "day")) return from.format("MMM DD");
+  if (from.isSame(to, "month")) return `${from.format("MMM DD")}–${to.format("DD")}`;
+  return `${from.format("MMM DD")} – ${to.format("MMM DD")}`;
+};
+
 const formatBucketRange = (bucketStart, bucketEnd, period) => {
   if (!bucketStart || !bucketEnd) return "";
   let from = dayjs(bucketStart);
   let to = dayjs(bucketEnd);
+  if (!from.isValid() || !to.isValid()) return "";
   if (period?.start && from.isBefore(period.start, "day")) from = period.start;
   if (period?.end && to.isAfter(period.end, "day")) to = period.end;
-  return `${from.format("DD MMM")} – ${to.format("DD MMM YYYY")}`;
+  if (from.isSame(to, "day")) return to.format("DD MMM YYYY");
+  if (from.isSame(to, "year")) return `${from.format("DD MMM")} – ${to.format("DD MMM YYYY")}`;
+  return `${from.format("DD MMM YYYY")} – ${to.format("DD MMM YYYY")}`;
 };
 
  
@@ -287,6 +302,12 @@ const ApprovalDashboard = () => {
       rejected: rows.map((r) => sumStatuses(r.status_counts, REJECTED_STATUSES)),
     };
   }, [exportTrends.series, exportTrends.exports]);
+
+  const trendLabels = useMemo(() => {
+    const rows = exportTrends.series || [];
+    if (!rows.length) return exportTrends.labels || [];
+    return rows.map(buildBucketLabel);
+  }, [exportTrends.series, exportTrends.labels]);
 
  
   const openTrendModal = () => {
@@ -610,10 +631,10 @@ useEffect(() => {
     if (!trendCtx) return;
     const trendChart = new Chart(
       trendCtx,
-      buildTrendConfig({ labels: exportTrends.labels, data: trendData }),
+      buildTrendConfig({ labels: trendLabels, data: trendData }),
     );
     return () => trendChart.destroy();
-  }, [exportTrends.labels, trendData]);
+  }, [trendLabels, trendData]);
 
   useEffect(() => {
     const statusCtx = document.getElementById("statusChart");
@@ -720,13 +741,13 @@ useEffect(() => {
     const chart = new Chart(
       trendModalCanvas,
       buildTrendConfig({
-        labels: exportTrends.labels,
+        labels: trendLabels,
         data: trendData,
         showFullLabels: true,
       }),
     );
     return () => chart.destroy();
-  }, [trendModalOpen, trendModalCanvas, exportTrends.labels, trendData, trendModalHeight]);
+  }, [trendModalOpen, trendModalCanvas, trendLabels, trendData, trendModalHeight]);
 
  
   useEffect(() => {
@@ -1276,9 +1297,9 @@ useEffect(() => {
             <div>
               <div className="text-sm font-semibold text-gray-800">
                 {GRANULARITY_LABEL[exportTrends.granularity] || "Monthly"} view
-                {exportTrends.labels.length > 0 && (
+                {trendLabels.length > 0 && (
                   <span className="text-gray-500 font-normal">
-                    {" · "}{exportTrends.labels.length} data points
+                    {" · "}{trendLabels.length} data points
                   </span>
                 )}
               </div>
@@ -1317,7 +1338,7 @@ useEffect(() => {
             <div
               style={{
                 height: trendChartHeight,
-                minWidth: Math.max(640, exportTrends.labels.length * TREND_POINT_WIDTH),
+                minWidth: Math.max(640, trendLabels.length * TREND_POINT_WIDTH),
               }}
             >
               <canvas id="trendChartModal" ref={setTrendModalCanvas} />
