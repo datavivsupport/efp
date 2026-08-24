@@ -194,6 +194,7 @@ const Navigation = ({
               const { label: badgeLabel, color: badgeColor } =
                 resolveNotifStyle(item.notif_type);
               const jobId = item.data?.sales_input_id;
+              const invoiceUrl = item.data?.VIEW_INVOICE_URL;
 
               return (
                 <div
@@ -237,13 +238,24 @@ const Navigation = ({
                     {dayjs(item.created_at).format("DD/MM/YYYY, hh:mm A")}
                   </div>
 
-                  {jobId && (
+                  {jobId ? (
                     <div
                       className={styles.notfiViewDetails}
                       onClick={() => openJob(jobId)}
                     >
                       View Details {" >"}
                     </div>
+                  ) : (
+                    invoiceUrl && (
+                      <a
+                        className={styles.notfiViewDetails}
+                        href={invoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Details {" >"}
+                      </a>
+                    )
                   )}
                 </div>
               );

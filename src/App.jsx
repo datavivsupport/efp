@@ -1,8 +1,9 @@
 import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
-import { Spin } from "antd";
+import { Spin, notification } from "antd";
 import Navigation from "./Components/Navigation/Navbar";
 import apiClient from "./api/apiclient";
+import { onMessageListener, requestForToken } from "./firebase/firebase";
 
 const PAGE_SIZE = 10;
 
@@ -24,7 +25,7 @@ const App = () => {
     try {
       // skipErrorHandler: a failed poll must not raise a global error toast
       const res = await apiClient.get(
-        `/accounts/notifications/?page=${pageToFetch}`,
+        `/accounts/notifications/?page=${pageToFetch}&live=true`,
         { skipErrorHandler: true },
       );
       const results = Array.isArray(res.data?.results) ? res.data.results : [];
@@ -86,6 +87,27 @@ const App = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     getNotification(1);
   }, [location.pathname, getNotification]);
+
+  // Firebase Cloud Messaging: ask for browser push permission once, then
+  // refetch page 1 (and toast) whenever a push arrives while the tab is open.
+  useEffect(() => {
+    requestForToken();
+
+    const unsubscribe = onMessageListener((payload) => {
+      notification.open({
+        message: payload?.notification?.title,
+        description: payload?.notification?.body,
+        onClick: () => {
+          const link = payload?.data?.VIEW_INVOICE_URL;
+          if (link) window.location.href = link;
+        },
+      });
+      getNotification(1);
+    });
+
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
