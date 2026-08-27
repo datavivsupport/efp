@@ -16,6 +16,7 @@ import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
+import { computeUserRoles } from "../utils/roleUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -211,6 +212,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const canUpdateTransportation = isAdmin;
+  const { isCNF } = computeUserRoles(user);
 
   const [loading, setLoading]                   = useState(false);
   const [open, setOpen] = useState({
@@ -545,7 +547,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
         await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       }
-      
+
+      if (isCNF) {
+        await apiClient.post(`/liner/sales-input/${id}/save-documents/`);
+      }
+
       message.success("Saved successfully");
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {

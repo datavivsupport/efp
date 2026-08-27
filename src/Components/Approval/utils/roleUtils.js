@@ -1,9 +1,4 @@
-/**
- * ─── DEPARTMENT CONFIG ───────────────────────────────────────────────────────
- * Add new department keyword arrays here to extend role detection.
- * Each array lists substrings matched against dept names AND role names.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+ 
 const DEPT_CONFIG = {
   CS:       ["CUSTOMER SERVICE", "DOCUMENTATION", "SHIPPING", "DOCS"],
   CNF:      ["C&F", "CNF", "CLEARANCE", "FORWARDING", "OPERATIONS", "LOGISTICS"],
@@ -13,11 +8,7 @@ const DEPT_CONFIG = {
 
 const matchesKeywords = (list, keywords) =>
   keywords.some((kw) => list.some((item) => item.includes(kw)));
-
-/**
- * Derives all role/department flags from the logged-in user object.
- * Returns a flat object of booleans consumed by Approval.jsx.
- */
+ 
 export const computeUserRoles = (user) => {
   const userRoles = (user?.roles || []).map((r) =>
     (typeof r === "object" ? r.name : r).toUpperCase()
