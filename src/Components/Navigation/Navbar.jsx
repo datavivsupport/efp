@@ -235,7 +235,7 @@ const Navigation = ({
                   <div className={styles.notfiTitle}>{item.title}</div>
                   <div className={styles.notfiBody}>{item.body}</div>
                   <div className={styles.notfiTime}>
-                    {dayjs(item.created_at).format("DD/MM/YYYY, hh:mm A")}
+                    {dayjs.tz(item.created_at).format("DD/MM/YYYY, hh:mm A")}
                   </div>
 
                   {jobId ? (

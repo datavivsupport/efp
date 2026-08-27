@@ -645,7 +645,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{isObject ? r.text : r}</p>
-                          {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
+                          {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs.tz(r.date).format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );
                     })}
@@ -672,7 +672,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
                 { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
                 { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
-                { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).format("DD-MM-YYYY HH:mm") : "N/A" }
+                { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs.tz(d).format("DD-MM-YYYY HH:mm") : "N/A" }
               ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>

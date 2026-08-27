@@ -498,7 +498,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
     { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
-    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).format("YYYY-MM-DD HH:mm") : "N/A" },
+    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs.tz(d).format("YYYY-MM-DD HH:mm") : "N/A" },
   ];
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -780,7 +780,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
+                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs.tz(r.date).format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );
                     })}

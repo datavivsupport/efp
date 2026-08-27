@@ -864,7 +864,7 @@ useEffect(() => {
       title: "Created Date",
       dataIndex: "export_created_date",
       key: "export_created_date",
-      render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "N/A"
+      render: (d) => d ? dayjs.tz(d).format("DD-MM-YYYY") : "N/A"
     },
     {
       title: "Pending With",
@@ -1052,7 +1052,7 @@ useEffect(() => {
               { title: "Customer", dataIndex: "customer_name", key: "customer", render: (text) => text || "-" },
               { title: "Carrier", dataIndex: "carrier_name", key: "carrier", render: (text) => text || "-" },
               { title: "Job Type", dataIndex: "job_type", key: "job_type", render: (t) => t?.toUpperCase() || "-" },
-              { title: "Created", dataIndex: "created_at", key: "created", render: (d) => dayjs(d).format("DD-MM-YYYY") || "-" },
+              { title: "Created", dataIndex: "created_at", key: "created", render: (d) => d ? dayjs.tz(d).format("DD-MM-YYYY") : "-" },
               {
                 title: "Actions",
                 key: "actions",
