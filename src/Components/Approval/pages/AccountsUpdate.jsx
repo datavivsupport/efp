@@ -16,7 +16,7 @@ import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
 
-/* ── FileChipList ── */
+
 const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
@@ -48,7 +48,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
   </div>
 );
 
-/* ── DocUploadField ── */
+
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, disabled, user, isAdmin }) => {
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) return false;
@@ -134,7 +134,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   );
 };
 
-/* ── Read-only File View ── */
+
 const FileListView = ({ files, onPreview }) => (
   <div>
     {files.length > 0 ? files.map((f, i) => (
@@ -198,13 +198,10 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   }, [jobData, form]);
 
   const { isAccountsTeam, isAdmin } = computeUserRoles(user);
-  const currentStage = String(jobData?.current_stage || "1");
-  
-  // Disable if stage 7 and CS HOD not approved, OR if job is rejected
-  const hasAccountsPending = (jobData?.approval_history || []).some(
-    (h) => h.pending_with?.toLowerCase().includes("accounts") && h.status === "PENDING"
-  );
-  const isDisabled = !hasAccountsPending || jobData?.status?.includes("REJECTED");
+
+
+  const isPendingAtAccounts = jobData?.pending_with?.toLowerCase().includes("accounts");
+  const isDisabled = !isPendingAtAccounts || jobData?.status?.includes("REJECTED");
 
   // const openPreview = (files, idx) => {
   //   setPreviewUrls(files.map(f => f.url || f.file_url));
