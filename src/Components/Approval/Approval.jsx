@@ -749,7 +749,7 @@ const Approval = () => {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d) => d ? dayjs.tz(d).format("DD-MM-YYYY HH:mm") : "N/A"
+      render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A"
     }
   ];
 
@@ -1635,7 +1635,7 @@ const Approval = () => {
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && (
                             <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
-                              — {authorName} {r.date ? `on ${dayjs.tz(r.date).format("DD MMM YY HH:mm")}` : ""}
+                              — {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}
                             </Typography.Text>
                           )}
                         </div>

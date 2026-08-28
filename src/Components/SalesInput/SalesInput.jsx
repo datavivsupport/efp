@@ -606,7 +606,7 @@ const SalesInput = () => {
             equipment_type: tr.equipment_type,
             no_of_containers: tr.no_of_containers,
             category: tr.category,
-            placement_time: tr.placement_time ? dayjs.tz(tr.placement_time) : null,
+            placement_time: tr.placement_time ? dayjs(tr.placement_time).tz("Asia/Dubai") : null,
             pickup_location: tr.pickup_location,
             special_remarks: tr.special_remarks
           }));
@@ -1799,7 +1799,7 @@ const SalesInput = () => {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <Typography.Text strong style={{ fontSize: "14px" }}>{item.stage}</Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: "12px" }}>
-                          {dayjs.tz(item.created_at).format("DD MMM YYYY HH:mm")}
+                          {dayjs(item.created_at).tz("Asia/Dubai").format("DD MMM YYYY HH:mm")}
                         </Typography.Text>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
@@ -1857,7 +1857,7 @@ const SalesInput = () => {
                         <ClampedText rows={3} style={{ fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</ClampedText>
                         {typeof r === 'object' && r.user_name && (
                           <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
-                            — {r.user_name} {r.date ? `on ${dayjs.tz(r.date).format("DD MMM YY HH:mm")}` : ""}
+                            — {r.user_name} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}
                           </Typography.Text>
                         )}
                       </div>

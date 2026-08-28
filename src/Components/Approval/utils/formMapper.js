@@ -84,7 +84,7 @@ export const mapJobToFormValues = (data) => ({
     equipment_type:   t.equipment_type,
     no_of_containers: t.no_of_containers,
     category:         t.category,
-    placement_time:   t.placement_time ? dayjs.tz(t.placement_time) : null,
+    placement_time:   t.placement_time ? dayjs(t.placement_time).tz("Asia/Dubai") : null,
     pickup_location:  t.pickup_location,
     special_remarks:  t.special_remarks,
   })) || [{}],
@@ -95,12 +95,12 @@ export const mapJobToFormValues = (data) => ({
   booking_voyage:  data.approval_details?.booking_voyage,
   vessel_eta:      data.approval_details?.vessel_eta ? dayjs(data.approval_details.vessel_eta) : null,
   booking_ref_no:  data.approval_details?.booking_ref_no,
-  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs.tz(data.approval_details.ll_cut_off_datetime) : null,
+  ll_cut_off_datetime: data.approval_details?.ll_cut_off_datetime ? dayjs(data.approval_details.ll_cut_off_datetime).tz("Asia/Dubai") : null,
   si_cut_off_date: (() => {
     const d = data.approval_details?.si_cut_off_date;
     const t = data.approval_details?.si_cut_off_time;
     if (!d) return null;
-    return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
+    return t ? dayjs(`${d} ${t}`).tz("Asia/Dubai") : dayjs(d).tz("Asia/Dubai");
   })(),
   booking_remarks: data.approval_details?.booking_remarks,
   cnf_remarks:     data.approval_details?.cnf_remarks,

@@ -86,7 +86,7 @@ const AccountsDashboard = () => {
       title: "Created At",
       dataIndex: "created_at",
       key: "created_at",
-      render: (date) => dayjs(date).format("DD MMM YYYY"),
+      render: (date) => dayjs(date).tz("Asia/Dubai").format("DD MMM YYYY"),
     },
     {
       title: "Action",

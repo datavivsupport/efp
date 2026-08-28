@@ -128,6 +128,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       if (response.data.status === "success") {
         const uploadedDoc = response.data.data;
         setFiles((prev) => [...prev, { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
+        uploadActivity?.onUploaded?.();
         message.success(`${label} uploaded successfully`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
@@ -246,6 +247,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
   const isDocumentUploading = uploadingDocsCount > 0;
+  const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
 
   /* ── Compute roles, context, locks ── */
   const {
@@ -498,7 +500,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
     { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
-    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs.tz(d).format("YYYY-MM-DD HH:mm") : "N/A" },
+    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("YYYY-MM-DD HH:mm") : "N/A" },
   ];
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -510,6 +512,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         value={{
           inc: () => setUploadingDocsCount((prev) => prev + 1),
           dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
+          onUploaded: () => setHasUploadedDoc(true),
         }}
       >
       <Spin spinning={loading}>
@@ -780,7 +783,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs.tz(r.date).format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
+                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );
                     })}
@@ -843,7 +846,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {/* ════════ BOTTOM BUTTONS ════════ */}
           {!isMasterMode && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
-              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading || !hasUploadedDoc} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
               <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>

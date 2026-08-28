@@ -326,7 +326,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d) => d ? dayjs.tz(d).format("YYYY-MM-DD HH:mm") : "N/A"
+      render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("YYYY-MM-DD HH:mm") : "N/A"
     }
   ];
 

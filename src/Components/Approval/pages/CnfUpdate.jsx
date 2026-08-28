@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useContext, createContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -34,6 +34,8 @@ const STATUS_COLOR = {
   Rejected: "error",
   REJECTED: "error"
 };
+
+const UploadSuccessContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -91,6 +93,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
+  const uploadSuccess = useContext(UploadSuccessContext);
 
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
@@ -126,6 +129,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
+        uploadSuccess?.markUploaded?.();
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -215,6 +219,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const { isCNF } = computeUserRoles(user);
 
   const [loading, setLoading]                   = useState(false);
+  const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
   const [open, setOpen] = useState({
     export: true,
     container: true,
@@ -322,12 +327,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       booking_ref_no: ad.booking_ref_no,
       other_charges_remarks: ad.other_charges_remarks || "",
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
-      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs.tz(ad.ll_cut_off_datetime) : null,
+      ll_cut_off_datetime: ad.ll_cut_off_datetime ? dayjs(ad.ll_cut_off_datetime).tz("Asia/Dubai") : null,
       si_cut_off_date: (() => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs.tz(`${d} ${t}`) : dayjs.tz(d);
+        return t ? dayjs(`${d} ${t}`).tz("Asia/Dubai") : dayjs(d).tz("Asia/Dubai");
       })(),
     });
   }, [initialJob, form, ad]);
@@ -601,11 +606,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       title: "Updated Date",
       dataIndex: "created_at",
       key: "created_at",
-      render: (d) => d ? dayjs.tz(d).format("DD-MM-YYYY HH:mm") : "N/A"
+      render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A"
     }
   ];
 
   return (
+    <UploadSuccessContext.Provider value={{ markUploaded: () => setHasUploadedDoc(true) }}>
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
@@ -848,7 +854,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs.tz(r.date).format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
+                          {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
                         </div>
                       );
                     })}
@@ -912,7 +918,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={handleSave}
                   icon={<Icon icon="mdi:content-save-outline" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading}
+                  disabled={isDocumentUploading || loading || !hasUploadedDoc}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                 >
                   Save
@@ -934,7 +940,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     onClick={handleSave}
                     icon={<Icon icon="mdi:content-save-outline" />}
                     loading={loading}
-                    disabled={isDocumentUploading || loading}
+                    disabled={isDocumentUploading || loading || !hasUploadedDoc}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                   >
                     Save
@@ -996,6 +1002,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         </div>
       </Modal>
     </div>
+    </UploadSuccessContext.Provider>
   );
 };
 
