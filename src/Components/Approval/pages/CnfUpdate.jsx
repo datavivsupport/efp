@@ -810,13 +810,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Haulier Note {isStage3 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                  <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
                     <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Load List {isStage3 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={currentStage === "2"} restrictionMessage={currentStage === "2" ? "Disabled until Sales & HOD approval is completed." : null} />
+                  <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
