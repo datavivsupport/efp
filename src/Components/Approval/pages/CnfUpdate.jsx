@@ -233,7 +233,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [loadListFiles, setLoadListFiles]         = useState([]);
   const [lpoFiles, setLpoFiles]                   = useState([]);
   const [invoiceFiles, setInvoiceFiles]           = useState([]);
-  const [facFiles, setFacFiles]                   = useState([]);
+  const [hcsFiles, setHcsFiles]                   = useState([]);
   const [croFiles, setCroFiles]                   = useState([]);
   const [edFiles, setEdFiles]                     = useState([]);
   const [hblFiles, setHblFiles]                   = useState([]);
@@ -295,7 +295,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setLoadListFiles(docs.loadListFiles);
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
-      setFacFiles(docs.facFiles);
+      setHcsFiles(docs.hcsFiles);
       setCroFiles(docs.croFiles);
       setEdFiles(docs.edFiles);
       setHblFiles(docs.hblFiles);
@@ -354,7 +354,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const hasPendingFiles = () => {
     return [
       releaseOrderFiles, bocFiles, haulageCostFiles, loadListFiles,
-      lpoFiles, invoiceFiles, facFiles, croFiles, edFiles,
+      lpoFiles, invoiceFiles, hcsFiles, croFiles, edFiles,
       haulierNoteFiles, preAlertFiles, bankSlips, attachments, hblFiles,
     ].some(arr => arr.some(f => f.pending));
   };
@@ -378,12 +378,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       Promise.all(arr.map((f) => (f.pending ? uploadOne(f) : Promise.resolve(f))));
 
     const [
-      newRO, newBoc, newHaulage, newLL, newLpo, newInv, newFac,
+      newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHcs,
       newCro, newEd, newHN, newPreAlert, newBankSlips, newAttach, newHbl,
     ] = await Promise.all([
       resolve(releaseOrderFiles), resolve(bocFiles), resolve(haulageCostFiles),
       resolve(loadListFiles),     resolve(lpoFiles),  resolve(invoiceFiles),
-      resolve(facFiles),          resolve(croFiles),  resolve(edFiles),
+      resolve(hcsFiles),          resolve(croFiles),  resolve(edFiles),
       resolve(haulierNoteFiles),  resolve(preAlertFiles), resolve(bankSlips),
       resolve(attachments),       resolve(hblFiles),
     ]);
@@ -391,14 +391,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     // Sync state so chips update
     setReleaseOrderFiles(newRO); setBocFiles(newBoc); setHaulageCostFiles(newHaulage);
     setLoadListFiles(newLL);     setLpoFiles(newLpo); setInvoiceFiles(newInv);
-    setFacFiles(newFac);         setCroFiles(newCro); setEdFiles(newEd);
+    setHcsFiles(newHcs);         setCroFiles(newCro); setEdFiles(newEd);
     setHaulierNoteFiles(newHN);  setPreAlertFiles(newPreAlert); setBankSlips(newBankSlips);
     setAttachments(newAttach);   setHblFiles(newHbl);
 
     return {
       releaseOrderFiles: newRO, bocFiles: newBoc, haulageCostFiles: newHaulage,
       loadListFiles: newLL,     lpoFiles: newLpo,  invoiceFiles: newInv,
-      facFiles: newFac,         croFiles: newCro,  edFiles: newEd,
+      hcsFiles: newHcs,         croFiles: newCro,  edFiles: newEd,
       haulierNoteFiles: newHN,  preAlertFiles: newPreAlert, bankSlips: newBankSlips,
       attachments: newAttach,   hblFiles: newHbl,
     };
@@ -442,7 +442,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             loadListFiles,
             lpoFiles,
             invoiceFiles,
-            facFiles,
+            hcsFiles,
             croFiles,
             edFiles,
             haulierNoteFiles,
@@ -532,7 +532,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             loadListFiles,
             lpoFiles,
             invoiceFiles,
-            facFiles,
+            hcsFiles,
             croFiles,
             edFiles,
             haulierNoteFiles,

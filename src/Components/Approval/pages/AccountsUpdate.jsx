@@ -161,7 +161,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
   const [hblFiles, setHblFiles] = useState([]);
-  const [facFiles, setFacFiles] = useState([]);
+  const [hcsFiles, setHcsFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
@@ -184,7 +184,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setLpoFiles(docs.lpoFiles);
       setInvoiceFiles(docs.invoiceFiles);
       setHblFiles(docs.hblFiles);
-      setFacFiles(docs.facFiles);
+      setHcsFiles(docs.hcsFiles);
       setPreAlertFiles(docs.preAlertFiles);
       setEdFiles(docs.edFiles);
       setExecutiveDocuments(docs.executiveDocuments || []);

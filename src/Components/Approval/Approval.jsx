@@ -333,7 +333,7 @@ const Approval = () => {
   const [loadListFiles, setLoadListFiles] = useState([]);
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
-  const [facFiles, setFacFiles] = useState([]);
+  const [hcsFiles, setHcsFiles] = useState([]);
   const [croFiles, setCroFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
@@ -541,7 +541,7 @@ const Approval = () => {
           setLoadListFiles(buckets.loadListFiles);
           setLpoFiles(buckets.lpoFiles);
           setInvoiceFiles(buckets.invoiceFiles);
-          setFacFiles(buckets.facFiles);
+          setHcsFiles(buckets.hcsFiles);
           setCroFiles(buckets.croFiles);
           setEdFiles(buckets.edFiles);
           setHaulierNoteFiles(buckets.haulierNoteFiles);
@@ -583,7 +583,7 @@ const Approval = () => {
         loadListFiles,
         lpoFiles,
         invoiceFiles,
-        facFiles,
+        hcsFiles,
         croFiles,
         edFiles,
         haulierNoteFiles,
@@ -701,7 +701,7 @@ const Approval = () => {
     setLoadListFiles([]);
     setLpoFiles([]);
     setInvoiceFiles([]);
-    setFacFiles([]);
+    setHcsFiles([]);
     setPreAlertFiles([]);
     message.info("Form reset");
   };
@@ -1574,7 +1574,7 @@ const Approval = () => {
                   {facFlag && (
                     <Col xs={24} md={8}>
                       <Form.Item className={Styles.formLabel} label="HCS">
-                        <DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={true} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={true} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                       </Form.Item>
                     </Col>
                   )}

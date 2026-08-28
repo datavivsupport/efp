@@ -225,7 +225,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [loadListFiles, setLoadListFiles] = useState([]);
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
-  const [facFiles, setFacFiles] = useState([]);
+  const [hcsFiles, setHcsFiles] = useState([]);
   const [croFiles, setCroFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
@@ -340,7 +340,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setLoadListFiles(buckets.loadListFiles);
       setLpoFiles(buckets.lpoFiles);
       setInvoiceFiles(buckets.invoiceFiles);
-      setFacFiles(buckets.facFiles);
+      setHcsFiles(buckets.hcsFiles);
       setCroFiles(buckets.croFiles);
       setEdFiles(buckets.edFiles);
       setHaulierNoteFiles(buckets.haulierNoteFiles);
@@ -376,7 +376,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         loadListFiles,
         lpoFiles,
         invoiceFiles,
-        facFiles,
+        hcsFiles,
         croFiles,
         edFiles,
         haulierNoteFiles,
@@ -487,7 +487,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const handleReset = () => {
     form.resetFields(); setOtherCharges([]); setRemarks([]); setAttachments([]); setBankSlips([]);
     setReleaseOrderFiles([]); setBocFiles([]); setHaulageCostFiles([]); setHaulierNoteFiles([]);
-    setLoadListFiles([]); setLpoFiles([]); setInvoiceFiles([]); setFacFiles([]); setPreAlertFiles([]);
+    setLoadListFiles([]); setLpoFiles([]); setInvoiceFiles([]); setHcsFiles([]); setPreAlertFiles([]);
     message.info("Form reset");
   };
 
@@ -753,7 +753,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice, message: "Required" }]}><Select placeholder="Select CS HOD" allowClear showSearch optionFilterProp="label" options={csHodOptions} optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} disabled={isCSUploadLocked || isMasterMode} /></Form.Item></Col>
                   )}
                   {facFlag && (
-                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HCS"><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="FAC" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
+                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HCS"><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
                   )}
                   {(documentationFlag || isLiner || isForwarding || isCrossTrade) && (
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="Pre-Alert"><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>

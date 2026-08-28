@@ -108,15 +108,7 @@ export const mapJobToFormValues = (data) => ({
   cs_hod:          data.cs_hod,
 });
 
-/**
- * ─── DOCUMENT TYPE CONFIG ────────────────────────────────────────────────────
- * Add a new document type here to partition it into its own file-state bucket.
- * Each entry: { key, types, keywords }
- *   - key:      camelCase name returned in the result object
- *   - types:    doc_type values to match (exact, uppercase)
- *   - keywords: filename substrings to match when doc_type is generic
- * ─────────────────────────────────────────────────────────────────────────────
- */
+ 
 const DOC_TYPE_CONFIG = [
   { key: "releaseOrderFiles", types: ["RELEASE ORDER","FREIGHT MANIFEST"],                              keywords: ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"] },
   { key: "bocFiles",          types: ["BOC"],                                        keywords: ["BOC_ATTACHMENT", "BOC"] },
@@ -124,7 +116,7 @@ const DOC_TYPE_CONFIG = [
   { key: "loadListFiles",     types: ["LOAD LIST", "LOAD LIST UPLOADING"],           keywords: ["LOAD_LIST", "LOADLIST"] },
   { key: "lpoFiles",          types: ["LPO"],                                        keywords: ["LPO"] },
   { key: "invoiceFiles",      types: ["INVOICE"],                                    keywords: ["INVOICE"] },
-  { key: "facFiles",          types: ["FAC"],                                        keywords: ["FAC"] },
+  { key: "hcsFiles",          types: ["HCS", "FAC"],                                 keywords: ["HCS", "FAC"] },
   { key: "croFiles",          types: ["CRO", "CRO UPLOADING"],                       keywords: ["CRO"] },
   { key: "edFiles",           types: ["ED", "ED UPLOADING", "TDR/SAILING REPORT"],   keywords: ["ED"] },
   { key: "haulierNoteFiles",  types: ["HAULAGE NOTE", "HAULAGE NOTE UPLOADING"],     keywords: ["HAULAGE_NOTE", "HAULAGENOTE"] },
@@ -135,14 +127,7 @@ const DOC_TYPE_CONFIG = [
   { key: "salesExecutiveFiles", types: ["SALES EXECUTIVE"],                           keywords: [] },
 ];
 
-/**
- * Partitions a flat documents array into typed buckets.
- * Anything not matched by DOC_TYPE_CONFIG goes into `attachments`.
- *
- * @param  {array} docs  - raw documents array from API
- * @param  {string} executiveName - name of the executive to filter executive documents
- * @returns {object}     - one key per DOC_TYPE_CONFIG entry + `executiveDocuments` + `attachments`
- */
+ 
 export const partitionDocuments = (docs, executiveName = null) => {
   const normalizedDocs = [...(docs || [])].sort((a, b) => {
     const aId = Number(a?.id);
@@ -162,8 +147,7 @@ export const partitionDocuments = (docs, executiveName = null) => {
       // Priority 1: Exact doc_type match
       if (dt && types.includes(dt)) return true;
 
-      // Priority 2: Keyword match ONLY if doc_type and category are generic/missing.
-      // We consider doc_type "Attachment" or "Other Docs" as specific classifications that belong in general attachments.
+     
       const isGenericType = !dt || ["OTHER", "OTHERS"].includes(dt);
       const isGenericCat  = !cat || ["GENERAL", "OTHERS"].includes(cat);
 

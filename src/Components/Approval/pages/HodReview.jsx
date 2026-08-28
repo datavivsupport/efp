@@ -224,7 +224,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [loadListFiles, setLoadListFiles] = useState([]);
   const [lpoFiles, setLpoFiles] = useState([]);
   const [invoiceFiles, setInvoiceFiles] = useState([]);
-  const [facFiles, setFacFiles] = useState([]);
+  const [hcsFiles, setHcsFiles] = useState([]);
   const [croFiles, setCroFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [haulierNoteFiles, setHaulierNoteFiles] = useState([]);
@@ -327,7 +327,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       setLoadListFiles(buckets.loadListFiles);
       setLpoFiles(buckets.lpoFiles);
       setInvoiceFiles(buckets.invoiceFiles);
-      setFacFiles(buckets.facFiles);
+      setHcsFiles(buckets.hcsFiles);
       setCroFiles(buckets.croFiles);
       setEdFiles(buckets.edFiles);
       setHaulierNoteFiles(buckets.haulierNoteFiles);
@@ -363,7 +363,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
         loadListFiles,
         lpoFiles,
         invoiceFiles,
-        facFiles,
+        hcsFiles,
         croFiles,
         edFiles,
         haulierNoteFiles,

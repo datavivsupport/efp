@@ -231,7 +231,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [lpoFiles, setLpoFiles]                 = useState([]);
   const [invoiceFiles, setInvoiceFiles]         = useState([]);
   const [hblFiles, setHblFiles]                 = useState([]);
-  const [facFiles, setFacFiles]                 = useState([]);
+  const [hcsFiles, setHcsFiles]                 = useState([]);
   const [edFiles, setEdFiles]                   = useState([]);
   const [preAlertFiles, setPreAlertFiles]       = useState([]);
   const [releaseOrderFiles, setReleaseOrderFiles] = useState([]);
@@ -284,7 +284,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     lpoFiles,
     invoiceFiles,
     hblFiles,
-    facFiles,
+    hcsFiles,
     edFiles,
     preAlertFiles,
     attachments,
@@ -310,7 +310,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setLpoFiles(docs.lpoFiles);
     setInvoiceFiles(docs.invoiceFiles);
     setHblFiles(docs.hblFiles);
-    setFacFiles(docs.facFiles);
+    setHcsFiles(docs.hcsFiles);
     setEdFiles(docs.edFiles);
     setPreAlertFiles(docs.preAlertFiles);
     setReleaseOrderFiles(docs.releaseOrderFiles);
@@ -382,22 +382,22 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const resolve = async (arr) =>
       Promise.all((arr || []).map((f) => (f?.pending ? uploadOne(f) : Promise.resolve(f))));
 
-    const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newFac, newEd, newPreAlert, newHN, newAttach] =
+    const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newHcs, newEd, newPreAlert, newHN, newAttach] =
       await Promise.all([
         resolve(releaseOrderFiles), resolve(bocFiles),    resolve(haulageCostFiles),
         resolve(loadListFiles),     resolve(lpoFiles),    resolve(invoiceFiles),
-        resolve(hblFiles),          resolve(facFiles),    resolve(edFiles),
+        resolve(hblFiles),          resolve(hcsFiles),    resolve(edFiles),
         resolve(preAlertFiles),     resolve(haulierNoteFiles), resolve(attachments),
       ]);
 
     setReleaseOrderFiles(newRO); setBocFiles(newBoc);    setHaulageCostFiles(newHaulage);
     setLoadListFiles(newLL);     setLpoFiles(newLpo);    setInvoiceFiles(newInv);
-    setHblFiles(newHbl);         setFacFiles(newFac);    setEdFiles(newEd);
+    setHblFiles(newHbl);         setHcsFiles(newHcs);    setEdFiles(newEd);
     setPreAlertFiles(newPreAlert); setHaulierNoteFiles(newHN); setAttachments(newAttach);
 
     return { releaseOrderFiles: newRO, bocFiles: newBoc, haulageCostFiles: newHaulage,
              loadListFiles: newLL, lpoFiles: newLpo, invoiceFiles: newInv,
-             hblFiles: newHbl, facFiles: newFac, edFiles: newEd,
+             hblFiles: newHbl, hcsFiles: newHcs, edFiles: newEd,
              preAlertFiles: newPreAlert, haulierNoteFiles: newHN, attachments: newAttach };
   };
 
@@ -413,7 +413,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...dm(d.lpoFiles, "LPO", "financial"),
       ...dm(d.invoiceFiles, "Invoice", "financial"),
       ...dm(d.hblFiles, "HBL", "financial"),
-      ...dm(d.facFiles, "FAC", "financial"),
+      ...dm(d.hcsFiles, "HCS", "financial"),
       ...dm(d.edFiles, "ED", "financial"),
       ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
       ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: f.category || "attachments" })),
@@ -723,7 +723,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={facFiles} setFiles={setFacFiles} salesInputId={id} docType="FAC" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
             </div>

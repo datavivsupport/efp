@@ -420,7 +420,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           ...dm(docs.lpoFiles, "LPO", "financial"),
           ...dm(docs.invoiceFiles, "Invoice", "financial"),
           ...dm(docs.hblFiles, "HBL", "financial"),
-          ...dm(docs.facFiles, "FAC", "financial"),
+          ...dm(docs.hcsFiles, "HCS", "financial"),
           ...dm(docs.edFiles, "ED", "financial"),
           ...dm(docs.preAlertFiles, "PRE-ALERT", "financial"),
           ...dm(docs.bankSlips, "Bank Slip", "financial"),
