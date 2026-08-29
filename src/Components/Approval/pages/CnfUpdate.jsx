@@ -332,7 +332,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`).tz("Asia/Dubai") : dayjs(d).tz("Asia/Dubai");
+        return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
       })(),
     });
   }, [initialJob, form, ad]);

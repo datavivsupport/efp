@@ -349,7 +349,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         const d = ad.si_cut_off_date;
         const t = ad.si_cut_off_time;
         if (!d) return null;
-        return t ? dayjs(`${d} ${t}`).tz("Asia/Dubai") : dayjs(d).tz("Asia/Dubai");
+        return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
       })(),
     });
   }, [initialJob, form, ad]);
@@ -484,8 +484,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
           booking_ref_no: form.getFieldValue("booking_ref_no"),
           ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
-          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
-          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").tz("Asia/Dubai").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").tz("Asia/Dubai").format("HH:mm") : null,
           booking_remarks: form.getFieldValue("booking_remarks"),
           cnf_remarks: form.getFieldValue("cnf_remarks"),
           other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",
@@ -565,8 +565,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           vessel_eta: form.getFieldValue("vessel_eta") ? form.getFieldValue("vessel_eta").format("YYYY-MM-DD") : null,
           booking_ref_no: form.getFieldValue("booking_ref_no"),
           ll_cut_off_datetime: form.getFieldValue("ll_cut_off_datetime") ? form.getFieldValue("ll_cut_off_datetime").format("YYYY-MM-DD HH:mm") : null,
-          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("YYYY-MM-DD") : null,
-          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").format("HH:mm") : null,
+          si_cut_off_date: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").tz("Asia/Dubai").format("YYYY-MM-DD") : null,
+          si_cut_off_time: form.getFieldValue("si_cut_off_date") ? form.getFieldValue("si_cut_off_date").tz("Asia/Dubai").format("HH:mm") : null,
           booking_remarks: form.getFieldValue("booking_remarks"),
           cnf_remarks: form.getFieldValue("cnf_remarks"),
           other_charges_remarks: form.getFieldValue("other_charges_remarks") || "",

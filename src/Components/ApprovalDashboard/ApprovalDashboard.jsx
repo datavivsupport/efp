@@ -857,14 +857,14 @@ useEffect(() => {
       title: "Invoice Date",
       dataIndex: "invoice_date",
       key: "invoice_date",
-      render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "-"
+      render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY") : "-"
     },
 
     {
       title: "Created Date",
       dataIndex: "export_created_date",
       key: "export_created_date",
-      render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY") : "N/A"
+      render: (d) => d ? dayjs(d).format("DD-MM-YYYY") : "N/A"
     },
     {
       title: "Pending With",

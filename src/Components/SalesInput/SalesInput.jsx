@@ -572,7 +572,7 @@ const SalesInput = () => {
             sales_hod: data.sales_hod,
             special_instructions: data.special_instructions,
             other_charges_remarks: data.approval_details?.other_charges_remarks,
-            export_created_date: data.export_created_date ? dayjs(data.export_created_date) : dayjs(),
+            export_created_date: data.export_created_date ? dayjs(data.export_created_date, "YYYY-MM-DD") : dayjs(),
             export_number: data.export_number || "N/A",
             created_by_name: data.created_by_name || "",
             lpo_required: data.approval_details?.lpo_required ?? true,
@@ -757,7 +757,7 @@ const SalesInput = () => {
         : [],
       /* 2026-03-25: ETA fields relocated to Approval Page (Stage 3+) per PRD */
       overseas_agent_name: values.overseas_agent_name || "",
-      export_created_date: values.export_created_date ? values.export_created_date.format("YYYY-MM-DD") : null,
+      export_created_date: values.export_created_date ? values.export_created_date.tz("Asia/Dubai").format("YYYY-MM-DD") : null,
       export_number: values.export_number !== "N/A" ? values.export_number : null,
       general_remarks: remarks,
       // documents: [
@@ -899,7 +899,7 @@ const SalesInput = () => {
         onFinish={onFinish}
         onFinishFailed={handleFinishFailed}
         initialValues={{
-          export_created_date: dayjs(),
+          export_created_date: dayjs().tz("Asia/Dubai"),
           created_by_name: user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "",
         }}
       >

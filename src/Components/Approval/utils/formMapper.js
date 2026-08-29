@@ -6,7 +6,7 @@ import dayjs from "../../../dayjs-config";
  */
 export const mapJobToFormValues = (data) => ({
   export_number:          data.export_number || "N/A",
-  export_created_date:    data.export_created_date ? dayjs(data.export_created_date).tz("Asia/Dubai").format("DD-MM-YYYY") : null,
+  export_created_date:    data.export_created_date ? dayjs(data.export_created_date).format("DD-MM-YYYY") : null,
   created_by_name:        data.created_by_name || "N/A",
   carrier_name:           data.carrier_name,
   customer_name:          data.customer_name,
@@ -100,7 +100,7 @@ export const mapJobToFormValues = (data) => ({
     const d = data.approval_details?.si_cut_off_date;
     const t = data.approval_details?.si_cut_off_time;
     if (!d) return null;
-    return t ? dayjs(`${d} ${t}`).tz("Asia/Dubai") : dayjs(d).tz("Asia/Dubai");
+    return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
   })(),
   booking_remarks: data.approval_details?.booking_remarks,
   cnf_remarks:     data.approval_details?.cnf_remarks,
