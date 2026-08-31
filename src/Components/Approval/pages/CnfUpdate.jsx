@@ -218,6 +218,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const canUpdateTransportation = isAdmin;
   const { isCNF } = computeUserRoles(user);
 
+  // Stage 2 — once Sales HOD has approved, CNF can submit straight from here.
+  const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
+  // Stages where the CNF approval action (and its mandatory-doc rule) applies.
+  const showSubmitAction  = isStage3 || canSubmitStage2;
+
   const [loading, setLoading]                   = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
   const [open, setOpen] = useState({
@@ -424,8 +429,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
-    // Stage 3 requires mandatory docs
-    if (action === "Approved" && isStage3) {
+    // Submitting stages require mandatory docs
+    if (action === "Approved" && showSubmitAction) {
       const missing = [];
       if (!haulierNoteFiles.length) missing.push("Haulier Note");
       if (!loadListFiles.length)    missing.push("Load List");
@@ -553,7 +558,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       }
 
-      if (isCNF) {
+      // Stage 2 — a regular CNF user's uploads are already persisted at upload time,
+      // so skip save-documents. Admin behaviour stays unchanged.
+      const skipSaveDocuments = isCNF && !isAdmin && currentStage === "2";
+
+      if (isCNF && !skipSaveDocuments) {
         await apiClient.post(`/liner/sales-input/${id}/save-documents/`);
       }
 
@@ -889,7 +898,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {isStage3 ? (
+            {showSubmitAction ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
@@ -900,19 +909,21 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   disabled={isDocumentUploading || loading}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
                 >
-                  Submit & Verify (CNF)
+                  {isStage3 ? "Submit & Verify (CNF)" : "Submit & Approve"}
                 </Button>
-                <Button
-                  danger
-                  size="large"
-                  onClick={() => handleAction("Rejected")}
-                  icon={<Icon icon="mdi:close-circle" />}
-                  loading={loading}
-                  disabled={isDocumentUploading || loading}
-                  style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-                >
-                  Reject
-                </Button>
+                {isStage3 && (
+                  <Button
+                    danger
+                    size="large"
+                    onClick={() => handleAction("Rejected")}
+                    icon={<Icon icon="mdi:close-circle" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Reject
+                  </Button>
+                )}
                 <Button
                   size="large"
                   onClick={handleSave}
