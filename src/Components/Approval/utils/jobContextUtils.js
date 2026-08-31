@@ -82,8 +82,7 @@ export const computeJobContext = ({ jobData, id, user, approvalHistory, roles })
   const isThisJobsCSHOD =
     !!jobData?.cs_hod &&
     String(user?.id) === String(jobData?.cs_hod);
-  // ── Stage 2 gate logic ─────────────────────────────────────────────────────
-  // Edit this object to change who can act at stage 2.
+ 
   const stage2 = {
     // True when the current user is the named Sales HOD for this specific job
     isThisJobsHOD:
@@ -91,14 +90,13 @@ export const computeJobContext = ({ jobData, id, user, approvalHistory, roles })
       !jobData?.is_hod_approved &&
       jobData?.sales_hod?.toLowerCase().trim() === userFullName?.toLowerCase().trim(),
 
-    // CS can act at stage 2 only if they haven't already updated (is_cs_updated = false)
+ 
     csCanAct: isStage2 && isCS && !jobData?.is_cs_updated,
 
-    // Creator becomes read-only after submitting
+ 
     creatorLocked: isCreator && jobData?.status !== "draft",
   };
-
-  // CS done + HOD not yet approved → CS form fully locked (no buttons, no edits)
+ 
   const isCSDoneWaitingHOD =
     isStage2 && isCS && !isAdmin &&
     !!jobData?.is_cs_updated && !jobData?.is_hod_approved;

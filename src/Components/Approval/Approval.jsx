@@ -385,7 +385,7 @@ const Approval = () => {
     isCNFSectionLocked, isAccountsEditableFieldLocked,
     isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked, isAccountsUploadLocked,
     isRequirementSelectorLocked,
-    showDocumentUploads, hideDocumentsAtStage2, disableDocumentsAtStage4, showROBOCForCS, needsLpoInvoice,
+    showDocumentUploads, hideCnfFromCS, disableDocumentsAtStage4, showROBOCForCS, needsLpoInvoice,
   } = computeSectionLocks({
     isAdmin, isCS, isCNF, isSalesExecutive, isCreator,
     isCSHOD, isAccountsTeam, isHOD, isSalesHOD,
@@ -1329,7 +1329,7 @@ const Approval = () => {
                   </Row>
                 )}
 
-                {showDocumentUploads && !hideDocumentsAtStage2 && (
+                {showDocumentUploads && !hideCnfFromCS && (
                   <>
                   </>
                 )}
@@ -1337,7 +1337,7 @@ const Approval = () => {
             </Card>
           )}
 
-          {showDocumentUploads && !hideDocumentsAtStage2 && !isOthers && !isSalesHOD && (
+          {showDocumentUploads && !hideCnfFromCS && !isOthers && !isSalesHOD && (
             <Card
               className={Styles.card}
               bordered

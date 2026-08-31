@@ -17,6 +17,7 @@ import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
+import { isCnfDataVisibleToCS } from "../utils/sectionLocks";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -225,6 +226,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const canEditBookingTechnical = isAdmin && isCS;
   const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
+  const hideCnfFromCS = isCS && !isCnfDataVisibleToCS(initialJob);
 
   const [loading, setLoading]           = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
@@ -708,7 +710,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
             </div>
           </Card>
 
-          {/* CNF DETAILS */}
+          {/* CNF DETAILS — hidden from CS until CNF hands over */}
+          {!hideCnfFromCS && (
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
             <div style={{ display: open.cnfDetails ? "block" : "none" }}>
               <Row gutter={[16, 16]}>
@@ -720,6 +723,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Row>
             </div>
           </Card>
+          )}
 
           {/* DOCUMENTS (ACTIONABLE) */}
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>

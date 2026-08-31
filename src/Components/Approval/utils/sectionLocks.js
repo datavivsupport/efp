@@ -1,3 +1,21 @@
+/** doc_type spellings that count as the Load List (mirrors DOC_TYPE_CONFIG). */
+const LOAD_LIST_DOC_TYPES = ["LOAD LIST", "LOAD LIST UPLOADING"];
+
+/**
+ * CS sees CNF's section only once CNF has handed over: the second stage has started and
+ * the Load List is in. Keyed on delivery, not on the stage alone - the job leaves stage 2
+ * the moment CS confirms the booking, which is before CNF has done anything.
+ */
+export const isCnfDataVisibleToCS = (jobData) => {
+  const stage = String(jobData?.current_stage || "1");
+  if (stage === "1" || stage === "2") return false;
+  // Nothing to wait for when the job was configured without a Load List.
+  if (jobData?.is_load_list_required === false) return true;
+  return (jobData?.documents || []).some((d) =>
+    LOAD_LIST_DOC_TYPES.includes(d?.doc_type?.toUpperCase())
+  );
+};
+
 /**
  * Computes all section-level read/write lock flags for Approval.jsx.
  *
@@ -112,8 +130,8 @@ export const computeSectionLocks = (ctx) => {
     (isCNF && isForwarding && currentStage === "3") ||
     (isForwarding && currentStage === "5");  // always visible at Forwarding stage 5
 
-  // Hide haulage cost, haulier note, ED, load list, remarks at CS stage 2
-  const hideDocumentsAtStage2 = isCS && isStage2;
+  // Hide haulage cost, haulier note, ED, load list, remarks from CS until CNF hands over
+  const hideCnfFromCS = isCS && !isCnfDataVisibleToCS(jobData);
 
   // Disable these fields at CS stage 4
   const disableDocumentsAtStage4 = isCS && currentStage === "4";
@@ -140,7 +158,7 @@ export const computeSectionLocks = (ctx) => {
     isAccountsUploadLocked,
     isRequirementSelectorLocked,
     showDocumentUploads,
-    hideDocumentsAtStage2,
+    hideCnfFromCS,
     disableDocumentsAtStage4,
     showROBOCForCS,
     needsLpoInvoice,

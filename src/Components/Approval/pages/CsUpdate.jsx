@@ -272,7 +272,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isAccountsEditableFieldLocked,
     isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked,
     isRequirementSelectorLocked,
-    showDocumentUploads, showROBOCForCS, needsLpoInvoice,
+    showDocumentUploads, showROBOCForCS, needsLpoInvoice, hideCnfFromCS,
   } = computeSectionLocks({
     isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
@@ -720,7 +720,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   </Row>
                 )}
 
-                {showDocumentUploads && !isStage2 && (
+                {showDocumentUploads && !hideCnfFromCS && (
                   <>
                     <Row gutter={16}>
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulage Cost Sheet"><DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Cost" disabled={isCNFUploadLocked} restrictionMessage={isLiner ? "CNF is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>

@@ -217,10 +217,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const canUpdateTransportation = isAdmin;
   const { isCNF } = computeUserRoles(user);
-
-  // Stage 2 — once Sales HOD has approved, CNF can submit straight from here.
+ 
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
-  // Stages where the CNF approval action (and its mandatory-doc rule) applies.
+ 
   const showSubmitAction  = isStage3 || canSubmitStage2;
 
   const [loading, setLoading]                   = useState(false);
@@ -369,6 +368,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     ].some(arr => arr.some(f => f.pending));
   };
   const isDocumentUploading = hasPendingFiles();
+
+  // The two documents handleAction enforces, so the button matches the rule it fires.
+  const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
@@ -906,7 +908,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={() => handleAction("Approved")}
                   icon={<Icon icon="mdi:check-circle" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading}
+                  disabled={isDocumentUploading || loading || !hasRequiredDocs}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
                 >
                   {isStage3 ? "Submit & Verify (CNF)" : "Submit & Approve"}
