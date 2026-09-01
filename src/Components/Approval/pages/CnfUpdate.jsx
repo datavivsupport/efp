@@ -14,6 +14,7 @@ import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
@@ -133,11 +134,11 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
-        message.error(res.data.message || "Upload failed");
+        message.error(`Upload failed: ${res.data.message || `${file.name} was rejected by the server.`}`);
       }
     } catch (err) {
       setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
-      message.error(`Failed to upload ${file.name}`);
+      message.error(uploadErrorMessage(err));
     } finally {
       pendingCountRef.current -= 1;
     }

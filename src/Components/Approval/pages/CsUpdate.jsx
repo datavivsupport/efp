@@ -48,6 +48,7 @@ import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage, uploadSucceededUiFailedMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
 
@@ -124,14 +125,32 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     uploadActivity?.inc?.();
     setUploading(true);
     try {
-      const response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response.data.status === "success") {
-        const uploadedDoc = response.data.data;
-        setFiles((prev) => [...prev, { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
-        uploadActivity?.onUploaded?.();
-        message.success(`${label} uploaded successfully`);
-      } else { message.error("Upload failed: " + response.data.message); }
-    } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
+      // Only the request itself belongs in this try. Anything after it runs with the
+      // file already stored, so folding both into one catch reports a broken list
+      // render as "no response from the server" - which is what sent CS back to
+      // re-upload documents the server had accepted.
+      let response;
+      try {
+        response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } catch (err) {
+        message.error(uploadErrorMessage(err));
+        return false;
+      }
+
+      try {
+        if (response.data.status === "success") {
+          const uploadedDoc = response.data.data;
+          setFiles((prev) => [...(prev || []), { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
+          uploadActivity?.onUploaded?.();
+          message.success(response.data.message || `${label} uploaded successfully`);
+        } else { message.error(`Upload failed: ${response.data.message || `${label} was rejected by the server.`}`); }
+      } catch (uiErr) {
+        // The document is saved. Say so, and leave the real cause in the console
+        // rather than blaming the network for a bug in this component.
+        console.error("Upload succeeded but the page could not be updated:", uiErr);
+        message.warning(uploadSucceededUiFailedMessage(label));
+      }
+    }
     finally {
       pendingCountRef.current -= 1;
       setUploading(false);
@@ -246,6 +265,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [rejectionRemarks, setRejectionRemarks] = useState("");
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
+  // Declared in CnfUpdate/CsDocuments but missing here, while the provider below
+  // still called its setter - so every successful upload threw a ReferenceError
+  // after the file was already stored, and the catch reported it as a network
+  // failure. See UploadActivityContext.Provider.
+  const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
   const isDocumentUploading = uploadingDocsCount > 0;
 
   /* ── Compute roles, context, locks ── */

@@ -39,6 +39,7 @@ import EquipmentTypeSelect from "./EquipmentType";
 import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
+import { uploadErrorMessage } from "../../api/uploadError";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
@@ -217,7 +218,7 @@ const DocUploadField = ({
       }
     } catch (err) {
       console.error(err);
-      // message.error("Upload failed. please check your connection.");
+      message.error(uploadErrorMessage(err));
     } finally {
       pendingCountRef.current -= 1;
       setUploading(false);

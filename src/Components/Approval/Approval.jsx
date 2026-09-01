@@ -51,6 +51,7 @@ import { uploadFile } from "../Viewer/UploadUtil";
 import MultiFileViewer from "../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../ScrollSafeTooltip";
 import apiClient from "../../api/apiclient";
+import { uploadErrorMessage } from "../../api/uploadError";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -215,8 +216,7 @@ const DocUploadField = ({
       }
     } catch (err) {
       console.error(err);
-      const errMsg = err.response?.data?.message || "Upload failed. Please check your connection.";
-      message.error(errMsg);
+      message.error(uploadErrorMessage(err));
     } finally {
       pendingCountRef.current -= 1;
       uploadActivity?.dec?.();

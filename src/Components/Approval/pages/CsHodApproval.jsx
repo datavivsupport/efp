@@ -15,6 +15,7 @@ import { renderUserLabel, userOptionLabel } from "../../StatusDot";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -105,8 +106,8 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
         const d = res.data.data;
         setFiles((prev) => [...prev, { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
         message.success(res.data.message || `${file.name} uploaded`);
-      } else { message.error(res.data.message || "Upload failed"); }
-    } catch (err) { message.error(err.response?.data?.message || "Upload failed"); }
+      } else { message.error(`Upload failed: ${res.data.message || `${file.name} was rejected by the server.`}`); }
+    } catch (err) { message.error(uploadErrorMessage(err)); }
     finally {
       pendingCountRef.current -= 1;
       setUploading(false);

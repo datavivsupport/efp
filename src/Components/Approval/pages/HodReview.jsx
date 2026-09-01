@@ -47,6 +47,7 @@ import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
 
@@ -129,7 +130,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
         setFiles((prev) => [...prev, { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
         message.success(response.data.message || `${file.name} uploaded successfully`);
       } else { message.error("Upload failed: " + response.data.message); }
-    } catch (err) { message.error(err.response?.data?.message || "Upload failed. Please check your connection."); }
+    } catch (err) { message.error(uploadErrorMessage(err)); }
     finally {
       pendingCountRef.current -= 1;
       setUploading(false);

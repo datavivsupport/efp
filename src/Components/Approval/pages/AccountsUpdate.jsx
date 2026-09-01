@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { EyeOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import dayjs from "../../../dayjs-config";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
@@ -75,9 +76,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me"
         }]);
         message.success(res.data.message || `${file.name} uploaded`);
+      } else {
+        message.error(`Upload failed: ${res.data.message || `${file.name} was rejected by the server.`}`);
       }
     } catch (err) {
-      message.error("Upload failed");
+      message.error(uploadErrorMessage(err));
     }
     return false;
   };

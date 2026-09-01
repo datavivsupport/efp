@@ -15,6 +15,7 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../../Status
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
+import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS } from "../utils/sectionLocks";
@@ -144,14 +145,14 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
         uploadSuccess?.markUploaded?.();
-        message.success(`${label} uploaded successfully`);
+        message.success(res.data.message || `${label} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
-        message.error(res.data.message || "Upload failed");
+        message.error(`Upload failed: ${res.data.message || `${label} was rejected by the server.`}`);
       }
     } catch (err) {
       setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
-      message.error(`Failed to upload ${file.name}`);
+      message.error(uploadErrorMessage(err));
     } finally {
       pendingCountRef.current -= 1;
     }
