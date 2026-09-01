@@ -134,34 +134,24 @@ html, body, #root {
   text-security: disc;         /* Other browsers */
 }
 
-.ant-form-item-control-input-content .ant-input-disabled {
-  color: rgba(33, 33, 33, 0.85) !important;
-}
-
-.ant-picker-disabled,
-.ant-picker .ant-picker-input >input[disabled] {
-  color: rgba(33, 33, 33, 0.85) !important;
-}
-
-.ant-form-item-control-input-content .ant-input {
-  color: rgba(33, 33, 33, 0.85) !important;
-}
-
+/* ── FILLED VALUES: dark ──────────────────────────────────────────────────────
+   A real value is dark #1f2937, whether the user typed it or the workflow filled
+   it in on a disabled/read-only field. Browsers paint input text with
+   -webkit-text-fill-color, which beats `color`, so both have to be set. */
 .ant-form-item-control-input,
 .ant-form-item-control-input-content,
-.ant-select-outlined {
-  color: rgba(33, 33, 33, 0.85) !important;
-}
-
-/* Actual/filled values stay dark, read-only fields included. Browsers paint disabled
-   inputs with -webkit-text-fill-color, which beats `color`, so both have to be set. */
+.ant-select-outlined,
+.ant-form-item-control-input-content .ant-input,
+.ant-picker-disabled,
+.ant-picker .ant-picker-input > input[disabled],
+.ant-form-item-control-input-content .ant-input-disabled,
 .ant-input-disabled,
 textarea.ant-input-disabled,
 .ant-input-number-disabled .ant-input-number-input,
 .ant-picker-disabled .ant-picker-input > input[disabled],
 .ant-select-disabled .ant-select-selection-item {
-  color: rgba(33, 33, 33, 0.85) !important;
-  -webkit-text-fill-color: rgba(33, 33, 33, 0.85) !important;
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
   opacity: 1 !important;
 }
 
@@ -170,21 +160,29 @@ textarea.ant-input {
   resize: vertical !important;
 }
 
-/* Placeholder text: a hint, not a value. Input text is rgba(0,0,0,0.88), so this stays
-   clearly lighter while still being readable. opacity:1 stops Firefox fading it further. */
+/* ── PLACEHOLDERS: light ──────────────────────────────────────────────────────
+   A placeholder is a hint, not a value, so it sits at #9ca3af against the #1f2937
+   above. ::placeholder INHERITS -webkit-text-fill-color from its input, so the
+   rules above (and the per-module ones that keep disabled text dark) were
+   painting placeholders dark too. Re-declaring the property directly on the
+   pseudo-element beats the inherited value regardless of parent specificity —
+   an inherited value only applies when nothing matches the element itself.
+   opacity:1 stops Firefox fading it further. */
 input::placeholder,
-textarea::placeholder {
-  color: rgba(0, 0, 0, 0.45);
-  opacity: 1;
-}
-
+textarea::placeholder,
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder,
-.ant-select-selection-placeholder,
 .ant-picker-input input::placeholder,
 .ant-input-number-input::placeholder,
+textarea.ant-input::placeholder,
+.ant-input-disabled::placeholder,
+textarea.ant-input-disabled::placeholder,
+.ant-input-number-disabled .ant-input-number-input::placeholder,
+.ant-picker-disabled .ant-picker-input > input[disabled]::placeholder,
 .ant-select-placeholder,
-textarea.ant-input::placeholder {
-  color: rgba(0, 0, 0, 0.45) !important;
+.ant-select-selection-placeholder,
+.ant-select-disabled .ant-select-selection-placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
   opacity: 1 !important;
 }

@@ -16,11 +16,7 @@ const App = () => {
 
   const location = useLocation();
 
-  /* -----------------------------
-     NOTIFICATIONS
-     Backend returns only unread notifications from the last 7 days,
-     so "mark as read" doubles as "dismiss".
-  ------------------------------ */
+ 
   const getNotification = useCallback(async (pageToFetch = 1) => {
     try {
       // skipErrorHandler: a failed poll must not raise a global error toast
@@ -66,8 +62,7 @@ const App = () => {
         return;
       }
 
-      // Deeper in the list: drop it locally so the scroll position survives,
-      // but refetch once the visible page would be left short.
+ 
       const remaining = notifications.filter((n) => n.id !== id);
       if (remaining.length < PAGE_SIZE) {
         await getNotification(1);
@@ -80,16 +75,13 @@ const App = () => {
     }
   };
 
-  // Fires on mount and on every route change. The lint rule below assumes any
-  // setState reached from an effect body is synchronous; here it happens after
-  // an awaited request, so it can't cascade renders.
+ 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     getNotification(1);
   }, [location.pathname, getNotification]);
 
-  // Firebase Cloud Messaging: ask for browser push permission once, then
-  // refetch page 1 (and toast) whenever a push arrives while the tab is open.
+ 
   useEffect(() => {
     requestForToken();
 

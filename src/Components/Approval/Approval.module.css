@@ -122,15 +122,18 @@
   display: block;
 }
 
-/* ================= DISABLED INPUT COLOR ================= */
+/* ================= DISABLED INPUT COLOR =================
+   Disabled here means read-only, not empty — these fields carry real workflow
+   data, so they get the same dark #1f2937 as a typed value. Placeholders are
+   pulled back to #9ca3af globally in index.css. */
 .card :global(.ant-select-disabled),
 .card :global(.ant-select-disabled .ant-select-selection-item),
 .card :global(.ant-select-disabled .ant-select-content),
 .card :global(.ant-input-disabled),
 .card :global(.ant-input-number-input[disabled]),
 .card :global(.ant-picker-input > input[disabled]) {
-  color: #374151 !important;
-  -webkit-text-fill-color: #374151 !important;
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
   opacity: 1 !important;
 }
 
@@ -189,8 +192,8 @@
 }
 
 .textAreaField.textAreaField.textAreaField {
-  color: #374151 !important;
-  -webkit-text-fill-color: #374151 !important;
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
   padding: 8px 12px !important;
   line-height: 1.5 !important;
   opacity: 1 !important;

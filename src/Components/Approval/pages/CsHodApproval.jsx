@@ -471,16 +471,16 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 )}
               </div>
               <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name"><Input placeholder="Customer Name" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input placeholder="Carrier Name" disabled variant="filled" /></Form.Item></Col>
                 {/* <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Status"><Tag color="cyan" style={{ fontWeight: 'bold' }}>{(initialJob?.status || "DRAFT").toUpperCase()}</Tag></Form.Item></Col> */}
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input placeholder="Contact PIC" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input placeholder="Export Created By" disabled variant="filled" /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -492,10 +492,10 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 {(fields) => fields.map(({ key, name, ...rest }) => (
                   <Row gutter={16} key={key} align="middle">
                     <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled variant="filled" /></Form.Item></Col>
                     <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
                   </Row>
                 ))}
               </Form.List>
@@ -513,17 +513,17 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
             <div style={{ display: open.otherDetails ? "block" : "none" }}>
               <Row gutter={16}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
-                {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea disabled variant="filled" rows={3} /></Form.Item></Col> */}
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Haulier Code" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
                 {executiveDocs.length > 0 ? (
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 ) : null}
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
                 <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
@@ -541,11 +541,11 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 {(fields) => fields.map(({ key, name, ...restField }) => (
                   <Row key={key} gutter={16} align="middle">
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input disabled variant="filled" /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled variant="filled" /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
                   </Row>
                 ))}
               </Form.List>
@@ -556,18 +556,18 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS (TECHNICAL DOCUMENTS)" open={open.booking} onToggle={() => toggle("booking")} />}>
             <div style={{ display: open.booking ? "block" : "none" }}>
               <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="AFSYS Job No." disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
@@ -592,7 +592,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     )}
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea disabled variant="filled" rows={2} /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
