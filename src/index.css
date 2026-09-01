@@ -153,6 +153,18 @@ html, body, #root {
   color: rgba(33, 33, 33, 0.85) !important;
 }
 
+/* Actual/filled values stay dark, read-only fields included. Browsers paint disabled
+   inputs with -webkit-text-fill-color, which beats `color`, so both have to be set. */
+.ant-input-disabled,
+textarea.ant-input-disabled,
+.ant-input-number-disabled .ant-input-number-input,
+.ant-picker-disabled .ant-picker-input > input[disabled],
+.ant-select-disabled .ant-select-selection-item {
+  color: rgba(33, 33, 33, 0.85) !important;
+  -webkit-text-fill-color: rgba(33, 33, 33, 0.85) !important;
+  opacity: 1 !important;
+}
+
 /* Allow vertical resize on all antd textareas even when autoSize is used */
 textarea.ant-input {
   resize: vertical !important;

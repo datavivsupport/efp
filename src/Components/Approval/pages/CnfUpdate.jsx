@@ -219,8 +219,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const { isCNF } = computeUserRoles(user);
  
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
- 
-  const showSubmitAction  = isStage3 || canSubmitStage2;
+
+
+  const cnfAlreadySubmitted =
+    canSubmitStage2 && isCNF && !isAdmin && !!initialJob?.is_cnf_loadlist_uploaded;
+
+  // Once CNF has approved, the action buttons go and only Save/Cancel remain.
+  const showSubmitAction  = (isStage3 || canSubmitStage2) && !cnfAlreadySubmitted;
 
   const [loading, setLoading]                   = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
@@ -371,13 +376,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // The two documents handleAction enforces, so the button matches the rule it fires.
   const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
-
-  // CNF hands a job over once. The backend sets is_cnf_loadlist_uploaded on that submit
-  // and stage 2 keeps showing this page afterwards, so the button has to close itself.
-  // Stage 2 only: a job can reach stage 3 with the flag already set, and CNF still has
-  // to submit there.
-  const cnfAlreadySubmitted =
-    canSubmitStage2 && isCNF && !isAdmin && !!initialJob?.is_cnf_loadlist_uploaded;
 
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
@@ -567,8 +565,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       }
 
-      // Stage 2 — a regular CNF user's uploads are already persisted at upload time,
-      // so skip save-documents. Admin behaviour stays unchanged.
+
       const skipSaveDocuments = isCNF && !isAdmin && currentStage === "2";
 
       if (isCNF && !skipSaveDocuments) {
@@ -915,10 +912,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={() => handleAction("Approved")}
                   icon={<Icon icon="mdi:check-circle" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading || !hasRequiredDocs || cnfAlreadySubmitted}
+                  disabled={isDocumentUploading || loading || !hasRequiredDocs}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
                 >
-                  {isStage3 ? "Submit & Verify (CNF)" : "Submit & Approve"}
+                  {isStage3 ? "Submit & Verify (CNF)" : "Submit & Verify(CNF)"}
                 </Button>
                 <Button
                   danger

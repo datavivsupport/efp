@@ -125,7 +125,6 @@
 /* ================= DISABLED INPUT COLOR ================= */
 .card :global(.ant-select-disabled),
 .card :global(.ant-select-disabled .ant-select-selection-item),
-.card :global(.ant-select-disabled .ant-select-selection-placeholder),
 .card :global(.ant-select-disabled .ant-select-content),
 .card :global(.ant-input-disabled),
 .card :global(.ant-input-number-input[disabled]),
