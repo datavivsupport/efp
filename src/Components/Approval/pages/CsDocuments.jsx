@@ -796,7 +796,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               onClick={handleSave}
               icon={<Icon icon="mdi:content-save-outline" />}
               loading={loading}
-              disabled={isDocumentUploading || loading || !hasUploadedDoc}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
             >
               Save

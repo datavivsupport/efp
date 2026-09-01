@@ -247,7 +247,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
   const isDocumentUploading = uploadingDocsCount > 0;
-  const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
 
   /* ── Compute roles, context, locks ── */
   const {
@@ -846,7 +845,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {/* ════════ BOTTOM BUTTONS ════════ */}
           {!isMasterMode && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
-              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading || !hasUploadedDoc} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
               <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
