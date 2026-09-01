@@ -158,7 +158,14 @@ textarea.ant-input {
   resize: vertical !important;
 }
 
-/* Darker placeholder text for all antd inputs */
+/* Placeholder text: a hint, not a value. Input text is rgba(0,0,0,0.88), so this stays
+   clearly lighter while still being readable. opacity:1 stops Firefox fading it further. */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+  opacity: 1;
+}
+
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder,
 .ant-select-selection-placeholder,
@@ -166,5 +173,6 @@ textarea.ant-input {
 .ant-input-number-input::placeholder,
 .ant-select-placeholder,
 textarea.ant-input::placeholder {
-  color: rgba(33, 33, 33, 0.85) !important;
+  color: rgba(0, 0, 0, 0.45) !important;
+  opacity: 1 !important;
 }

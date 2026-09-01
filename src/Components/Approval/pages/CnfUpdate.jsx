@@ -372,6 +372,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // The two documents handleAction enforces, so the button matches the rule it fires.
   const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
+  // CNF hands a job over once. The backend sets is_cnf_loadlist_uploaded on that submit
+  // and stage 2 keeps showing this page afterwards, so the button has to close itself.
+  // Stage 2 only: a job can reach stage 3 with the flag already set, and CNF still has
+  // to submit there.
+  const cnfAlreadySubmitted =
+    canSubmitStage2 && isCNF && !isAdmin && !!initialJob?.is_cnf_loadlist_uploaded;
+
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
       const formData = new FormData();
@@ -908,24 +915,22 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={() => handleAction("Approved")}
                   icon={<Icon icon="mdi:check-circle" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading || !hasRequiredDocs}
+                  disabled={isDocumentUploading || loading || !hasRequiredDocs || cnfAlreadySubmitted}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
                 >
                   {isStage3 ? "Submit & Verify (CNF)" : "Submit & Approve"}
                 </Button>
-                {isStage3 && (
-                  <Button
-                    danger
-                    size="large"
-                    onClick={() => handleAction("Rejected")}
-                    icon={<Icon icon="mdi:close-circle" />}
-                    loading={loading}
-                    disabled={isDocumentUploading || loading}
-                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-                  >
-                    Reject
-                  </Button>
-                )}
+                <Button
+                  danger
+                  size="large"
+                  onClick={() => handleAction("Rejected")}
+                  icon={<Icon icon="mdi:close-circle" />}
+                  loading={loading}
+                  disabled={isDocumentUploading || loading}
+                  style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                >
+                  Reject
+                </Button>
                 <Button
                   size="large"
                   onClick={handleSave}
@@ -1011,7 +1016,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             onChange={(e) => setRejectionRemarks(e.target.value)}
             style={{ borderRadius: 4 }}
           />
-          <p style={{ fontSize: 12, color: "#666", marginTop: 8 }}>This reason will be visible to the CNF team for corrections.</p>
+          <p style={{ fontSize: 12, color: isStage3 ? "#666" : "#cf1322", marginTop: 8 }}>
+            {isStage3
+              ? "The job returns to Stage 2 for review."
+              : "The job is sent back to Stage 1 and a new request must be created. This cannot be undone."}
+          </p>
         </div>
       </Modal>
     </div>

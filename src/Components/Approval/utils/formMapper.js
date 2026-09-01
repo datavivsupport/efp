@@ -113,7 +113,7 @@ const DOC_TYPE_CONFIG = [
   { key: "releaseOrderFiles", types: ["RELEASE ORDER","FREIGHT MANIFEST"],                              keywords: ["RELEASE ORDER", "RELEORDER", "RELEASE_ORDER"] },
   { key: "bocFiles",          types: ["BOC"],                                        keywords: ["BOC_ATTACHMENT", "BOC"] },
   { key: "haulageCostFiles",  types: ["HAULAGE COST"],                               keywords: ["HAULAGE_COST", "COST_SHEET"] },
-  { key: "loadListFiles",     types: ["LOAD LIST", "LOAD LIST UPLOADING"],           keywords: ["LOAD_LIST", "LOADLIST"] },
+    { key: "loadListFiles",     types: ["LOAD LIST", "LOAD LIST UPLOADING"],           keywords: ["LOAD_LIST", "LOADLIST"] },
   { key: "lpoFiles",          types: ["LPO"],                                        keywords: ["LPO"] },
   { key: "invoiceFiles",      types: ["INVOICE"],                                    keywords: ["INVOICE"] },
   { key: "hcsFiles",          types: ["HCS", "FAC"],                                 keywords: ["HCS", "FAC"] },

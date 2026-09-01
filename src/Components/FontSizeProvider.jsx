@@ -44,7 +44,7 @@ const FontSizeProvider = ({ children }) => {
         theme={{
           token: {
             fontSize: FONT_SIZES[fontSize].antdFontSize,
-            colorTextPlaceholder: "rgba(0, 0, 0, 0.85)",
+            colorTextPlaceholder: "rgba(0, 0, 0, 0.45)",
           },
         }}
       >
