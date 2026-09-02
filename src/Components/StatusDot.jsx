@@ -24,12 +24,16 @@ export const renderUserOption = ({ data }) => (
 );
 
  
-export const renderUserLabel = (options) => ({ label, value }) => (
-  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-    <StatusDot onLeave={options.find((o) => o.value === value)?.isOnLeave} />
-    {label}
-  </span>
-);
+export const renderUserLabel = (options) => ({ label, value }) => {
+  // Match loosely: the API returns cs_hod as a string while option values may be numeric ids.
+  const matched = (options || []).find((o) => String(o.value) === String(value));
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <StatusDot onLeave={matched?.isOnLeave} />
+      {label ?? matched?.label ?? value}
+    </span>
+  );
+};
 
  
 export const userOptionLabel = (user) => {

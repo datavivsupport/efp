@@ -265,10 +265,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [rejectionRemarks, setRejectionRemarks] = useState("");
   const [rejectionLoading, setRejectionLoading] = useState(false);
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
-  // Declared in CnfUpdate/CsDocuments but missing here, while the provider below
-  // still called its setter - so every successful upload threw a ReferenceError
-  // after the file was already stored, and the catch reported it as a network
-  // failure. See UploadActivityContext.Provider.
+
   const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
   const isDocumentUploading = uploadingDocsCount > 0;
 
@@ -386,7 +383,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   useEffect(() => {
     apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
+      setCsHodOptions(data.map((item) => ({ value: String(item.id), label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 

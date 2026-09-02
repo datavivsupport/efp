@@ -105,7 +105,7 @@ export const mapJobToFormValues = (data) => ({
   booking_remarks: data.approval_details?.booking_remarks,
   cnf_remarks:     data.approval_details?.cnf_remarks,
   account_remarks: data.approval_details?.account_remarks,
-  cs_hod:          data.cs_hod,
+  cs_hod:          data.cs_hod != null && data.cs_hod !== "" ? String(data.cs_hod) : null,
 });
 
  

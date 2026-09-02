@@ -304,9 +304,9 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
   /* Fetch CS HOD options */
   useEffect(() => {
-    apiClient.get("/accounts/liner/admin/users/hods/").then((res) => {
+    apiClient.get("/accounts/liner/admin/users/hods/", { params: { department_group: "CS" } }).then((res) => {
       const data = res.data?.results ?? res.data ?? [];
-      setCsHodOptions(data.map((item) => ({ value: item.id, label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
+      setCsHodOptions(data.map((item) => ({ value: String(item.id), label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
     }).catch(() => {});
   }, []);
 
@@ -341,7 +341,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       booking_remarks: ad.booking_remarks,
       cnf_remarks: ad.cnf_remarks,
       other_charges_remarks: ad.other_charges_remarks || "",
-      cs_hod: initialJob.cs_hod ? Number(initialJob.cs_hod) : null,
+      cs_hod: initialJob.cs_hod ? String(initialJob.cs_hod) : null,
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
       vsl_latest_eta: initialJob.vsl_latest_eta ? dayjs(initialJob.vsl_latest_eta) : null,

@@ -508,7 +508,8 @@ const Approval = () => {
   useEffect(() => {
     const fetchCsHodOptions = async () => {
       try {
-        const res = await apiClient.get("/accounts/liner/admin/users/hods/");
+        // Disabled/read-only field: fetch unscoped so the stored CS HOD always resolves.
+        const res = await apiClient.get("/accounts/liner/admin/users/hods/", { params: { all: true } });
         const data = res.data?.results ?? res.data ?? [];
         setCsHodOptions(data.map(item => ({
           value: String(item.id),
