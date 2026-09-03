@@ -55,8 +55,11 @@ const ExportReport = () => {
     if (f.pendingWith && f.pendingWith !== "all") url += `&pending_with=${encodeURIComponent(f.pendingWith)}`;
     if (f.jobType)       url += `&job_type=${encodeURIComponent(f.jobType)}`;
     if (f.exportNumber)  url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
-    if (f.createdAtFrom) url += `&created_at_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
-    if (f.createdAtTo)   url += `&created_at_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
+    // export_created_date, not created_at: the "Created Date" column in the table below
+    // renders export_created_date, and the two diverge on back-dated and migrated jobs -
+    // so a range on created_at hid rows whose visible date was inside it.
+    if (f.createdAtFrom) url += `&export_created_date_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
+    if (f.createdAtTo)   url += `&export_created_date_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
     if (f.createdBy)     url += `&created_by=${encodeURIComponent(f.createdBy)}`;
     if (f.carrier)       url += `&carrier=${encodeURIComponent(f.carrier)}`;
     if (f.customerName)  url += `&customer_name=${encodeURIComponent(f.customerName)}`;
@@ -206,8 +209,11 @@ const ExportReport = () => {
                   icon={<Icon icon={filtersExpanded ? "mdi:tune-vertical" : "mdi:tune"} width="16" height="16" />}
                 >
                   {(() => {
-                    const extra = [jobType, createdAtFrom, createdAtTo, createdBy,
-                      afsysJobNo, bookingRef].filter(Boolean).length;
+                
+                    const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
+                      createdBy, carrier, customerName, afsysJobNo, bookingRef,
+                      salesName, pol, fpod,
+                      pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
                         marginLeft: 4, background: "#1b9cac", color: "#fff",
