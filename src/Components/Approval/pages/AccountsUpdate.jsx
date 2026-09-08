@@ -362,21 +362,14 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
             <Typography.Title level={5}>Documentation (View Only)</Typography.Title>
             <Row gutter={[24, 16]}>
-              {lpoFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>LPO</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={lpoFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {invoiceFiles.length > 0 && (
-                <Col span={12}>
-                  <Typography.Text strong>Invoice</Typography.Text>
-                  <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} /></div>
-                </Col>
-              )}
-              {!lpoFiles.length && !invoiceFiles.length && (
-                <Col span={24}><Typography.Text type="secondary" italic>No documents available.</Typography.Text></Col>
-              )}
+              <Col span={12}>
+                <Typography.Text strong>LPO</Typography.Text>
+                <div style={{ marginTop: 8 }}><FileListView files={lpoFiles} onPreview={openPreview} /></div>
+              </Col>
+              <Col span={12}>
+                <Typography.Text strong>Invoice</Typography.Text>
+                <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} /></div>
+              </Col>
             </Row>
           </div>
 
