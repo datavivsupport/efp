@@ -55,7 +55,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [] }) => (
+const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -69,7 +69,7 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
               {file.uploaded_by_user_name && (
                 <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>({file.uploaded_by_user_name})</Typography.Text>
               )}
-              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} />
+              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} showStatus={showStatus} />
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
@@ -618,7 +618,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col key={label} xs={24} md={8}>
                     <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
                     {files?.length > 0
-                      ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} />
+                      ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} showStatus />
                       : <div style={{ marginTop: 8 }}>
                           <Upload disabled showUploadList={false}>
                             <Button size="small" icon={<UploadOutlined />} disabled style={{ fontSize: 12, color: '#bfbfbf', borderColor: '#d9d9d9' }}>

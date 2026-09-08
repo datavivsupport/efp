@@ -5,18 +5,21 @@ import { isDocPendingApproval } from "../../utils/additionalDocs";
 /**
  * Tags shown next to an LPO/Invoice file name.
  *
- * Only additional (2nd-phase) uploads are tagged. Original documents keep the
- * plain chip they have always had, so the tag itself is the signal that a file
- * arrived after CS HOD had already signed the job off.
+ * `showStatus` renders the Approved/Pending Approval tag for every LPO/Invoice
+ * document, original included. `isAdditional` additionally renders the
+ * "ADDITIONAL" tag, so a 2nd-phase upload stays visually distinct from the
+ * original even though both now carry a status tag.
  */
-const DocStatusTags = ({ file, isAdditional }) => {
-  if (!isAdditional) return null;
+const DocStatusTags = ({ file, isAdditional, showStatus }) => {
+  if (!isAdditional && !showStatus) return null;
   const pending = isDocPendingApproval(file);
   return (
     <>
-      <Tag color="gold" style={{ fontSize: 10, margin: 0, flexShrink: 0 }}>
-        ADDITIONAL
-      </Tag>
+      {isAdditional && (
+        <Tag color="gold" style={{ fontSize: 10, margin: 0, flexShrink: 0 }}>
+          ADDITIONAL
+        </Tag>
+      )}
       <Tag
         color={pending ? "orange" : "success"}
         icon={pending ? <ClockCircleOutlined /> : <CheckCircleOutlined />}

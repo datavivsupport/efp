@@ -77,7 +77,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [] }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -91,7 +91,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               {file.uploaded_by_user_name && (
                 <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
               )}
-              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} />
+              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} showStatus={showStatus} />
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
@@ -110,7 +110,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [] }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -215,6 +215,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             user={user}
             isAdmin={isAdmin}
             additionalFiles={additionalFiles}
+            showStatus={showStatus}
           />
         )}
       </div>
@@ -767,8 +768,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Row gutter={16}>
                   {(isPaymentReq || isLiner) && (
                     <>
-                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(lpoFiles)} /></Form.Item></Col>
-                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(invoiceFiles)} /></Form.Item></Col>
+                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus /></Form.Item></Col>
+                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus /></Form.Item></Col>
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (
