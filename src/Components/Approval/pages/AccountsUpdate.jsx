@@ -10,6 +10,8 @@ import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";
+import { getAdditionalDocs } from "../utils/additionalDocs";
+import DocStatusTags from "../components/Common/DocStatusTags";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
@@ -138,13 +140,16 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
 };
 
 
-const FileListView = ({ files, onPreview }) => (
+const FileListView = ({ files, onPreview, additionalFiles = [] }) => (
   <div>
     {files.length > 0 ? files.map((f, i) => (
       <div key={i} style={{ marginBottom: 6, padding: '6px 8px', border: '1px solid #f0f0f0', borderRadius: 4, backgroundColor: '#fafafa' }}>
-        <Button type="link" size="small" icon={<Icon icon="mdi:file-document-outline" />} style={{ padding: 0 }} onClick={() => onPreview(files, i)}>
-          {f.name || f.file_name}
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Button type="link" size="small" icon={<Icon icon="mdi:file-document-outline" />} style={{ padding: 0 }} onClick={() => onPreview(files, i)}>
+            {f.name || f.file_name}
+          </Button>
+          <DocStatusTags file={f} isAdditional={additionalFiles.includes(f)} />
+        </div>
         {f.remarks ? (
           <Typography.Text className={Styles.remarkText} style={{ display: 'block', marginTop: 2 }}>
             {f.remarks}
@@ -364,11 +369,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
             <Row gutter={[24, 16]}>
               <Col span={12}>
                 <Typography.Text strong>LPO</Typography.Text>
-                <div style={{ marginTop: 8 }}><FileListView files={lpoFiles} onPreview={openPreview} /></div>
+                <div style={{ marginTop: 8 }}><FileListView files={lpoFiles} onPreview={openPreview} additionalFiles={getAdditionalDocs(lpoFiles)} /></div>
               </Col>
               <Col span={12}>
                 <Typography.Text strong>Invoice</Typography.Text>
-                <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} /></div>
+                <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} additionalFiles={getAdditionalDocs(invoiceFiles)} /></div>
               </Col>
             </Row>
           </div>

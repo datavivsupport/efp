@@ -20,6 +20,8 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS } from "../utils/sectionLocks";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
+import { getAdditionalDocs } from "../utils/additionalDocs";
+import DocStatusTags from "../components/Common/DocStatusTags";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -56,7 +58,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [] }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
@@ -75,6 +77,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
                   <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
                 )
               }
+              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} />
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
@@ -93,7 +96,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── Upload field wrapper ── */
-const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
+const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [] }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const uploadSuccess = useContext(UploadSuccessContext);
@@ -141,6 +144,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           id: d.id, name: d.file_name, file_name: d.file_name,
           url: d.file_url, file_url: d.file_url,
           doc_type: docType, category, remarks: "",
+          created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved,
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
@@ -210,6 +214,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           user={user}
           isAdmin={isAdmin}
           disabled={disabled}
+          additionalFiles={additionalFiles}
         />
       )}
     </div>
@@ -382,7 +387,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const res = await apiClient.post(`/liner/sales-input/${id}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.status === "success") {
         const d = res.data.data;
-        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
+        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved, uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
       }
       throw new Error(res.data.message || "Upload failed");
     };
@@ -728,8 +733,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
             <div style={{ display: open.documents ? "block" : "none" }}>
               <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>

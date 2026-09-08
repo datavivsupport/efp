@@ -43,6 +43,8 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
+import { getAdditionalDocs } from "../utils/additionalDocs";
+import DocStatusTags from "../components/Common/DocStatusTags";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
@@ -75,7 +77,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [] }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -89,6 +91,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               {file.uploaded_by_user_name && (
                 <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>({file.uploaded_by_user_name})</Typography.Text>
               )}
+              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} />
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
@@ -107,7 +110,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [] }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -140,7 +143,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       try {
         if (response.data.status === "success") {
           const uploadedDoc = response.data.data;
-          setFiles((prev) => [...(prev || []), { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
+          setFiles((prev) => [...(prev || []), { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", created_at: uploadedDoc.created_at, is_cs_hod_approved: uploadedDoc.is_cs_hod_approved, uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
           uploadActivity?.onUploaded?.();
           message.success(response.data.message || `${label} uploaded successfully`);
         } else { message.error(`Upload failed: ${response.data.message || `${label} was rejected by the server.`}`); }
@@ -211,6 +214,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             disabled={disabled}
             user={user}
             isAdmin={isAdmin}
+            additionalFiles={additionalFiles}
           />
         )}
       </div>
@@ -763,8 +767,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Row gutter={16}>
                   {(isPaymentReq || isLiner) && (
                     <>
-                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
-                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
+                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(lpoFiles)} /></Form.Item></Col>
+                      <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} additionalFiles={getAdditionalDocs(invoiceFiles)} /></Form.Item></Col>
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (

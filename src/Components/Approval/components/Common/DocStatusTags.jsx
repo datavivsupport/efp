@@ -1,6 +1,6 @@
 import { Tag } from "antd";
 import { CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { isAdditionalDoc, isDocPendingApproval } from "../../utils/additionalDocs";
+import { isDocPendingApproval } from "../../utils/additionalDocs";
 
 /**
  * Tags shown next to an LPO/Invoice file name.
@@ -9,8 +9,8 @@ import { isAdditionalDoc, isDocPendingApproval } from "../../utils/additionalDoc
  * plain chip they have always had, so the tag itself is the signal that a file
  * arrived after CS HOD had already signed the job off.
  */
-const DocStatusTags = ({ file }) => {
-  if (!isAdditionalDoc(file)) return null;
+const DocStatusTags = ({ file, isAdditional }) => {
+  if (!isAdditional) return null;
   const pending = isDocPendingApproval(file);
   return (
     <>
