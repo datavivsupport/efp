@@ -1188,7 +1188,7 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
@@ -1198,7 +1198,7 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
