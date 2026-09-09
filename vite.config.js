@@ -10,13 +10,14 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
+  // server: {
+  //   host: true,
 
-    proxy: {
-      '/api/v1': {
-        target: 'http://192.168.0.120:8090',
-        changeOrigin: true,
-      },
-    },
-  },
+  //   proxy: {
+  //     '/api/v1': {
+  //       target: 'http://192.168.0.120:8090',
+  //       changeOrigin: true,
+  //     },
+  //   },
+  // },
 })
