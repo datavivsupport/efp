@@ -275,9 +275,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   
   const throttle = useRef(false);
 
-  const history = [...(initialJob?.approval_history || [])].sort(
-    (a, b) => new Date(a.created_at) - new Date(b.created_at)
-  );
+  // Keep backend order as-is
+  const history = initialJob?.approval_history || [];
   const ad = initialJob?.approval_details || {};
   const executiveDocs = useMemo(
     () =>

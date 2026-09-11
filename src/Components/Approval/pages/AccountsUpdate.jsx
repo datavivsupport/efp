@@ -338,7 +338,8 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     }
   ];
 
-  const approvalHistory = [...(jobData?.approval_history || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Keep backend order as-is
+  const approvalHistory = jobData?.approval_history || [];
 
   const items = [
     {

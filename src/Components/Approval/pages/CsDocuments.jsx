@@ -305,7 +305,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   ].some((files) => (files || []).some((f) => f?.pending));
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
-  const history = [...(initialJob?.approval_history || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Keep backend order as-is
+  const history = initialJob?.approval_history || [];
   const ad = initialJob?.approval_details || {};
 
   /* Fetch CS HOD options */

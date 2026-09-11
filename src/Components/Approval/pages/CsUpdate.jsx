@@ -378,8 +378,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setExecutiveDocuments(buckets.executiveDocuments || []);
       setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     }
-    const sortedHistory = (jobData.approval_history || []).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    setApprovalHistory(sortedHistory);
+    // Keep backend order as-is
+    setApprovalHistory(jobData.approval_history || []);
     setOtherCharges(jobData.approval_details?.other_charges || []);
     setChargeInput(jobData.approval_details?.other_charges_remarks || "");
     setRemarks(jobData.general_remarks || []);
