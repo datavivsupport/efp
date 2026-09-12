@@ -19,7 +19,7 @@ const matchJobType = (jobTypeUpper, keywords) =>
  * ─── TERMINAL STATUSES ───────────────────────────────────────────────────────
  * Statuses that mean the job is closed and no further action is possible.
  */
-const TERMINAL_STATUSES = ["rejected", "REJECTED-CLOSED", "Completed", "completed"];
+export const TERMINAL_STATUSES = ["rejected", "REJECTED-CLOSED", "Completed", "completed"];
 
 /**
  * Derives job-type flags, stage flags, and stage-2 gate logic.

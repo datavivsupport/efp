@@ -37,7 +37,9 @@ import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";
-import { computeSectionLocks } from "../utils/sectionLocks";
+import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
+import { usePlacementEditing } from "../utils/usePlacementEditing";
+import PlacementEditActions from "../components/Common/PlacementEditActions";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
@@ -338,6 +340,14 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = transportationFlag || isMasterMode;
+  // Placement Details stays open to CS until CS submits this stage — see sectionLocks.js
+  const canEditPlacement = canCSEditPlacement({
+    isAdmin: isAdminForCsUpdate, isCS: true,
+    currentStage, isMasterMode, isTerminal, jobData,
+  });
+  const placement = usePlacementEditing({ form, id });
+  // Unchanged lock for everyone else; only an open edit session opens the fields.
+  const placementLocked = placement.editing ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
   const canApprove = computeCanApprove({
@@ -678,17 +688,25 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {(!isOthers || isMasterMode) && showPlacement && (
             <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
+                <PlacementEditActions
+                  canEdit={canEditPlacement}
+                  editing={placement.editing}
+                  saving={placement.saving}
+                  onEdit={placement.startEdit}
+                  onSave={placement.savePlacement}
+                  onCancel={placement.cancelEdit}
+                />
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (
                     <>
                       {fields.map(({ key, name, ...restField }) => (
                         <Row key={key} gutter={16} align="middle">
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
                           <Col xs={24} md={2}><Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} /></Col>
                         </Row>
                       ))}

@@ -19,6 +19,8 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
+import { usePlacementEditing } from "../utils/usePlacementEditing";
+import PlacementEditActions from "../components/Common/PlacementEditActions";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -216,7 +218,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isForwarding = initialJob?.job_type === "FORWARDING";
   const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
-  const canUpdateTransportation = isAdmin;
   const { isCNF } = computeUserRoles(user);
  
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
@@ -227,6 +228,15 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Once CNF has approved, the action buttons go and only Save/Cancel remain.
   const showSubmitAction  = (isStage3 || canSubmitStage2) && !cnfAlreadySubmitted;
+
+  const canUpdateTransportation = isAdmin;
+
+  // Placement Details is CNF's to edit for as long as the job is still sitting
+  // with them — i.e. right up to the submit/approve that hands it on.
+  const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
+  const placement = usePlacementEditing({ form, id });
+  // Unchanged for admins; for CNF the fields open only during an edit session.
+  const placementLocked = !canUpdateTransportation && !placement.editing;
 
   const [loading, setLoading]                   = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
@@ -735,17 +745,25 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}
           >
             <div style={{ display: open.placement ? "block" : "none" }}>
+              <PlacementEditActions
+                canEdit={canEditPlacement}
+                editing={placement.editing}
+                saving={placement.saving}
+                onEdit={placement.startEdit}
+                onSave={placement.savePlacement}
+                onCancel={placement.cancelEdit}
+              />
               <Form.List name="placementRows">
                 {(fields, { add, remove }) => (
                   <>
                     {fields.map(({ key, name, ...restField }) => (
                       <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
-                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={placementLocked} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={placementLocked} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
+                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
                         {canUpdateTransportation && (
                           <Col xs={24} md={1} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0px' }}>
                             <Button

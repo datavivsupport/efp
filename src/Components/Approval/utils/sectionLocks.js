@@ -1,3 +1,5 @@
+import { TERMINAL_STATUSES } from "./jobContextUtils";
+
 /** doc_type spellings that count as the Load List (mirrors DOC_TYPE_CONFIG). */
 const LOAD_LIST_DOC_TYPES = ["LOAD LIST", "LOAD LIST UPLOADING"];
 
@@ -14,6 +16,37 @@ export const isCnfDataVisibleToCS = (jobData) => {
   return (jobData?.documents || []).some((d) =>
     LOAD_LIST_DOC_TYPES.includes(d?.doc_type?.toUpperCase())
   );
+};
+
+/**
+ * Placement Details is the one section CS and CNF keep editing after Sales has
+ * handed the job over: the truck slots move around right up to the moment the
+ * desk signs off. Each desk may edit while the job is sitting with it, and the
+ * edits go out on the existing PATCH /liner/sales-input/:id/ call — so a plain
+ * Save persists them, and Submit/Approve carries the final rows.
+ *
+ * Once the desk submits/approves, the section goes read-only for that desk again.
+ */
+export const canCSEditPlacement = ({
+  isAdmin, isCS, currentStage, isMasterMode, isTerminal, jobData,
+}) => {
+  if (isAdmin) return true;
+  if (!isCS || isMasterMode || isTerminal) return false;
+  // Callers that don't compute isTerminal still must not edit a closed job.
+  if (TERMINAL_STATUSES.includes(jobData?.status)) return false;
+
+  switch (String(currentStage || "")) {
+    // CS Update desk — open until CS marks the job updated.
+    case "2":
+      return !jobData?.is_cs_updated;
+    // CS Documents desk — open until CS hands the job to the CS HOD.
+    case "4":
+    case "4B":
+      return true;
+    // Any later stage belongs to CS HOD / Accounts.
+    default:
+      return false;
+  }
 };
 
 /**

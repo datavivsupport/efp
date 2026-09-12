@@ -22,6 +22,32 @@ export const buildApprovalDetails = (values) => ({
 });
 
 /**
+ * Maps the Placement Details form rows onto the API's transportation_rows shape.
+ * Shared by the full payload below and by buildPlacementPayload().
+ */
+export const buildTransportationRows = (values) =>
+  values.placementRows?.map((r) => ({
+    id: r.id,
+    equipment_type: r.equipment_type,
+    no_of_containers: parseInt(r.no_of_containers) || 0,
+    category: r.category,
+    placement_time: r.placement_time
+      ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
+      : null,
+    pickup_location: r.pickup_location,
+    special_remarks: r.special_remarks,
+  }));
+
+/**
+ * Placement Details on their own — for the CS/CNF desks, which may edit this
+ * section while the job sits with them. PATCHing just these rows keeps a Save
+ * from writing back fields that belong to another desk.
+ */
+export const buildPlacementPayload = (values) => ({
+  transportation_rows: buildTransportationRows(values),
+});
+
+/**
  * Builds the full POST/PATCH payload from form values + current file/doc state.
  *
  * @param {object} values        - Antd form values
@@ -132,17 +158,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
       cost: r.cost,
     })),
 
-    transportation_rows: values.placementRows?.map((r) => ({
-      id: r.id,
-      equipment_type: r.equipment_type,
-      no_of_containers: parseInt(r.no_of_containers) || 0,
-      category: r.category,
-      placement_time: r.placement_time
-        ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
-        : null,
-      pickup_location: r.pickup_location,
-      special_remarks: r.special_remarks,
-    })),
+    transportation_rows: buildTransportationRows(values),
 
     documents: allDocs.map((d) => ({
       id: d.id,
