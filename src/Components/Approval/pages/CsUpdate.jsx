@@ -346,7 +346,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     currentStage, isMasterMode, isTerminal, jobData,
   });
   const placement = usePlacementEditing({ form, id });
-  // Unchanged lock for everyone else; only an open edit session opens the fields.
+  // Unchanged lock for everyone else; an open edit session opens only
+  // Date/Time, Pickup/Delivery and Remarks — equipment, volume and category stay put.
   const placementLocked = placement.editing ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
@@ -701,9 +702,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     <>
                       {fields.map(({ key, name, ...restField }) => (
                         <Row key={key} gutter={16} align="middle">
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={placementLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={placementLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Volume"><InputNumber placeholder="Volume" precision={0} min={0} style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={placementLocked} /></Form.Item></Col>
                           <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>

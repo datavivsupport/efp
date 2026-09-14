@@ -235,7 +235,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // with them — i.e. right up to the submit/approve that hands it on.
   const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
   const placement = usePlacementEditing({ form, id });
-  // Unchanged for admins; for CNF the fields open only during an edit session.
+  // Unchanged for admins; for CNF an edit session opens only Date/Time,
+  // Pickup/Delivery and Remarks — equipment, volume and category stay put.
   const placementLocked = !canUpdateTransportation && !placement.editing;
 
   const [loading, setLoading]                   = useState(false);
@@ -758,9 +759,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   <>
                     {fields.map(({ key, name, ...restField }) => (
                       <Row key={key} gutter={16} align="middle" style={{ marginBottom: '16px' }}>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={placementLocked} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={placementLocked} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Volume"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
                         <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
