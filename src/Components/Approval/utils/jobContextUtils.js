@@ -22,6 +22,18 @@ const matchJobType = (jobTypeUpper, keywords) =>
 export const TERMINAL_STATUSES = ["rejected", "REJECTED-CLOSED", "Completed", "completed"];
 
 /**
+ * True once the job has run through every desk. A finished job comes back from
+ * the sales-input detail API with pending_with "Completed" (status "approved",
+ * current_stage "9" on Forwarding). "WORKFLOW COMPLETED" — the Export Report's
+ * filter value — and a "completed" status are accepted too.
+ */
+const COMPLETED_PENDING_WITH = ["COMPLETED", "WORKFLOW COMPLETED"];
+
+export const isWorkflowCompleted = (jobData) =>
+  COMPLETED_PENDING_WITH.includes(String(jobData?.pending_with || "").trim().toUpperCase()) ||
+  String(jobData?.status || "").toLowerCase() === "completed";
+
+/**
  * Derives job-type flags, stage flags, and stage-2 gate logic.
  *
  * @param {object} opts

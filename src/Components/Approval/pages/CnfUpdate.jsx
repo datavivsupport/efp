@@ -18,6 +18,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
+import { isWorkflowCompleted } from "../utils/jobContextUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -55,7 +56,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, deleteLocked = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
@@ -76,7 +77,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && (!deleteLocked || isPending) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -91,7 +92,11 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── Upload field wrapper ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null }) => {
+/**
+ * deleteLocked — saved files can no longer be deleted (uploads still allowed).
+ * Used for the mandatory CNF documents once the workflow has completed.
+ */
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const uploadSuccess = useContext(UploadSuccessContext);
@@ -171,6 +176,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           onRemove={(i) => {
             const f = files[i];
             if (!f) return;
+            if (deleteLocked && f.id && !f.pending) return;
             if (f?.id && !f.pending) {
               const prev = files;
               Modal.confirm({
@@ -198,6 +204,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           disabled={disabled}
           user={user}
           isAdmin={isAdmin}
+          deleteLocked={deleteLocked}
         />
       )}
     </div>
@@ -228,6 +235,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const showSubmitAction  = (isStage3 || canSubmitStage2) && !cnfAlreadySubmitted;
 
   const canUpdateTransportation = isAdmin;
+
+  // A completed job must keep its mandatory CNF documents (Haulier Note, Load List).
+  const mandatoryDocsLocked = isWorkflowCompleted(initialJob);
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — i.e. right up to the submit/approve that hands it on.
@@ -834,12 +844,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} />
+                    <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
