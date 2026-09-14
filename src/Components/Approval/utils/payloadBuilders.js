@@ -23,7 +23,8 @@ export const buildApprovalDetails = (values) => ({
 
 /**
  * Maps the Placement Details form rows onto the API's transportation_rows shape.
- * Shared by the full payload below and by buildPlacementPayload().
+ * Shared by the full payload below and by pages that send the rows on their own
+ * request shape (CsDocuments).
  */
 export const buildTransportationRows = (values) =>
   values.placementRows?.map((r) => ({
@@ -37,15 +38,6 @@ export const buildTransportationRows = (values) =>
     pickup_location: r.pickup_location,
     special_remarks: r.special_remarks,
   }));
-
-/**
- * Placement Details on their own — for the CS/CNF desks, which may edit this
- * section while the job sits with them. PATCHing just these rows keeps a Save
- * from writing back fields that belong to another desk.
- */
-export const buildPlacementPayload = (values) => ({
-  transportation_rows: buildTransportationRows(values),
-});
 
 /**
  * Builds the full POST/PATCH payload from form values + current file/doc state.

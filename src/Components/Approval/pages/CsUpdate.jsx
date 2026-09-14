@@ -38,8 +38,6 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../../Status
 import { computeUserRoles } from "../utils/roleUtils";
 import { computeJobContext } from "../utils/jobContextUtils";
 import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
-import { usePlacementEditing } from "../utils/usePlacementEditing";
-import PlacementEditActions from "../components/Common/PlacementEditActions";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
@@ -345,10 +343,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isAdmin: isAdminForCsUpdate, isCS: true,
     currentStage, isMasterMode, isTerminal, jobData,
   });
-  const placement = usePlacementEditing({ form, id });
-  // Unchanged lock for everyone else; an open edit session opens only
-  // Date/Time, Pickup/Delivery and Remarks — equipment, volume and category stay put.
-  const placementLocked = placement.editing ? false : isSalesSectionLocked;
+  // CS may change only Date/Time, Pickup/Delivery and Remarks; they ride along
+  // on the page's existing Save / Submit calls. Equipment, volume, category keep
+  // the sales-section lock.
+  const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
   const canApprove = computeCanApprove({
@@ -689,14 +687,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           {(!isOthers || isMasterMode) && showPlacement && (
             <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
-                <PlacementEditActions
-                  canEdit={canEditPlacement}
-                  editing={placement.editing}
-                  saving={placement.saving}
-                  onEdit={placement.startEdit}
-                  onSave={placement.savePlacement}
-                  onCancel={placement.cancelEdit}
-                />
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (
                     <>
@@ -707,7 +697,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={placementLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} rows={1} /></Form.Item></Col>
                           <Col xs={24} md={2}><Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} /></Col>
                         </Row>
                       ))}

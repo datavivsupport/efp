@@ -19,8 +19,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
-import { usePlacementEditing } from "../utils/usePlacementEditing";
-import PlacementEditActions from "../components/Common/PlacementEditActions";
+import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -240,10 +239,9 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const canEditPlacement = canCSEditPlacement({
     isAdmin, isCS, currentStage, jobData: initialJob,
   });
-  const placement = usePlacementEditing({ form, id });
-  // Read-only as before; an open edit session opens only Date/Time,
-  // Pickup/Delivery and Remarks — equipment, volume and category stay put.
-  const placementLocked = !placement.editing;
+  // CS may change only Date/Time, Pickup/Delivery and Remarks; the rows ride
+  // along on the page's existing Save / Submit calls.
+  const placementLocked = !canEditPlacement;
 
   const [loading, setLoading]           = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
@@ -497,6 +495,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        ...(canEditPlacement && { transportation_rows: buildTransportationRows(form.getFieldsValue()) }),
         approval_details: {
           afsys_job_no: form.getFieldValue("afsys_job_no"),
           booking_vessel: form.getFieldValue("booking_vessel"),
@@ -578,6 +577,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         vsl_etd: form.getFieldValue("vsl_etd") ? form.getFieldValue("vsl_etd").format("YYYY-MM-DD") : null,
         pod_eta: form.getFieldValue("pod_eta") ? form.getFieldValue("pod_eta").format("YYYY-MM-DD") : null,
         documents: buildDocPayload(withExecutiveDocs(resolved)),
+        ...(canEditPlacement && { transportation_rows: buildTransportationRows(form.getFieldsValue()) }),
         approval_details: {
           afsys_job_no: form.getFieldValue("afsys_job_no"),
           booking_vessel: form.getFieldValue("booking_vessel"),
@@ -687,14 +687,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           {/* PLACEMENT DETAILS */}
           <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
             <div style={{ display: open.placement ? "block" : "none" }}>
-              <PlacementEditActions
-                canEdit={canEditPlacement}
-                editing={placement.editing}
-                saving={placement.saving}
-                onEdit={placement.startEdit}
-                onSave={placement.savePlacement}
-                onCancel={placement.cancelEdit}
-              />
               <Form.List name="placementRows">
                 {(fields) => fields.map(({ key, name, ...restField }) => (
                   <Row key={key} gutter={16} align="middle">
@@ -703,7 +695,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
                     <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    <Col xs={24} md={4}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} rows={1} /></Form.Item></Col>
                   </Row>
                 ))}
               </Form.List>

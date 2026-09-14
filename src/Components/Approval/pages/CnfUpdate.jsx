@@ -19,8 +19,6 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
-import { usePlacementEditing } from "../utils/usePlacementEditing";
-import PlacementEditActions from "../components/Common/PlacementEditActions";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -234,10 +232,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — i.e. right up to the submit/approve that hands it on.
   const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
-  const placement = usePlacementEditing({ form, id });
-  // Unchanged for admins; for CNF an edit session opens only Date/Time,
-  // Pickup/Delivery and Remarks — equipment, volume and category stay put.
-  const placementLocked = !canUpdateTransportation && !placement.editing;
+  // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
+  // Remarks, which go out with the existing Submit/Approve payload.
+  const placementLocked = !canUpdateTransportation && !canEditPlacement;
 
   const [loading, setLoading]                   = useState(false);
   const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
@@ -746,14 +743,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}
           >
             <div style={{ display: open.placement ? "block" : "none" }}>
-              <PlacementEditActions
-                canEdit={canEditPlacement}
-                editing={placement.editing}
-                saving={placement.saving}
-                onEdit={placement.startEdit}
-                onSave={placement.savePlacement}
-                onCancel={placement.cancelEdit}
-              />
               <Form.List name="placementRows">
                 {(fields, { add, remove }) => (
                   <>
@@ -764,7 +753,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
-                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} rows={1} /></Form.Item></Col>
                         {canUpdateTransportation && (
                           <Col xs={24} md={1} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0px' }}>
                             <Button
