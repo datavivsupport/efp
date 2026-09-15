@@ -129,7 +129,7 @@ html, body {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  /* margin-top:5px; */
+  margin-bottom: 12px;
 }
 
 .forgotLink {
@@ -143,6 +143,12 @@ html, body {
 .forgotLink:hover {
   color: #19d0c6;
   text-decoration: underline;
+}
+
+/* Sign in sits inside a Form.Item, where index.css forces the dark text fill meant for
+   input values. Reset it so both login buttons show the same white label. */
+.loginBtn {
+  -webkit-text-fill-color: #fff;
 }
 
 .btnLogin {

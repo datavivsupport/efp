@@ -138,6 +138,7 @@ const Login = () => {
                   size="large"
                   block
                   loading={loading}
+                  className={styles.loginBtn}
                 >
                   Sign in
                 </Button>
@@ -163,6 +164,7 @@ const Login = () => {
               size="large"
               block
               type="primary"
+              className={styles.loginBtn}
               onClick={() => {
                 window.location.href = `${import.meta.env.VITE_API_BASE_URL}/accounts/oauth/microsoft?url=${window.location.origin}/dashboard`;
               }}
