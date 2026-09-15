@@ -108,8 +108,7 @@ const DocUploadField = ({
   isMasterMode = false,
   user,
   isAdmin,
-  onAutoSave,
-  isOthers
+  onAutoSave
 }) => {
   const [uploading, setUploading] = useState(false);
   const pendingCountRef = useRef(0);
@@ -135,20 +134,15 @@ const DocUploadField = ({
     pendingCountRef.current += 1;
 
     setUploading(true);
-    // ⏳ Fake delay to make it "feel" like it's uploading
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
+    // Upload straight away, same as the CS/CNF pages. A new form has no id yet,
+    // so onAutoSave saves it as a draft first.
     let currentId = salesInputId;
-    if (!currentId && isOthers && onAutoSave) {
+    if (!currentId && onAutoSave) {
       currentId = await onAutoSave();
     }
 
-    // if (!currentId && !isMasterMode) {
-    //   message.warning("Save the draft first before uploading documents");
-    //   console.log({file})
-    //   return false;
-    // }
-
+    // The draft could not be saved: keep the file and upload it when the form is saved.
     if (!currentId && !isMasterMode) {
       const tempId = buildTempId();
 
@@ -413,6 +407,10 @@ const SalesInput = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const id = searchParams.get("id");
   const typeParam = searchParams.get("type");
+  // Set when an upload on a new form saves it as a draft (see handleAutoSave).
+  const [draftId, setDraftId] = useState(null);
+  const draftSaveRef = useRef(null);
+  const salesInputId = id || draftId;
   const user = useSelector((state) => state.auth.user);
   const userRoles = (user?.roles || []).map(r => (r.name || "").toUpperCase());
   const userDepts = (user?.departments_assigned || []).map(d => (d.name || "").toUpperCase());
@@ -674,10 +672,7 @@ const SalesInput = () => {
   return response.data;
 };
 
-  const onFinish = async (values, statusValue = "submitted") => {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    setLoading(true);
+  const buildPayload = (values, statusValue) => {
     const cleanEquipment = (values.equipmentRows || []).map((row) => ({
       id: row?.id,
       equipment_type: row?.equipment_type || "",
@@ -705,7 +700,7 @@ const SalesInput = () => {
       allCommodities.push(commodityInput.trim());
     }
 
-    const payload = {
+    return {
       customer_name: (isOthers && !values?.customer_name)
         ? `${user?.first_name || ""} ${user?.last_name || ""}`.trim()
         : values?.customer_name || "",
@@ -769,6 +764,35 @@ const SalesInput = () => {
       //   }))
       // ]
     };
+  };
+
+  // upload-document needs a sales input id, same as on the CS/CNF pages. A new form has
+  // none yet, so the first upload saves it as a draft and later uploads reuse that draft.
+  const handleAutoSave = () => {
+    if (salesInputId) return Promise.resolve(salesInputId);
+    if (!draftSaveRef.current) {
+      draftSaveRef.current = apiClient
+        .post("/liner/sales-input/", buildPayload(form.getFieldsValue(), "draft"))
+        .then((response) => {
+          const newId = response?.data?.id;
+          if (!newId) throw new Error("Draft saved without an id");
+          setDraftId(newId);
+          return newId;
+        })
+        .catch((err) => {
+          console.error("Auto-save draft failed:", err);
+          draftSaveRef.current = null;
+          return null;
+        });
+    }
+    return draftSaveRef.current;
+  };
+
+  const onFinish = async (values, statusValue = "submitted") => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
+    const payload = buildPayload(values, statusValue);
     if(pendingFiles.length === 0){
       payload["documents"] = [
         ...attachments.map(d => ({
@@ -791,8 +815,10 @@ const SalesInput = () => {
       // For OTHERS, we might need to handle document IDs or wait for sequential upload
       // WritableNestedModelSerializer handles nested documents if provided
 
-      const response = id
-        ? await apiClient.put(`/liner/sales-input/${id}/`, payloadWithUser)
+      // An upload may already have saved this form as a draft: update it rather than create a second job.
+      const currentId = salesInputId || (draftSaveRef.current ? await draftSaveRef.current : null);
+      const response = currentId
+        ? await apiClient.put(`/liner/sales-input/${currentId}/`, payloadWithUser)
         : await apiClient.post("/liner/sales-input/", payloadWithUser);
 
       if (response.status === 201 || response.status === 200) {
@@ -1057,7 +1083,7 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                        <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="blue" onPreview={openPreview} salesInputId={id} category="others" docType="FREIGHT MANIFEST" disabled={isReadOnly} />
+                        <DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="blue" onPreview={openPreview} salesInputId={salesInputId} onAutoSave={handleAutoSave} category="others" docType="FREIGHT MANIFEST" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
@@ -1069,7 +1095,8 @@ const SalesInput = () => {
                           setPendingFiles={setPendingFiles}
                           color="gold"
                           onPreview={openPreview}
-                          salesInputId={id}
+                          salesInputId={salesInputId}
+                          onAutoSave={handleAutoSave}
                           category="others"
                           docType="LOAD LIST UPLOADING"
                           disabled={isReadOnly}
@@ -1082,12 +1109,12 @@ const SalesInput = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                        <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="green" onPreview={openPreview} salesInputId={id} category="others" docType="TDR/SAILING REPORT" disabled={isReadOnly} />
+                        <DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="green" onPreview={openPreview} salesInputId={salesInputId} onAutoSave={handleAutoSave} category="others" docType="TDR/SAILING REPORT" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                        <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isReadOnly} />
+                        <DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} setPendingFiles={setPendingFiles} color="purple" onPreview={openPreview} salesInputId={salesInputId} onAutoSave={handleAutoSave} category="others" docType="OTHER DOCS" disabled={isReadOnly} />
                       </Form.Item>
                     </Col>
                   </Row>
@@ -1901,7 +1928,8 @@ const SalesInput = () => {
                   setPendingFiles={setPendingFiles}
                   color="blue"
                   onPreview={openPreview}
-                  salesInputId={id}
+                  salesInputId={salesInputId}
+                  onAutoSave={handleAutoSave}
                   category="Sales Executive"
                   docType="Sales Executive"
                   user={user}
