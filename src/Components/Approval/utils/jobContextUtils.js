@@ -41,10 +41,6 @@ const stageNumber = (jobData) => parseInt(jobData?.current_stage, 10) || 0;
  * longer be deleted by that desk (new uploads are still allowed).
  */
 
-/** CS has confirmed the booking (Release Order) at stage 2. */
-export const isCsBookingSubmitted = (jobData) =>
-  !!jobData?.is_cs_updated || stageNumber(jobData) >= 3 || isWorkflowCompleted(jobData);
-
 /** CS has submitted LPO / Invoice to the CS HOD — the job has left stage 4. */
 export const isCsDocumentsSubmitted = (jobData) =>
   stageNumber(jobData) >= 5 || isWorkflowCompleted(jobData);

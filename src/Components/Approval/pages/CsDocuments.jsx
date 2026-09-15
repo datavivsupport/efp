@@ -19,10 +19,10 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
-import { isCsBookingSubmitted, isCsDocumentsSubmitted } from "../utils/jobContextUtils";
+import { isCsDocumentsSubmitted } from "../utils/jobContextUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
-import { getAdditionalDocs } from "../utils/additionalDocs";
+import { getAdditionalDocs, isMandatoryDocDeleteLocked } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -60,13 +60,14 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner || isPending);
-      const isHodApproved = !!file.is_cs_hod_approved;
+      // Only mandatory documents (the fields given submittedAtStage) are ever locked.
+      const isDeleteLocked = submittedAtStage != null && !isPending && isMandatoryDocDeleteLocked(file, deleteLocked, submittedAtStage);
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: `1px solid ${isPending ? '#faad14' : '#f0f0f0'}`, borderRadius: '4px', backgroundColor: isPending ? '#fffbe6' : '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -83,7 +84,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canEditFile && !isHodApproved && (!deleteLocked || isPending) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !isDeleteLocked && !savedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -99,10 +100,12 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 
 /* ── Upload field wrapper ── */
 /**
- * deleteLocked — saved files can no longer be deleted (uploads still allowed).
- * Used for the mandatory CS documents once CS has submitted.
+ * submittedAtStage — marks a mandatory CS document field (LPO / Invoice): the stage CS
+ * submits it at. deleteLocked — CS has submitted. Saved files then can't be deleted, nor
+ * once a CS HOD approves them (uploads still allowed); see isMandatoryDocDeleteLocked.
+ * savedDocIds — ids of the files attached when CS pressed Save; they can't be deleted.
  */
-const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false }) => {
+const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const uploadSuccess = useContext(UploadSuccessContext);
@@ -150,7 +153,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           id: d.id, name: d.file_name, file_name: d.file_name,
           url: d.file_url, file_url: d.file_url,
           doc_type: docType, category, remarks: "",
-          created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved,
+          created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved, stage_uploaded: d.stage_uploaded,
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
@@ -192,7 +195,8 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           onRemove={(i) => {
             const f = files[i];
             if (!f) return;
-            if (deleteLocked && f.id && !f.pending) return;
+            if (submittedAtStage != null && f.id && !f.pending && isMandatoryDocDeleteLocked(f, deleteLocked, submittedAtStage)) return;
+            if (f.id && savedDocIds?.has(f.id)) return;
             if (f?.id && !f.pending) {
               Modal.confirm({
                 title: "Delete attachment?",
@@ -224,6 +228,8 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           additionalFiles={additionalFiles}
           showStatus={showStatus}
           deleteLocked={deleteLocked}
+          submittedAtStage={submittedAtStage}
+          savedDocIds={savedDocIds}
         />
       )}
     </div>
@@ -242,10 +248,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
   const hideCnfFromCS = isCS && !isCnfDataVisibleToCS(initialJob);
-  // Once CS has submitted, its mandatory documents can't be deleted:
-  // Release Order after the stage-2 booking, LPO / Invoice after stage 4.
-  const releaseOrderDeleteLocked = isCsBookingSubmitted(initialJob);
+  // LPO / Invoice are the only documents mandatory for CS: once submitted at stage 4 (or
+  // approved by a CS HOD) they can't be deleted. Every other document stays deletable.
   const lpoInvoiceDeleteLocked = isCsDocumentsSubmitted(initialJob);
+  // Files attached when CS presses Save can no longer be deleted on this screen; anything
+  // uploaded afterwards stays deletable until the next Save.
+  const [savedDocIds, setSavedDocIds] = useState(() => new Set());
   // Placement Details stays open to CS until they submit the documents — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin, isCS, currentStage, jobData: initialJob,
@@ -408,7 +416,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const res = await apiClient.post(`/liner/sales-input/${id}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.status === "success") {
         const d = res.data.data;
-        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved, uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
+        return { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: file.doc_type, category: file.category, remarks: file.remarks || "", created_at: d.created_at, is_cs_hod_approved: d.is_cs_hod_approved, stage_uploaded: d.stage_uploaded, uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || "Me" };
       }
       throw new Error(res.data.message || "Upload failed");
     };
@@ -606,6 +614,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
         message.success(res.data.message || "Saved successfully");
+        setSavedDocIds(new Set(Object.values(resolved).flat().map((f) => f?.id).filter(Boolean)));
       } else {
         message.error(res.data.message || "Save failed");
       }
@@ -731,8 +740,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} deleteLocked={releaseOrderDeleteLocked} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -745,7 +754,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
               </Row>
             </div>
@@ -756,12 +765,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
             <div style={{ display: open.documents ? "block" : "none" }}>
               <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus deleteLocked={lpoInvoiceDeleteLocked} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus deleteLocked={lpoInvoiceDeleteLocked} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>LPO <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label={<span>INVOICE <span style={{ color: "#ff4d4f" }}>*</span></span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -793,7 +802,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                   <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
-                <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} /></Col>
+                <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
               </Row>
             </div>
           </Card>

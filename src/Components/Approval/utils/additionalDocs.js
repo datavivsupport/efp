@@ -32,3 +32,13 @@ export const getAdditionalDocs = (files) => {
  * as approved.
  */
 export const isDocPendingApproval = (file) => file?.is_cs_hod_approved === false;
+
+/**
+ * Whether a saved LPO / Invoice - the only documents mandatory for CS - can no longer be
+ * deleted: a CS HOD has approved it, or CS has submitted (`submitted`) with it attached at
+ * `submittedAtStage`. One uploaded after submitting stays deletable until it is approved.
+ * Files without stage_uploaded predate that field and count as submitted.
+ */
+export const isMandatoryDocDeleteLocked = (file, submitted, submittedAtStage) =>
+  !!file?.is_cs_hod_approved ||
+  (submitted && (parseInt(file?.stage_uploaded, 10) || 0) <= submittedAtStage);
