@@ -1713,7 +1713,8 @@ const SalesInput = () => {
                             label="Placement Date & Time"
                           >
                             <DatePicker
-                            showTime={{ defaultValue: dayjs() }}
+                            // Default the time column to Dubai "now", not the browser clock
+                            showTime={{ defaultValue: dayjs().tz("Asia/Dubai") }}
                               format="DD-MM-YYYY HH:mm:ss"
                               placeholder="DD-MM-YYYY HH:mm:ss"
                               style={{ width: "100%" }}
