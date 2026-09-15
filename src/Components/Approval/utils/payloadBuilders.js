@@ -1,4 +1,4 @@
-import dayjs from "../../../dayjs-config";
+import dayjs, { toDubaiDateTime } from "../../../dayjs-config";
 
 /**
  * Builds the approval_details sub-object from form values.
@@ -32,9 +32,7 @@ export const buildTransportationRows = (values) =>
     equipment_type: r.equipment_type,
     no_of_containers: parseInt(r.no_of_containers) || 0,
     category: r.category,
-    placement_time: r.placement_time
-      ? dayjs(r.placement_time).format("YYYY-MM-DD HH:mm:ss")
-      : null,
+    placement_time: toDubaiDateTime(r.placement_time),
     pickup_location: r.pickup_location,
     special_remarks: r.special_remarks,
   }));

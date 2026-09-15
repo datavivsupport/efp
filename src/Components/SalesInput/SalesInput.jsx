@@ -30,7 +30,7 @@ import {
   CheckCircleOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import dayjs from "../../dayjs-config";
+import dayjs, { toDubaiDateTime } from "../../dayjs-config";
 import Styles from "./salesinput.module.css";
 import { Icon } from "@iconify/react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -693,9 +693,7 @@ const SalesInput = () => {
         equipment_type: row?.equipment_type || "",
         no_of_containers: Number(row?.no_of_containers) || 0,
         category: row?.category || "",
-        placement_time: row?.placement_time
-          ? row.placement_time.format("YYYY-MM-DD HH:mm:ss")
-          : null,
+        placement_time: toDubaiDateTime(row?.placement_time),
         pickup_location: row?.pickup_location || "",
         special_remarks: row?.special_remarks || "",
       }),
