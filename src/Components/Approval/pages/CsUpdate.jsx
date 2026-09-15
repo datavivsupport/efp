@@ -36,7 +36,7 @@ import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
-import { computeJobContext } from "../utils/jobContextUtils";
+import { computeJobContext, isCsBookingSubmitted } from "../utils/jobContextUtils";
 import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -77,7 +77,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -95,7 +95,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !deleteLocked && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -110,7 +110,11 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false }) => {
+/**
+ * deleteLocked — saved files can no longer be deleted (uploads still allowed).
+ * Used for the mandatory CS documents once CS has submitted.
+ */
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -186,6 +190,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             onRemove={(i) => {
               const f = files[i];
               if (!f) return;
+              if (deleteLocked && f.id) return;
               if (f.id) {
                 Modal.confirm({
                   title: "Delete attachment?",
@@ -216,6 +221,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             isAdmin={isAdmin}
             additionalFiles={additionalFiles}
             showStatus={showStatus}
+            deleteLocked={deleteLocked}
           />
         )}
       </div>
@@ -329,6 +335,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";
     return null;
   })();
+  // Once CS has confirmed the booking, its mandatory Release Order stays.
+  const releaseOrderDeleteLocked = isCsBookingSubmitted(jobData);
   const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
   const isPaymentReq = normalizeBoolean(isLNR_LPO_ReqForm, jobData?.is_lpo_invoice_required) || normalizeBoolean(isPaymentReqForm, jobData?.is_payment_processing_required);
   const facFlag = normalizeBoolean(facFlagForm, jobData?.fac);
@@ -747,7 +755,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
                 {(showDocumentUploads || showROBOCForCS) && (
                   <Row gutter={16}>
-                    <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} deleteLocked={releaseOrderDeleteLocked} /></Form.Item></Col>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="BOC Attachment"><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={baseLocked || (isCNFUploadLocked && !isCS)} restrictionMessage={isCNFUploadLocked && !isCS && isLiner ? "CNF is allowed to upload it" : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   </Row>
                 )}

@@ -18,7 +18,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
-import { isWorkflowCompleted } from "../utils/jobContextUtils";
+import { isCnfSubmitted } from "../utils/jobContextUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -94,7 +94,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 /* ── Upload field wrapper ── */
 /**
  * deleteLocked — saved files can no longer be deleted (uploads still allowed).
- * Used for the mandatory CNF documents once the workflow has completed.
+ * Used for the mandatory CNF documents once CNF has submitted.
  */
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
@@ -236,8 +236,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   const canUpdateTransportation = isAdmin;
 
-  // A completed job must keep its mandatory CNF documents (Haulier Note, Load List).
-  const mandatoryDocsLocked = isWorkflowCompleted(initialJob);
+  // Once CNF has submitted, its mandatory documents (Haulier Note, Load List) stay.
+  const mandatoryDocsLocked = isCnfSubmitted(initialJob);
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — i.e. right up to the submit/approve that hands it on.
