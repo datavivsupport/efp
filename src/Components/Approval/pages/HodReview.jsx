@@ -682,8 +682,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                   <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
                   {/* OTHERS only: Sales Input saves its attachments as doc_type "Sales Executive" and the Executive Documents card is hidden for OTHERS; shown read-only so edits here can't drift from salesExecutiveFiles */}
-                  {isOthers && salesExecutiveFiles.length > 0 && <FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdmin} />
-                                  </Col>
+                  {isOthers && salesExecutiveFiles.length > 0 && <FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdmin} />}
+                </Col>
               </Row>
             </div>
           </Card>
