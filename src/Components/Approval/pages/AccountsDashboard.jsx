@@ -68,11 +68,11 @@ const AccountsDashboard = () => {
     },
     {
       title: "Stage",
-      dataIndex: "current_stage",
-      key: "current_stage",
-      render: (stage) => (
-        <Tag color={stage === "6" ? "green" : "gold"}>
-          {stage === "6" ? "Accounts Stage" : `Stage ${stage}`}
+      dataIndex: "pending_with",
+      key: "pending_with",
+      render: (pendingWith) => (
+        <Tag color={pendingWith === "Accounts" ? "green" : pendingWith === "Completed" ? "default" : "gold"}>
+          {pendingWith || "-"}
         </Tag>
       ),
     },
