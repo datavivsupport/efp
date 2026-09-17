@@ -828,6 +828,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                   <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdminForCsUpdate} disabled={isOthers} />
+                  {/* OTHERS only: Sales Input saves its attachments as doc_type "Sales Executive" and the Executive Documents card is hidden for OTHERS; shown read-only so edits here can't drift from salesExecutiveFiles */}
+                  {isOthers && salesExecutiveFiles.length > 0 && <FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdminForCsUpdate} />}
                 </Col>
               </Row>
             </div>
