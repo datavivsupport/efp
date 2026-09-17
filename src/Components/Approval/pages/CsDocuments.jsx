@@ -98,13 +98,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
   </div>
 );
 
-/* ── Upload field wrapper ── */
-/**
- * submittedAtStage — marks a mandatory CS document field (LPO / Invoice): the stage CS
- * submits it at. deleteLocked — CS has submitted. Saved files then can't be deleted, nor
- * once a CS HOD approves them (uploads still allowed); see isMandatoryDocDeleteLocked.
- * savedDocIds — ids of the files attached when CS pressed Save; they can't be deleted.
- */
+ 
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
@@ -787,7 +781,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
                       const authorId = isObject ? r.user_id : null;
-                      const canDelete = isAdmin || authorId === user?.id || !authorId;
+                      const canDelete = !lpoInvoiceDeleteLocked && (isAdmin || authorId === user?.id || !authorId);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
