@@ -19,7 +19,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
-import { buildCommonPayload } from "../utils/payloadBuilders";
+import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -243,7 +243,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // with them — i.e. right up to the submit/approve that hands it on.
   const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
-  // Remarks, which go out with the existing Submit/Approve payload.
+  // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
 
   const [loading, setLoading]                   = useState(false);
@@ -584,13 +584,34 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
 
 
+      // Stage 2 stays without a request: a PATCH there counts as CNF's stage-2 work being done.
       const skipSaveDocuments = isCNF && !isAdmin && currentStage === "2";
+      let saveMessage = "Saved successfully";
 
       if (isCNF && !skipSaveDocuments) {
-        await apiClient.post(`/liner/sales-input/${id}/save-documents/`);
+        // Only what CNF can edit on this page. Documents are left out - each file is saved on
+        // upload and its remarks on edit, and a documents list would rename types or drop files
+        // this page did not load. Booking fields are CS's and read-only here, so not sent back.
+        const values = form.getFieldsValue();
+        const cnfPayload = {
+          general_remarks: remarks,
+          approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
+          ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
+          ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
+        };
+
+        if (currentStage === "7") {
+          // save-documents stores the payload and is also CNF's commit at stage 7: it locks CNF's
+          // attachments, mails the pending list and moves the job to stage 9 once all docs are in.
+          const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
+          if (typeof res.data?.message === "string") saveMessage = res.data.message;
+        } else if (!canUpdateTransportation) {
+          // Same as CS's Save. Admins already sent the full PATCH above.
+          await apiClient.patch(`/liner/sales-input/${id}/`, cnfPayload);
+        }
       }
 
-      message.success("Saved successfully");
+      message.success(saveMessage);
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       console.error("Save error:", err);
