@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useContext, createContext } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -41,8 +41,6 @@ const STATUS_COLOR = {
   Rejected: "error",
   REJECTED: "error"
 };
-
-const UploadSuccessContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -103,7 +101,6 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
-  const uploadSuccess = useContext(UploadSuccessContext);
 
   const handleBeforeUpload = async (file) => {
     if (!file) {
@@ -152,7 +149,6 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
-        uploadSuccess?.markUploaded?.();
         message.success(res.data.message || `${label} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -258,7 +254,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const placementLocked = !canEditPlacement;
 
   const [loading, setLoading]           = useState(false);
-  const [hasUploadedDoc, setHasUploadedDoc] = useState(false);
   const [open, setOpen]                 = useState({
     export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
   });
@@ -622,7 +617,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   };
 
   return (
-    <UploadSuccessContext.Provider value={{ markUploaded: () => setHasUploadedDoc(true) }}>
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
@@ -837,7 +831,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               onClick={() => handleAction("Approved")}
               icon={<Icon icon="mdi:check-circle" />}
               loading={loading}
-              disabled={isDocumentUploading || loading || !hasUploadedDoc}
+              disabled={isDocumentUploading || loading}
               style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
             >
               Submit Documents & Approve
@@ -895,7 +889,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         </div>
       </Modal>
     </div>
-    </UploadSuccessContext.Provider>
   );
 };
 
