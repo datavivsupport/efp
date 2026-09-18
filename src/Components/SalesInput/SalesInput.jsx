@@ -43,6 +43,7 @@ import { uploadErrorMessage } from "../../api/uploadError";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
+import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -1844,16 +1845,20 @@ const SalesInput = () => {
               <div style={{ flex: '1 1 50%', minWidth: 0 }}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
                   <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-                    {remarks.map((r, i) => (
+                    {remarks.map((r, i) => {
+                      const canDelete = canDeleteRemark(r);
+                      return (
                       <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          style={{ position: "absolute", top: 6, right: 6 }}
-                          onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
-                        />
+                        {canDelete && (
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            style={{ position: "absolute", top: 6, right: 6 }}
+                            onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
+                          />
+                        )}
                         <ClampedText rows={3} style={{ fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</ClampedText>
                         {typeof r === 'object' && r.user_name && (
                           <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
@@ -1861,7 +1866,8 @@ const SalesInput = () => {
                           </Typography.Text>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
 
@@ -1877,12 +1883,7 @@ const SalesInput = () => {
                     type="primary"
                     onClick={() => {
                       if (newRemark.trim()) {
-                        setRemarks(p => [...p, {
-                          text: newRemark.trim(),
-                          user_id: user?.id,
-                          user_name: user?.first_name || user?.name || "User",
-                          date: new Date().toISOString()
-                        }]);
+                        setRemarks(p => [...p, createRemark(newRemark, user)]);
                         setNewRemark("");
                       }
                     }}
