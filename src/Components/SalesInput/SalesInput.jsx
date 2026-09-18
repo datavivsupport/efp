@@ -799,7 +799,7 @@ const SalesInput = () => {
         // Redirection as requested by user
         message.success(`Form ${statusValue === 'draft' ? "Saved" : "Submitted"} Successfully`);
         if (response?.data?.id && pendingFiles.length > 0) {
-          for (const item of pendingFiles) {
+          const uploadPending = async (item) => {
             try {
               const data = await uploadFileToServer(
                 item.file,
@@ -831,6 +831,15 @@ const SalesInput = () => {
               }
             } catch (err) {
               console.error("Pending upload failed:", err);
+            }
+          };
+
+          if (payload.job_type === "OTHERS") {
+            // OTHERS: upload all pending files concurrently
+            await Promise.allSettled(pendingFiles.map(uploadPending));
+          } else {
+            for (const item of pendingFiles) {
+              await uploadPending(item);
             }
           }
 
