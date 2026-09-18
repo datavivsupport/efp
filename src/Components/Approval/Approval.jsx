@@ -7,6 +7,7 @@ import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
 import { normalizeBoolean } from "./utils/formUtils";
 import { buildCommonPayload } from "./utils/payloadBuilders";
 import { validateApprovalAction } from "./utils/approvalValidations";
+import { deleteDocument } from "../../utils/documentApi";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -273,7 +274,8 @@ const DocUploadField = ({
           files={files}
           color={color}
           onRemove={(i) => {
-            const docId = files[i]?.id;
+            const doc = files[i];
+            const docId = doc?.id;
             if (!docId) return;
             Modal.confirm({
               title: "Delete attachment?",
@@ -281,8 +283,20 @@ const DocUploadField = ({
               okText: "Delete",
               okType: "danger",
               cancelText: "Cancel",
-              onOk: () => {
+              onOk: async () => {
+                if (!salesInputId) {
+                  setFiles((p) => p.filter((f) => f.id !== docId));
+                  return;
+                }
+
                 setFiles((p) => p.filter((f) => f.id !== docId));
+                try {
+                  await deleteDocument(salesInputId, docId);
+                  message.success("Attachment deleted");
+                } catch (err) {
+                  setFiles((p) => (p.some((f) => f.id === docId) ? p : [...p, doc]));
+                  message.error(err.response?.data?.message || "Failed to delete attachment");
+                }
               },
             });
           }}

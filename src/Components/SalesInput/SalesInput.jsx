@@ -39,6 +39,7 @@ import EquipmentTypeSelect from "./EquipmentType";
 import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
+import { deleteDocument } from "../../utils/documentApi";
 import { uploadErrorMessage } from "../../api/uploadError";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
@@ -286,17 +287,34 @@ const DocUploadField = ({
             files={files}
             color={color}
             onRemove={(i) => {
-              const docId = files[i]?.id;
+              const doc = files[i];
+              const docId = doc?.id;
               if (!docId) return;
+              const isTemp = doc.isTemp || String(docId).startsWith("temp-");
               Modal.confirm({
                 title: "Delete attachment?",
                 content: "Are you sure you want to delete this attachment? This action cannot be undone.",
                 okText: "Delete",
                 okType: "danger",
                 cancelText: "Cancel",
-                onOk: () => {
+                onOk: async () => {
+                  // Queued but not yet uploaded — nothing on the server to delete
+                  if (isTemp || !salesInputId) {
+                    setFiles((p) => p.filter((f) => f.id !== docId));
+                    setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                    return;
+                  }
+
                   setFiles((p) => p.filter((f) => f.id !== docId));
-                  setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                  try {
+                    await deleteDocument(salesInputId, docId);
+                    message.success("Attachment deleted");
+                  } catch (err) {
+                    // `files` is a filtered view of the shared `attachments` state,
+                    // so restore just this document instead of replacing the array.
+                    setFiles((p) => (p.some((f) => f.id === docId) ? p : [...p, doc]));
+                    message.error(err.response?.data?.message || "Failed to delete attachment");
+                  }
                 },
               });
             }}
