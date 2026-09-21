@@ -7,6 +7,7 @@ import CommonTable from "../Commontable/Commontable";
 import useReportExport from "./useReportExport";
 import { Icon } from "@iconify/react";
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
+import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 
 const { Option } = Select;
 
@@ -24,7 +25,25 @@ const EMPTY_FILTERS = {
   pol: "",
   fpod: "",
   pendingWith: "all",
+  status: "",
+  bookingVessel: "",
+  bookingVoyage: "",
+  loadList: "",
+  equipmentType: "",
 };
+
+const STATUS_OPTIONS = [
+  ["draft", "Draft"],
+  ["submitted", "Submitted"],
+  ["approved", "Approved"],
+  ["rejected", "Rejected"],
+  ["CS-REJECTED", "CS Rejected"],
+  ["CNF-REJECTED", "CNF Rejected"],
+  ["CSHOD-REJECTED", "CS HOD Rejected"],
+  ["ACCOUNTS-REJECTED", "Accounts Rejected"],
+  ["REJECTED-CLOSED", "Rejected Closed"],
+  ["STOPPED", "Stopped"],
+];
 
 // Query params for the active filters, shared by the list request and the Excel export
 // so both always describe the same set of records. Unset filters are left out.
@@ -46,6 +65,11 @@ const buildFilterParams = (f = {}) => {
   if (f.salesName)     params.sales_name = f.salesName;
   if (f.pol)           params.pol = f.pol;
   if (f.fpod)          params.fpod = f.fpod;
+  if (f.status)        params.status = f.status;
+  if (f.bookingVessel) params.booking_vessel = f.bookingVessel;
+  if (f.bookingVoyage) params.booking_voyage = f.bookingVoyage;
+  if (f.loadList)      params.load_list = f.loadList;
+  if (f.equipmentType) params.equipment_type = f.equipmentType;
   return params;
 };
 
@@ -71,16 +95,24 @@ const ExportReport = () => {
   const [pol, setPol] = useState("");
   const [fpod, setFpod] = useState("");
   const [pendingWith, setPendingWith] = useState("all");
+  const [status, setStatus] = useState("");
+  const [bookingVessel, setBookingVessel] = useState("");
+  const [bookingVoyage, setBookingVoyage] = useState("");
+  const [loadList, setLoadList] = useState("");
+  const [equipmentType, setEquipmentType] = useState("");
+
+  const currentFilters = {
+    jobType, exportNumber, createdAtFrom, createdAtTo,
+    createdBy, carrier, customerName, afsysJobNo,
+    bookingRef, salesName, pol, fpod, pendingWith,
+    status, bookingVessel, bookingVoyage, loadList, equipmentType,
+  };
 
   const debounceRef = useRef(null);
   const { exporting, startExport } = useReportExport();
 
   const handleExport = () => {
-    startExport(buildFilterParams({
-      jobType, exportNumber, createdAtFrom, createdAtTo,
-      createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
-    }));
+    startExport(buildFilterParams(currentFilters));
   };
 
   const buildUrl = useCallback((page, size, f = {}) => {
@@ -112,11 +144,7 @@ const ExportReport = () => {
 
   // Auto-fetch with debounce whenever any filter changes
   useEffect(() => {
-    const filters = {
-      jobType, exportNumber, createdAtFrom, createdAtTo,
-      createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
-    };
+    const filters = currentFilters;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -129,6 +157,7 @@ const ExportReport = () => {
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
     bookingRef, salesName, pol, fpod, pendingWith,
+    status, bookingVessel, bookingVoyage, loadList, equipmentType,
   ]);
 
   // Pagination change — fetch immediately with current filters
@@ -136,11 +165,7 @@ const ExportReport = () => {
     const { current, pageSize: ps } = pagination;
     setCurrentPage(current);
     setPageSize(ps);
-    fetchData(current, ps, {
-      jobType, exportNumber, createdAtFrom, createdAtTo,
-      createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
-    });
+    fetchData(current, ps, currentFilters);
   };
 
   const handleClear = () => {
@@ -157,6 +182,11 @@ const ExportReport = () => {
     setPol("");
     setFpod("");
     setPendingWith("all");
+    setStatus("");
+    setBookingVessel("");
+    setBookingVoyage("");
+    setLoadList("");
+    setEquipmentType("");
   };
 
   const labelCls = "block text-xs font-semibold text-gray-600 mb-1";
@@ -232,7 +262,8 @@ const ExportReport = () => {
                 
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
-                      salesName, pol, fpod,
+                      salesName, pol, fpod, status, bookingVessel, bookingVoyage,
+                      loadList, equipmentType,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
@@ -254,7 +285,8 @@ const ExportReport = () => {
                 </Button>
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
-                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all") && (
+                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all" ||
+                  status || bookingVessel || bookingVoyage || loadList || equipmentType) && (
                   <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
                     Clear
                   </Button>
@@ -308,6 +340,44 @@ const ExportReport = () => {
                   <DatePicker value={createdAtTo} onChange={setCreatedAtTo} format="DD-MM-YYYY" placeholder="To date" style={{ width: "100%" }} />
                 </div>
 
+                <div className={colCls}>
+                  <label className={labelCls}>Status</label>
+                  <Select value={status || undefined} onChange={(v) => setStatus(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
+                    {STATUS_OPTIONS.map(([value, label]) => (
+                      <Option key={value} value={value}>{label}</Option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Booking Vessel</label>
+                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVessel} onChange={(e) => setBookingVessel(e.target.value)} />
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Booking Voyage</label>
+                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVoyage} onChange={(e) => setBookingVoyage(e.target.value)} />
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Load List (Y/N)</label>
+                  <Select value={loadList || undefined} onChange={(v) => setLoadList(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
+                    <Option value="true">Yes</Option>
+                    <Option value="false">No</Option>
+                  </Select>
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Equipment Type</label>
+                  <EquipmentTypeSelect
+                    value={equipmentType || undefined}
+                    onChange={(v) => setEquipmentType(v || "")}
+                    placeholder="All"
+                    allowClear
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
               </div>
             </div>
           )}
@@ -325,6 +395,8 @@ const ExportReport = () => {
                 { title: "POL", dataIndex: "port_of_loading", key: "port_of_loading", render: (v) => v || "-" },
                 { title: "FPOD", dataIndex: "final_pod", key: "final_pod", render: (v) => v || "-" },
                 { title: "Vessel / Voyage", dataIndex: "vessel_voyage", key: "vessel_voyage", render: (v) => v || "-" },
+                { title: "Booking Vessel", dataIndex: "booking_vessel", key: "booking_vessel", render: (v) => v || "-" },
+                { title: "Booking Voyage", dataIndex: "booking_voyage", key: "booking_voyage", render: (v) => v || "-" },
                 { title: "Job No (AFSYS)", dataIndex: "afsys_job_no", key: "afsys_job_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
                 { title: "Booking Ref", dataIndex: "booking_ref_no", key: "booking_ref_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
                 { title: "Sales HOD", dataIndex: "sales_hod", key: "sales_hod", render: (v) => v || "-" },
@@ -337,6 +409,11 @@ const ExportReport = () => {
                     </Tag>
                   ),
                 },
+                {
+                  title: "Load List (Y/N)", dataIndex: "is_load_list_uploaded", key: "is_load_list_uploaded",
+                  render: (v) => <Tag color={v ? "green" : "default"}>{v ? "Y" : "N"}</Tag>,
+                },
+                { title: "Equipment Type", dataIndex: "equipment_type", key: "equipment_type", render: (v) => v || "-" },
               ]}
               data={data}
               loading={loading}
