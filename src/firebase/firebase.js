@@ -3,13 +3,13 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import apiClient from "../api/apiclient";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCS-k0xA97LWFEhYZh8tCyllvz734N_Tk8",
-  authDomain: "sharaf-stage-dev.firebaseapp.com",
-  projectId: "sharaf-stage-dev",
-  storageBucket: "sharaf-stage-dev.firebasestorage.app",
-  messagingSenderId: "113425308767",
-  appId: "1:113425308767:web:ef1335e6af818fa1448fea",
-  measurementId: "G-50PX3LXPPG",
+  apiKey: "AIzaSyAf91oN0vqPJ6VdSVOC6HcRPbds9N2O1Lw",
+  authDomain: "ssa-dms-ae967.firebaseapp.com",
+  projectId: "ssa-dms-ae967",
+  storageBucket: "ssa-dms-ae967.firebasestorage.app",
+  messagingSenderId: "49671243737",
+  appId: "1:49671243737:web:866242c71e961adc6fbbc8",
+  measurementId: "G-8953KKV1DR",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -23,7 +23,7 @@ const sendFcmToken = async (token) => {
   }
 };
 
- 
+
 let tokenPromise = null;
 
 const fetchToken = async () => {
@@ -62,7 +62,7 @@ const fetchToken = async () => {
 export const requestForToken = () => {
   if (!tokenPromise) {
     tokenPromise = fetchToken().finally(() => {
-       
+
       tokenPromise = null;
     });
   }
