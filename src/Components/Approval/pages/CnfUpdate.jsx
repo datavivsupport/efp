@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useContext, createContext } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -37,8 +37,6 @@ const STATUS_COLOR = {
   Rejected: "error",
   REJECTED: "error"
 };
-
-const UploadSuccessContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -100,7 +98,6 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
-  const uploadSuccess = useContext(UploadSuccessContext);
 
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
@@ -136,7 +133,6 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
-        uploadSuccess?.markUploaded?.();
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -237,8 +233,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   const canUpdateTransportation = isAdmin;
 
+  // One call, two uses: CNF's mandatory documents lock at the same moment Save does.
+  const cnfHasSubmitted = isCnfSubmitted(initialJob);
+
   // Once CNF has submitted, its mandatory documents (Haulier Note, Load List) stay.
-  const mandatoryDocsLocked = isCnfSubmitted(initialJob);
+  const mandatoryDocsLocked = cnfHasSubmitted;
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — i.e. right up to the submit/approve that hands it on.
@@ -248,7 +247,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
 
   const [loading, setLoading]                   = useState(false);
-  const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
+  // Set the moment the approve POST succeeds, so Save goes dead during the 1.5s
+  // the page waits before navigating away.
+  const [hasApproved, setHasApproved]           = useState(false);
   const [open, setOpen] = useState({
     export: true,
     container: true,
@@ -396,6 +397,15 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // The two documents handleAction enforces, so the button matches the rule it fires.
   const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
+  // Save stays live while the job still sits with CNF — a document upload is not
+  // required, editing Placement Details or the remarks is enough. Only the approve
+  // POST hands the job on, and from then Save is dead. Stage 7 is CNF's second pass,
+  // which commits through save-documents, so Save lives on there too. Admins keep
+  // the full PATCH at every stage.
+  const canSave =
+    !hasApproved &&
+    (canUpdateTransportation || currentStage === "7" || !cnfHasSubmitted);
+
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
       const formData = new FormData();
@@ -504,6 +514,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") {
+        // The job has left CNF's desk: no more saving from this page.
+        setHasApproved(true);
         message.success(res.data.message || `${action} successfully`);
         setTimeout(() => navigate("/"), 1500);
       } else {
@@ -585,11 +597,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
 
 
-      // Stage 2 stays without a request: a PATCH there counts as CNF's stage-2 work being done.
-      const skipSaveDocuments = isCNF && !isAdmin && currentStage === "2";
       let saveMessage = "Saved successfully";
 
-      if (isCNF && !skipSaveDocuments) {
+      if (isCNF) {
         // Only what CNF can edit on this page. Documents are left out - each file is saved on
         // upload and its remarks on edit, and a documents list would rename types or drop files
         // this page did not load. Booking fields are CS's and read-only here, so not sent back.
@@ -607,13 +617,18 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
           if (typeof res.data?.message === "string") saveMessage = res.data.message;
         } else if (!canUpdateTransportation) {
-          // Same as CS's Save. Admins already sent the full PATCH above.
+          // Same as CS's Save. Admins already sent the full PATCH above. Stage 2 goes
+          // through here too, so remarks typed there are kept rather than dropped —
+          // this PATCH must never advance the stage, only the approve POST does that.
           await apiClient.patch(`/liner/sales-input/${id}/`, cnfPayload);
         }
       }
 
       message.success(saveMessage);
-      setTimeout(() => navigate("/"), 1500);
+      // CNF's plain Save (PATCH) keeps the user on the page. Stage 7 save-documents is CNF's
+      // commit (can lock attachments / move the job to stage 9) and admin's full PATCH keep the redirect.
+      const stayOnPage = isCNF && !canUpdateTransportation && currentStage !== "7";
+      if (!stayOnPage) setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       console.error("Save error:", err);
       const errorMsg = typeof err.response?.data?.message === "string" ? err.response?.data?.message : "Failed to save";
@@ -666,7 +681,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   ];
 
   return (
-    <UploadSuccessContext.Provider value={{ markUploaded: () => setHasUploadedDoc(true) }}>
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
@@ -972,7 +986,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={handleSave}
                   icon={<Icon icon="mdi:content-save-outline" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading || !hasUploadedDoc}
+                  disabled={isDocumentUploading || loading || !canSave}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                 >
                   Save
@@ -994,7 +1008,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     onClick={handleSave}
                     icon={<Icon icon="mdi:content-save-outline" />}
                     loading={loading}
-                    disabled={isDocumentUploading || loading || !hasUploadedDoc}
+                    disabled={isDocumentUploading || loading || !canSave}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                   >
                     Save
@@ -1060,7 +1074,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         </div>
       </Modal>
     </div>
-    </UploadSuccessContext.Provider>
   );
 };
 
