@@ -1,11 +1,17 @@
 import React, { Suspense, useCallback, useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { Spin, notification } from "antd";
 import Navigation from "./Components/Navigation/Navbar";
 import apiClient from "./api/apiclient";
 import { onMessageListener, requestForToken } from "./firebase/firebase";
 
 const PAGE_SIZE = 10;
+
+// Push payload data values are strings; sales_input_id opens that job in Approval
+const getNotificationPath = (data) =>
+  data?.sales_input_id
+    ? `/approval?id=${encodeURIComponent(data.sales_input_id)}`
+    : "/dashboard";
 
 const App = () => {
   const [notifications, setNotifications] = useState([]);
@@ -15,6 +21,7 @@ const App = () => {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
  
   const getNotification = useCallback(async (pageToFetch = 1) => {
@@ -89,10 +96,7 @@ const App = () => {
       notification.open({
         message: payload?.notification?.title,
         description: payload?.notification?.body,
-        onClick: () => {
-          const link = payload?.data?.VIEW_INVOICE_URL;
-          if (link) window.location.href = link;
-        },
+        onClick: () => navigate(getNotificationPath(payload?.data)),
       });
       getNotification(1);
     });
@@ -100,6 +104,24 @@ const App = () => {
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A click on a background push reuses this tab; the service worker asks us to route
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return undefined;
+
+    const onServiceWorkerMessage = (event) => {
+      if (event.data?.type === "NOTIFICATION_CLICK" && event.data.path) {
+        navigate(event.data.path);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", onServiceWorkerMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener(
+        "message",
+        onServiceWorkerMessage,
+      );
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">
