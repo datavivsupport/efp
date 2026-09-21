@@ -625,7 +625,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
 
       message.success(saveMessage);
-      setTimeout(() => navigate("/"), 1500);
+      // CNF's plain Save (PATCH) keeps the user on the page. Stage 7 save-documents is CNF's
+      // commit (can lock attachments / move the job to stage 9) and admin's full PATCH keep the redirect.
+      const stayOnPage = isCNF && !canUpdateTransportation && currentStage !== "7";
+      if (!stayOnPage) setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       console.error("Save error:", err);
       const errorMsg = typeof err.response?.data?.message === "string" ? err.response?.data?.message : "Failed to save";
