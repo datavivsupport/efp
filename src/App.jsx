@@ -1,4 +1,10 @@
-import React, { Suspense, useCallback, useEffect, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Outlet, useLocation } from "react-router";
 import { Spin, notification } from "antd";
 import Navigation from "./Components/Navigation/Navbar";
@@ -16,19 +22,35 @@ const App = () => {
 
   const location = useLocation();
 
- 
+  // Scroll fires many times per tick, so the in-flight check has to read a ref
+  // rather than the render-time `loadingMore` value, which every one of those
+  // handlers would still see as false.
+  const loadingMoreRef = useRef(false);
+  // Only the newest fetch may write to state; a page-1 refresh landing during a
+  // "load more" would otherwise merge a stale page back in.
+  const fetchSeqRef = useRef(0);
+
   const getNotification = useCallback(async (pageToFetch = 1) => {
+    const seq = ++fetchSeqRef.current;
+
     try {
       // skipErrorHandler: a failed poll must not raise a global error toast
       const res = await apiClient.get(
         `/accounts/notifications/?page=${pageToFetch}&live=true`,
         { skipErrorHandler: true },
       );
+      if (seq !== fetchSeqRef.current) return;
+
       const results = Array.isArray(res.data?.results) ? res.data.results : [];
 
-      setNotifications((prev) =>
-        pageToFetch === 1 ? results : [...prev, ...results],
-      );
+      setNotifications((prev) => {
+        if (pageToFetch === 1) return results;
+
+        // Offset pagination re-serves an item when a new notification lands
+        // between two page fetches, so merge on id instead of appending blind.
+        const seen = new Set(prev.map((n) => n.id));
+        return [...prev, ...results.filter((n) => !seen.has(n.id))];
+      });
       setPage(pageToFetch);
       setTotalUnread(res.data?.count ?? 0);
       setHasNextPage(Boolean(res.data?.next));
@@ -38,10 +60,16 @@ const App = () => {
   }, []);
 
   const loadNextPage = async () => {
-    if (!hasNextPage || loadingMore) return;
+    if (!hasNextPage || loadingMoreRef.current) return;
+
+    loadingMoreRef.current = true;
     setLoadingMore(true);
-    await getNotification(page + 1);
-    setLoadingMore(false);
+    try {
+      await getNotification(page + 1);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
   };
 
   const markAllAsRead = async () => {
@@ -85,8 +113,42 @@ const App = () => {
   useEffect(() => {
     requestForToken();
 
+    // An account can hold several FCM tokens, so one event arrives as several
+    // identical pushes. Keyed toasts replace rather than stack, and the recent
+    // window stops a repeat from re-opening a toast the user already dismissed.
+    const seenPushes = new Map();
+
+    const pushKey = (payload) => {
+      const data = payload?.data || {};
+      const notif = payload?.notification || {};
+
+      return (
+        data.notification_id ||
+        [
+          data.sales_input_id || "",
+          notif.title || "",
+          notif.body || "",
+        ].join("|")
+      );
+    };
+
+    const isRepeat = (key) => {
+      const now = Date.now();
+      seenPushes.forEach((seenAt, k) => {
+        if (now - seenAt > 60_000) seenPushes.delete(k);
+      });
+
+      if (seenPushes.has(key)) return true;
+      seenPushes.set(key, now);
+      return false;
+    };
+
     const unsubscribe = onMessageListener((payload) => {
+      const key = pushKey(payload);
+      if (isRepeat(key)) return;
+
       notification.open({
+        key,
         message: payload?.notification?.title,
         description: payload?.notification?.body,
         onClick: () => {

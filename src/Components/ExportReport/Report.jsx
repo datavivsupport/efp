@@ -19,7 +19,7 @@ const EMPTY_FILTERS = {
   customerName: "",
   afsysJobNo: "",
   bookingRef: "",
-  salesName: "",
+  salesHod: "",
   pol: "",
   fpod: "",
   pendingWith: "all",
@@ -43,7 +43,7 @@ const ExportReport = () => {
   const [customerName, setCustomerName] = useState("");
   const [afsysJobNo, setAfsysJobNo] = useState("");
   const [bookingRef, setBookingRef] = useState("");
-  const [salesName, setSalesName] = useState("");
+  const [salesHod, setSalesHod] = useState("");
   const [pol, setPol] = useState("");
   const [fpod, setFpod] = useState("");
   const [pendingWith, setPendingWith] = useState("all");
@@ -53,21 +53,21 @@ const ExportReport = () => {
   const buildUrl = useCallback((page, size, f = {}) => {
     let url = `/liner/sales-input/reports/?page=${page}&page_size=${size}`;
     if (f.pendingWith && f.pendingWith !== "all") url += `&pending_with=${encodeURIComponent(f.pendingWith)}`;
-    if (f.jobType)       url += `&job_type=${encodeURIComponent(f.jobType)}`;
-    if (f.exportNumber)  url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
+    if (f.jobType) url += `&job_type=${encodeURIComponent(f.jobType)}`;
+    if (f.exportNumber) url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
     // export_created_date, not created_at: the "Created Date" column in the table below
     // renders export_created_date, and the two diverge on back-dated and migrated jobs -
     // so a range on created_at hid rows whose visible date was inside it.
     if (f.createdAtFrom) url += `&export_created_date_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
-    if (f.createdAtTo)   url += `&export_created_date_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
-    if (f.createdBy)     url += `&created_by=${encodeURIComponent(f.createdBy)}`;
-    if (f.carrier)       url += `&carrier=${encodeURIComponent(f.carrier)}`;
-    if (f.customerName)  url += `&customer_name=${encodeURIComponent(f.customerName)}`;
-    if (f.afsysJobNo)    url += `&afsys_job_no=${encodeURIComponent(f.afsysJobNo)}`;
-    if (f.bookingRef)    url += `&booking_ref=${encodeURIComponent(f.bookingRef)}`;
-    if (f.salesName)     url += `&sales_name=${encodeURIComponent(f.salesName)}`;
-    if (f.pol)           url += `&pol=${encodeURIComponent(f.pol)}`;
-    if (f.fpod)          url += `&fpod=${encodeURIComponent(f.fpod)}`;
+    if (f.createdAtTo) url += `&export_created_date_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
+    if (f.createdBy) url += `&created_by=${encodeURIComponent(f.createdBy)}`;
+    if (f.carrier) url += `&carrier=${encodeURIComponent(f.carrier)}`;
+    if (f.customerName) url += `&customer_name=${encodeURIComponent(f.customerName)}`;
+    if (f.afsysJobNo) url += `&afsys_job_no=${encodeURIComponent(f.afsysJobNo)}`;
+    if (f.bookingRef) url += `&booking_ref=${encodeURIComponent(f.bookingRef)}`;
+    if (f.salesHod) url += `&sales_hod=${encodeURIComponent(f.salesHod)}`;
+    if (f.pol) url += `&pol=${encodeURIComponent(f.pol)}`;
+    if (f.fpod) url += `&fpod=${encodeURIComponent(f.fpod)}`;
     return url;
   }, []);
 
@@ -95,7 +95,7 @@ const ExportReport = () => {
     const filters = {
       jobType, exportNumber, createdAtFrom, createdAtTo,
       createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
+      bookingRef, salesHod, pol, fpod, pendingWith,
     };
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -108,7 +108,7 @@ const ExportReport = () => {
   }, [
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
-    bookingRef, salesName, pol, fpod, pendingWith,
+    bookingRef, salesHod, pol, fpod, pendingWith,
   ]);
 
   // Pagination change — fetch immediately with current filters
@@ -119,7 +119,7 @@ const ExportReport = () => {
     fetchData(current, ps, {
       jobType, exportNumber, createdAtFrom, createdAtTo,
       createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
+      bookingRef, salesHod, pol, fpod, pendingWith,
     });
   };
 
@@ -133,7 +133,7 @@ const ExportReport = () => {
     setCustomerName("");
     setAfsysJobNo("");
     setBookingRef("");
-    setSalesName("");
+    setSalesHod("");
     setPol("");
     setFpod("");
     setPendingWith("all");
@@ -169,31 +169,31 @@ const ExportReport = () => {
               <label className={labelCls}>Customer Name</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
- 
+
             <div className={colCls}>
               <label className={labelCls}>Carrier</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
-            
+
             <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
-              <label className={labelCls}>Sales Name</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+              <label className={labelCls}>Sales HOD</label>
+              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesHod} onChange={(e) => setSalesHod(e.target.value)} />
             </div>
 
-        
+
             <div className={colCls}>
               <label className={labelCls}>POL</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
               <label className={labelCls}>FPOD</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
@@ -209,10 +209,10 @@ const ExportReport = () => {
                   icon={<Icon icon={filtersExpanded ? "mdi:tune-vertical" : "mdi:tune"} width="16" height="16" />}
                 >
                   {(() => {
-                
+
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
-                      salesName, pol, fpod,
+                      salesHod, pol, fpod,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
@@ -224,11 +224,11 @@ const ExportReport = () => {
                 </Button>
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
-                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all") && (
-                  <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
-                    Clear
-                  </Button>
-                )}
+                  customerName || afsysJobNo || bookingRef || salesHod || pol || fpod || pendingWith !== "all") && (
+                    <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
+                      Clear
+                    </Button>
+                  )}
               </div>
             </div>
 
@@ -246,7 +246,7 @@ const ExportReport = () => {
                   <label className={labelCls}>Job Type</label>
                   <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="LINER">LINER</Option>
-                     
+
                     <Option value="FORWARDING">FORWARDING</Option>
                     <Option value="CROSS TRADE">CROSS-TRADE</Option>
                     <Option value="OTHERS">OTHERS</Option>
