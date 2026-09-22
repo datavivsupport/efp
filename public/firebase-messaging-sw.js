@@ -16,19 +16,36 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
-// messaging.onBackgroundMessage(function (payload) {
-//   console.log("Background message received:", payload);
 
-//   const notificationTitle = payload.notification.title;
-//   const notificationOptions = {
-//     body: payload.notification.body,
-//     icon: "./sharaf.png",
-//     data: payload.data
-//   };
-//   console.log(notificationTitle,notificationOptions)
+// An account can hold more than one FCM token, so the same event is delivered
+// as several identical pushes. Tagging each notification with a stable key
+// makes the browser collapse them into one instead of stacking duplicates.
+const notificationTag = (payload) => {
+  const data = payload?.data || {};
+  const notif = payload?.notification || {};
 
-//   self.registration.showNotification(notificationTitle, notificationOptions);
-// });
+  return (
+    data.notification_id ||
+    [
+      data.sales_input_id || "",
+      notif.title || data.title || "",
+      notif.body || data.body || "",
+    ].join("|")
+  );
+};
+
+messaging.onBackgroundMessage((payload) => {
+  const title = payload?.notification?.title || payload?.data?.title;
+  if (!title) return;
+
+  self.registration.showNotification(title, {
+    body: payload?.notification?.body || payload?.data?.body || "",
+    icon: "/sharaf.png",
+    data: payload?.data,
+    tag: notificationTag(payload),
+    renotify: false,
+  });
+});
 
 self.addEventListener("notificationclick", (event) => {
   // console.log("Notification clicked:", event);
