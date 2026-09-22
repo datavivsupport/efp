@@ -21,7 +21,7 @@ const EMPTY_FILTERS = {
   customerName: "",
   afsysJobNo: "",
   bookingRef: "",
-  salesName: "",
+  salesHod: "",
   pol: "",
   fpod: "",
   pendingWith: "all",
@@ -45,30 +45,27 @@ const STATUS_OPTIONS = [
   ["STOPPED", "Stopped"],
 ];
 
-// Query params for the active filters, shared by the list request and the Excel export
-// so both always describe the same set of records. Unset filters are left out.
+
 const buildFilterParams = (f = {}) => {
   const params = {};
   if (f.pendingWith && f.pendingWith !== "all") params.pending_with = f.pendingWith;
-  if (f.jobType)       params.job_type = f.jobType;
-  if (f.exportNumber)  params.export_number = f.exportNumber;
-  // export_created_date, not created_at: the "Created Date" column in the table below
-  // renders export_created_date, and the two diverge on back-dated and migrated jobs -
-  // so a range on created_at hid rows whose visible date was inside it.
+  if (f.jobType) params.job_type = f.jobType;
+  if (f.exportNumber) params.export_number = f.exportNumber;
+  
   if (f.createdAtFrom) params.export_created_date_gte = dayjs(f.createdAtFrom).format("YYYY-MM-DD");
-  if (f.createdAtTo)   params.export_created_date_lte = dayjs(f.createdAtTo).format("YYYY-MM-DD");
-  if (f.createdBy)     params.created_by = f.createdBy;
-  if (f.carrier)       params.carrier = f.carrier;
-  if (f.customerName)  params.customer_name = f.customerName;
-  if (f.afsysJobNo)    params.afsys_job_no = f.afsysJobNo;
-  if (f.bookingRef)    params.booking_ref = f.bookingRef;
-  if (f.salesName)     params.sales_name = f.salesName;
-  if (f.pol)           params.pol = f.pol;
-  if (f.fpod)          params.fpod = f.fpod;
-  if (f.status)        params.status = f.status;
+  if (f.createdAtTo) params.export_created_date_lte = dayjs(f.createdAtTo).format("YYYY-MM-DD");
+  if (f.createdBy) params.created_by = f.createdBy;
+  if (f.carrier) params.carrier = f.carrier;
+  if (f.customerName) params.customer_name = f.customerName;
+  if (f.afsysJobNo) params.afsys_job_no = f.afsysJobNo;
+  if (f.bookingRef) params.booking_ref = f.bookingRef;
+  if (f.salesHod) params.sales_hod = f.salesHod;
+  if (f.pol) params.pol = f.pol;
+  if (f.fpod) params.fpod = f.fpod;
+  if (f.status) params.status = f.status;
   if (f.bookingVessel) params.booking_vessel = f.bookingVessel;
   if (f.bookingVoyage) params.booking_voyage = f.bookingVoyage;
-  if (f.loadList)      params.load_list = f.loadList;
+  if (f.loadList) params.load_list = f.loadList;
   if (f.equipmentType) params.equipment_type = f.equipmentType;
   return params;
 };
@@ -91,7 +88,7 @@ const ExportReport = () => {
   const [customerName, setCustomerName] = useState("");
   const [afsysJobNo, setAfsysJobNo] = useState("");
   const [bookingRef, setBookingRef] = useState("");
-  const [salesName, setSalesName] = useState("");
+  const [salesHod, setSalesHod] = useState("");
   const [pol, setPol] = useState("");
   const [fpod, setFpod] = useState("");
   const [pendingWith, setPendingWith] = useState("all");
@@ -104,7 +101,7 @@ const ExportReport = () => {
   const currentFilters = {
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
-    bookingRef, salesName, pol, fpod, pendingWith,
+    bookingRef, salesHod, pol, fpod, pendingWith,
     status, bookingVessel, bookingVoyage, loadList, equipmentType,
   };
 
@@ -156,7 +153,7 @@ const ExportReport = () => {
   }, [
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
-    bookingRef, salesName, pol, fpod, pendingWith,
+    bookingRef, salesHod, pol, fpod, pendingWith,
     status, bookingVessel, bookingVoyage, loadList, equipmentType,
   ]);
 
@@ -178,7 +175,7 @@ const ExportReport = () => {
     setCustomerName("");
     setAfsysJobNo("");
     setBookingRef("");
-    setSalesName("");
+    setSalesHod("");
     setPol("");
     setFpod("");
     setPendingWith("all");
@@ -219,31 +216,31 @@ const ExportReport = () => {
               <label className={labelCls}>Customer Name</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
- 
+
             <div className={colCls}>
               <label className={labelCls}>Carrier</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
-            
+
             <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
-              <label className={labelCls}>Sales Name</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+              <label className={labelCls}>Sales HOD</label>
+              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesHod} onChange={(e) => setSalesHod(e.target.value)} />
             </div>
 
-        
+
             <div className={colCls}>
               <label className={labelCls}>POL</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
               <label className={labelCls}>FPOD</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
@@ -259,10 +256,10 @@ const ExportReport = () => {
                   icon={<Icon icon={filtersExpanded ? "mdi:tune-vertical" : "mdi:tune"} width="16" height="16" />}
                 >
                   {(() => {
-                
+
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
-                      salesName, pol, fpod, status, bookingVessel, bookingVoyage,
+                      salesHod, pol, fpod, status, bookingVessel, bookingVoyage,
                       loadList, equipmentType,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
@@ -285,12 +282,12 @@ const ExportReport = () => {
                 </Button>
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
-                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all" ||
+                  customerName || afsysJobNo || bookingRef || salesHod || pol || fpod || pendingWith !== "all" ||
                   status || bookingVessel || bookingVoyage || loadList || equipmentType) && (
-                  <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
-                    Clear
-                  </Button>
-                )}
+                    <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
+                      Clear
+                    </Button>
+                  )}
               </div>
             </div>
 
@@ -308,7 +305,7 @@ const ExportReport = () => {
                   <label className={labelCls}>Job Type</label>
                   <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="LINER">LINER</Option>
-                     
+
                     <Option value="FORWARDING">FORWARDING</Option>
                     <Option value="CROSS TRADE">CROSS-TRADE</Option>
                     <Option value="OTHERS">OTHERS</Option>
