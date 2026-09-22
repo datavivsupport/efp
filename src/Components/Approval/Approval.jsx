@@ -1186,10 +1186,10 @@ const Approval = () => {
                     <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={false} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={false} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
