@@ -38,6 +38,14 @@ const STATUS_COLOR = {
   REJECTED: "error"
 };
 
+/**
+ * CNF's second pass — the stages it may still file documents on after the CS HOD has
+ * signed off. Approving at stage 5 sends the job to stage 6 when a payment is due
+ * (Accounts holds it for the slip) and straight to stage 7 when none is, and CNF is
+ * expected to hand in its optional Haulage Cost Sheet / ED on either.
+ */
+const CNF_POST_CS_HOD_STAGES = ["6", "7"];
+
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
   <div
@@ -399,12 +407,19 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Save stays live while the job still sits with CNF — a document upload is not
   // required, editing Placement Details or the remarks is enough. Only the approve
-  // POST hands the job on, and from then Save is dead. Stage 7 is CNF's second pass,
-  // which commits through save-documents, so Save lives on there too. Admins keep
-  // the full PATCH at every stage.
+  // POST hands the job on, and from then Save is dead. Admins keep the full PATCH
+  // at every stage.
+  //
+  // The exception is CNF's second pass. Once the CS HOD approves, the job either parks
+  // at stage 6 (Accounts holds it for the payment slip) or skips to stage 7 when no
+  // payment is due; on both, CNF is still expected to file its optional documents —
+  // Haulage Cost Sheet, ED — so Save has to stay live. Both commit through
+  // save-documents, which leaves the stage alone anywhere but 7.
   const canSave =
     !hasApproved &&
-    (canUpdateTransportation || currentStage === "7" || !cnfHasSubmitted);
+    (canUpdateTransportation ||
+      CNF_POST_CS_HOD_STAGES.includes(currentStage) ||
+      !cnfHasSubmitted);
 
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
@@ -611,9 +626,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
         };
 
-        if (currentStage === "7") {
+        if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
           // save-documents stores the payload and is also CNF's commit at stage 7: it locks CNF's
           // attachments, mails the pending list and moves the job to stage 9 once all docs are in.
+          // At stage 6 it only saves — the job stays on the Accounts desk — and it is the one route
+          // that lifts the API's HOD/GM read-only rule, which a plain PATCH trips for the CNF users
+          // who carry an HOD role. It also reports what is still outstanding.
           const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
           if (typeof res.data?.message === "string") saveMessage = res.data.message;
         } else if (!canUpdateTransportation) {
