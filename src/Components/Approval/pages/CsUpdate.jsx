@@ -21,6 +21,7 @@ import {
   Spin,
   Alert,
   Checkbox,
+  Switch,
   message,
 } from "antd";
 import {
@@ -730,18 +731,22 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   {/* Workflow Configuration */}
                   {((isLiner || isCrossTrade) || isMasterMode) && (
                     <Col span={24}>
-                      <Alert
-                        message="Workflow Configuration (Action Required)"
-                        description={
-                          <Row gutter={16} style={{ marginTop: 8 }}>
-                            {!isLiner && <Col xs={24} md={6}><Form.Item label="Payment Req?" name="is_payment_processing_required"><Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}><Radio.Button value={true}>Yes</Radio.Button><Radio.Button value={false}>No</Radio.Button></Radio.Group></Form.Item></Col>}
-                            <Col xs={24} md={6}><Form.Item label="RO Req?" name="is_release_order_required"><Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}><Radio.Button value={true}>Yes</Radio.Button><Radio.Button value={false}>No</Radio.Button></Radio.Group></Form.Item></Col>
-                            <Col xs={24} md={6}><Form.Item label="Load List Req?" name="is_load_list_required"><Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}><Radio.Button value={true}>Yes</Radio.Button><Radio.Button value={false}>No</Radio.Button></Radio.Group></Form.Item></Col>
-                            <Col xs={24} md={6}><Form.Item label="Haulier Note Req?" name="is_haulier_note_required"><Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}><Radio.Button value={true}>Yes</Radio.Button><Radio.Button value={false}>No</Radio.Button></Radio.Group></Form.Item></Col>
-                          </Row>
-                        }
-                        type="info" showIcon style={{ marginBottom: 16 }}
-                      />
+                      <div className={Styles.workflowConfigBox}>
+                        <div className={Styles.workflowConfigHeader}>
+                          <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>
+                            Workflow Configuration
+                          </Typography.Text>
+                          <Typography.Text style={{ fontSize: 12, color: '#ff4d4f' }}>
+                            (Action Required)
+                          </Typography.Text>
+                        </div>
+                        <Row gutter={16}>
+                          {!isLiner && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Payment Req?" name="is_payment_processing_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>}
+                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="RO Req?" name="is_release_order_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
+                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Req?" name="is_load_list_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
+                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Note Req?" name="is_haulier_note_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
+                        </Row>
+                      </div>
                     </Col>
                   )}
                 </Row>

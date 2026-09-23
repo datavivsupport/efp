@@ -191,6 +191,69 @@
   resize: none !important;
 }
 
+/* ================= WORKFLOW CONFIGURATION =================
+   Same border/radius as .chipBox, same label typography as the
+   "REMARKS" section label, same red already used for required-field
+   asterisks elsewhere in this file — no new colors, no custom sizing
+   on the Radio.Button (kept at antd default, as used everywhere else
+   in Approval.jsx). */
+.workflowConfigBox {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 12px 16px 4px;
+  margin: 4px 0 8px;
+}
+
+.workflowConfigHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* Toggle uses the same navy-to-teal gradient already used on every icon
+   badge (.mainhead) and every primary button like "Add Remark"
+   (.ant-btn-primary in index.css: linear-gradient(to right, #003A75, #19D0C6)).
+   A gradient can't be transitioned directly, so it's faded in on an overlay
+   instead — that keeps the slide smooth while landing on the same gradient. */
+.workflowConfigBox :global(.ant-switch) {
+  position: relative;
+  overflow: hidden;
+}
+
+.workflowConfigBox :global(.ant-switch)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #003A75, #19D0C6);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.workflowConfigBox :global(.ant-switch.ant-switch-checked)::before {
+  opacity: 1;
+}
+
+/* The overlay above is absolutely positioned, so without this the "Yes"/"No"
+   text (not itself positioned) paints underneath it and gets hidden whenever
+   the overlay is opaque — this lifts the text back above it. */
+.workflowConfigBox :global(.ant-switch-inner) {
+  position: relative;
+  z-index: 1;
+}
+
+.workflowConfigBox :global(.ant-switch-inner-checked),
+.workflowConfigBox :global(.ant-switch-inner-unchecked) {
+  color: #ffffff !important;
+}
+
+.workflowConfigBox :global(.ant-switch .ant-switch-handle) {
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
 .textAreaField.textAreaField.textAreaField {
   color: #1f2937 !important;
   -webkit-text-fill-color: #1f2937 !important;
