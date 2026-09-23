@@ -395,6 +395,14 @@ const Approval = () => {
     stage2, isCSDoneWaitingHOD, jobData,
   });
 
+  // CS viewing a job that is sitting with CNF (Load List stage) may still correct the
+  // carrier-driven booking fields (Vessel, Voyage, Latest ETA, ETD, POD ETA, LL & SI
+  // cut-offs — same set CsUpdate/CsDocuments keep open) and save them with a PATCH.
+  // Every other field stays read-only.
+  const canCSEditBookingAtCNF =
+    isCS && isCNFStage && !isOthers && !isMasterMode && !isTerminal;
+  const isBookingFieldLocked = isBookingSectionLocked && !canCSEditBookingAtCNF;
+
   // Disable ALL uploads if user doesn't have allowed role
   const disableAllUploads = !hasAllowedRole;
 
@@ -683,6 +691,35 @@ const Approval = () => {
       console.error(err);
       const errorMsg = err.response?.data?.message || "Internal server error";
       message.error("Failed to save draft: " + errorMsg);
+    } finally {
+      actionThrottleRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  // Save for canCSEditBookingAtCNF — keeps the job's status and stage as they are.
+  const handleCSBookingSave = async () => {
+    if (isDocumentUploading) {
+      message.warning("Please wait until document upload is complete.");
+      return;
+    }
+    if (actionThrottleRef.current) return;
+    actionThrottleRef.current = true;
+    setLoading(true);
+    try {
+      const values = await form.validateFields();
+      const payload = { ...getCommonPayload(values), status: jobData?.status };
+      const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
+      if (response.data.status === "success" || response.status === 200 || response.status === 201) {
+        message.success(response.data.message || "Job Saved Successfully");
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(response.data.message || "Failed to save booking details");
+      }
+    } catch (err) {
+      console.error(err);
+      const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Internal server error";
+      message.error("Failed to save booking details: " + errorMsg);
     } finally {
       actionThrottleRef.current = false;
       setLoading(false);
@@ -1172,10 +1209,10 @@ const Approval = () => {
                     <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={isBookingFieldLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={isBookingFieldLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
@@ -1189,27 +1226,27 @@ const Approval = () => {
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
                     <Form.Item className={`${Styles.formLabel} ${Styles.remarksResize}`} label="Booking Remarks" name="booking_remarks"><TextArea rows={1} disabled={isBookingSectionLocked} /></Form.Item>
@@ -1720,6 +1757,17 @@ const Approval = () => {
               showIcon
               style={{ marginTop: 16, marginBottom: 16 }}
             />
+          )}
+
+          {canCSEditBookingAtCNF && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
+              <Button size="large" onClick={handleCSBookingSave} icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Save
+              </Button>
+              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Cancel
+              </Button>
+            </div>
           )}
 
           {/* Bottom buttons - Disabled */}

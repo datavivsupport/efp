@@ -26,10 +26,10 @@ import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
 
-const STATUS_COLOR = { 
-  Submitted: "processing", 
+const STATUS_COLOR = {
+  Submitted: "processing",
   SUBMITTED: "processing",
-  Draft: "default", 
+  Draft: "default",
   draft: "default",
   Approved: "success",
   APPROVED: "success",
@@ -77,9 +77,9 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
             </Space>
           </div>
           {canEditFile ? (
-            <Input size="large"   className={Styles.remarkInput} placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
+            <Input size="large" className={Styles.remarkInput} placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
           ) : (
-            file.remarks && <Typography.Text type="secondary"   className={Styles.remarkInput} italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.remarks}</Typography.Text>
+            file.remarks && <Typography.Text type="secondary" className={Styles.remarkInput} italic style={{ fontSize: '10px', paddingLeft: '4px', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.remarks}</Typography.Text>
           )}
         </div>
       );
@@ -182,37 +182,37 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [form] = Form.useForm();
 
   const isAdmin = user?.is_superuser || user?.user_type === "admin";
-  
+
   // Check if there are any unapproved documents
   const hasPendingDocuments = (initialJob?.documents || []).some(d => d.is_cs_hod_approved === false);
-  
+
   // Disable if job is rejected
   const isDisabled = initialJob?.status?.includes("REJECTED");
 
-  const [loading, setLoading]           = useState(false);
-  const [open, setOpen]                 = useState({
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState({
     export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
   });
 
-  const [previewVisible, setPreviewVisible]     = useState(false);
-  const [previewUrls, setPreviewUrls]           = useState([]);
-  const [previewIndex, setPreviewIndex]         = useState(0);
-  const [previewLoading, setPreviewLoading]     = useState(false);
-  
-  const [remarks, setRemarks]                   = useState([]);
-  const [newRemark, setNewRemark]               = useState("");
-  const [otherCharges, setOtherCharges]         = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [remarks, setRemarks] = useState([]);
+  const [newRemark, setNewRemark] = useState("");
+  const [otherCharges, setOtherCharges] = useState([]);
   const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
   const otherChargesDisplay = otherCharges.length > 0
     ? otherCharges.join(", ")
     : otherChargesRemarks || "";
-  const [attachments, setAttachments]           = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
-  const [docs, setDocs]                         = useState({});
-  const [csHodOptions, setCsHodOptions]         = useState([]);
+  const [docs, setDocs] = useState({});
+  const [csHodOptions, setCsHodOptions] = useState([]);
   const throttle = useRef(false);
-  
+
   // Rejection Modal State
   const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
   const [rejectionRemarks, setRejectionRemarks] = useState("");
@@ -240,7 +240,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     apiClient.get("/accounts/liner/admin/users/hods/", { params: { all: true } }).then((res) => {
       const data = res.data?.results ?? res.data ?? [];
       setCsHodOptions(data.map((item) => ({ value: String(item.id), label: userOptionLabel(item), isOnLeave: !!item.is_leave })));
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
@@ -260,7 +260,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
     setRemarks(initialJob.general_remarks || []);
-    
+
     form.setFieldsValue({
       afsys_job_no: ad.afsys_job_no,
       booking_vessel: ad.booking_vessel,
@@ -325,7 +325,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       setRejectionRemarks("");
       return;
     }
-    
+
     // For Approval - proceed normally
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
@@ -334,18 +334,18 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const endpoint = `/liner/sales-input/${id}/approve/`;
-      
+
       let payload;
       // For approval: send remarks + approved document IDs
       const unapprovedDocIds = (initialJob?.documents || [])
         .filter(d => d.is_cs_hod_approved === false)
         .map(d => d.id);
-      
+
       payload = {
         remarks: approvalRemarks,
         approved_document_ids: unapprovedDocIds
       };
-      
+
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") { message.success(res.data.message || "Approved successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
@@ -363,29 +363,29 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       message.error("Please enter rejection remarks");
       return;
     }
-    
+
     if (throttle.current) return;
     throttle.current = true;
     setRejectionLoading(true);
-    
+
     try {
       const endpoint = `/liner/sales-input/${id}/reject/`;
       const payload = {
         remarks: rejectionRemarks
       };
-      
+
       const res = await apiClient.post(endpoint, payload);
-      if (res.data.status === "success") { 
-        message.success(res.data.message || "Job rejected successfully"); 
+      if (res.data.status === "success") {
+        message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
-        setTimeout(() => navigate("/"), 1500); 
+        setTimeout(() => navigate("/"), 1500);
       }
       else { message.error(res.data.message || "Rejection failed"); }
-    } catch (err) { 
-      message.error(err.response?.data?.message || "Something went wrong"); 
-    } finally { 
-      throttle.current = false; 
-      setRejectionLoading(false); 
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      throttle.current = false;
+      setRejectionLoading(false);
     }
   };
 
@@ -462,280 +462,280 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
         }}
       >
-      <Spin spinning={loading}>
-        <Form form={form} layout="vertical">
-          
-          {/* EXPORT DETAILS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS (CS HOD APPROVAL)" open={open.export} onToggle={() => toggle("export")} />}>
-            <div style={{ display: open.export ? "block" : "none" }}>
-              <div style={{ marginBottom: 12 }}>
-                <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
-                {initialJob?.status?.includes("REJECTED") && (
-                  <div style={{ marginTop: 8, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
-                    <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
-                    <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
-                  </div>
-                )}
+        <Spin spinning={loading}>
+          <Form form={form} layout="vertical">
+
+            {/* EXPORT DETAILS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS (CS HOD APPROVAL)" open={open.export} onToggle={() => toggle("export")} />}>
+              <div style={{ display: open.export ? "block" : "none" }}>
+                <div style={{ marginBottom: 12 }}>
+                  <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                  {initialJob?.status?.includes("REJECTED") && (
+                    <div style={{ marginTop: 8, padding: 12, backgroundColor: "#fff2e8", border: "1px solid #ffbb96", borderRadius: 4 }}>
+                      <div style={{ fontWeight: 600, color: "#d4380d", marginBottom: 4 }}>⚠️ Rejection Reason:</div>
+                      <div style={{ color: "#595959" }}>{initialJob?.rejection_remarks || "Rejected by previous approver"}</div>
+                    </div>
+                  )}
+                </div>
+                <Row gutter={[16, 8]}>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name"><Input placeholder="Customer Name" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input placeholder="Carrier Name" disabled variant="filled" /></Form.Item></Col>
+                  {/* <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Status"><Tag color="cyan" style={{ fontWeight: 'bold' }}>{(initialJob?.status || "DRAFT").toUpperCase()}</Tag></Form.Item></Col> */}
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input placeholder="Contact PIC" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input placeholder="Export Created By" disabled variant="filled" /></Form.Item></Col>
+                </Row>
               </div>
-              <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name"><Input placeholder="Customer Name" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name"><Input placeholder="Carrier Name" disabled variant="filled" /></Form.Item></Col>
-                {/* <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Status"><Tag color="cyan" style={{ fontWeight: 'bold' }}>{(initialJob?.status || "DRAFT").toUpperCase()}</Tag></Form.Item></Col> */}
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic"><Input placeholder="Contact PIC" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input placeholder="Export Created By" disabled variant="filled" /></Form.Item></Col>
-              </Row>
-            </div>
-          </Card>
+            </Card>
 
-          {/* CONTAINER DETAILS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="octicon:container-24" title="CONTAINER DETAILS" open={open.container} onToggle={() => toggle("container")} />}>
-            <div style={{ display: open.container ? "block" : "none" }}>
-              <Form.List name="containerRows">
-                {(fields) => fields.map(({ key, name, ...rest }) => (
-                  <Row gutter={16} key={key} align="middle">
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled variant="filled" /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                    <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                  </Row>
-                ))}
-              </Form.List>
-              <Row gutter={16} style={{ marginTop: 8 }}>
-                <Col xs={24}>
-                  <Form.Item className={Styles.formLabel} label="Other Charges">
-                    <Input.TextArea value={otherChargesDisplay} placeholder="No other charges" disabled variant="filled" autoSize={{ minRows: 2 }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-          </Card>
+            {/* CONTAINER DETAILS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="octicon:container-24" title="CONTAINER DETAILS" open={open.container} onToggle={() => toggle("container")} />}>
+              <div style={{ display: open.container ? "block" : "none" }}>
+                <Form.List name="containerRows">
+                  {(fields) => fields.map(({ key, name, ...rest }) => (
+                    <Row gutter={16} key={key} align="middle">
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled variant="filled" /></Form.Item></Col>
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    </Row>
+                  ))}
+                </Form.List>
+                <Row gutter={16} style={{ marginTop: 8 }}>
+                  <Col xs={24}>
+                    <Form.Item className={Styles.formLabel} label="Other Charges">
+                      <Input.TextArea value={otherChargesDisplay} placeholder="No other charges" disabled variant="filled" autoSize={{ minRows: 2 }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            </Card>
 
-          {/* OTHER DETAILS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
-            <div style={{ display: open.otherDetails ? "block" : "none" }}>
-              <Row gutter={16}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Haulier Code" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
-                {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
-                <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
-              </Row>
-              <Row gutter={16} style={{ marginTop: 8 }}>
-                <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
-              </Row>
-            </div>
-          </Card>
+            {/* OTHER DETAILS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
+              <div style={{ display: open.otherDetails ? "block" : "none" }}>
+                <Row gutter={16}>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Haulier Code" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                  {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
+                  <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
+                </Row>
+                <Row gutter={16} style={{ marginTop: 8 }}>
+                  <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                </Row>
+              </div>
+            </Card>
 
-          {/* PLACEMENT DETAILS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
-            <div style={{ display: open.placement ? "block" : "none" }}>
-              <Form.List name="placementRows">
-                {(fields) => fields.map(({ key, name, ...restField }) => (
-                  <Row key={key} gutter={16} align="middle">
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled variant="filled" /></Form.Item></Col>
-                    <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                  </Row>
-                ))}
-              </Form.List>
-            </div>
-          </Card>
+            {/* PLACEMENT DETAILS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+              <div style={{ display: open.placement ? "block" : "none" }}>
+                <Form.List name="placementRows">
+                  {(fields) => fields.map(({ key, name, ...restField }) => (
+                    <Row key={key} gutter={16} align="middle">
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled variant="filled" /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                    </Row>
+                  ))}
+                </Form.List>
+              </div>
+            </Card>
 
-          {/* BOOKING DETAILS (TECHNICAL DOCUMENTS) */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS (TECHNICAL DOCUMENTS)" open={open.booking} onToggle={() => toggle("booking")} />}>
-            <div style={{ display: open.booking ? "block" : "none" }}>
-              <Row gutter={[16, 8]}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="AFSYS Job No." disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
-              </Row>
-              <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={docs?.bocFiles || []} onPreview={(i) => openPreview(docs?.bocFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-              </Row>
-            </div>
-          </Card>
+            {/* BOOKING DETAILS (TECHNICAL DOCUMENTS) */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS" open={open.booking} onToggle={() => toggle("booking")} />}>
+              <div style={{ display: open.booking ? "block" : "none" }}>
+                <Row gutter={[16, 8]}>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="AFSYS Job No." disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
+                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                </Row>
+                <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+                  <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={docs?.bocFiles || []} onPreview={(i) => openPreview(docs?.bocFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                </Row>
+              </div>
+            </Card>
 
-          {/* CNF DETAILS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
-            <div style={{ display: open.cnfDetails ? "block" : "none" }}>
-              <Row gutter={[16, 16]}>
-                <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={docs?.haulierNoteFiles || []} onPreview={(i) => openPreview(docs?.haulierNoteFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={docs?.loadListFiles || []} onPreview={(i) => openPreview(docs?.loadListFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="ED" className={Styles.formLabel}>
-                    {(docs?.edFiles || []).length === 0 ? (
-                      <div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div>
-                    ) : (
-                      <FileChipList files={docs?.edFiles || []} onPreview={(i) => openPreview(docs?.edFiles || [], i)} user={user} isAdmin={isAdmin} disabled />
-                    )}
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
-              </Row>
-            </div>
-          </Card>
+            {/* CNF DETAILS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+              <div style={{ display: open.cnfDetails ? "block" : "none" }}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={docs?.haulierNoteFiles || []} onPreview={(i) => openPreview(docs?.haulierNoteFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={docs?.loadListFiles || []} onPreview={(i) => openPreview(docs?.loadListFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item label="ED" className={Styles.formLabel}>
+                      {(docs?.edFiles || []).length === 0 ? (
+                        <div style={{ fontSize: 12, color: '#bfbfbf', padding: '4px 11px', backgroundColor: '#f5f5f5', border: '1px solid #d9d9d9', borderRadius: '4px', minHeight: 32, display: 'flex', alignItems: 'center' }}>No documents</div>
+                      ) : (
+                        <FileChipList files={docs?.edFiles || []} onPreview={(i) => openPreview(docs?.edFiles || [], i)} user={user} isAdmin={isAdmin} disabled />
+                      )}
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                </Row>
+              </div>
+            </Card>
 
-          {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
-            <div style={{ display: open.documents ? "block" : "none" }}>
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={8}>
-                  <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
-                  <Form.Item name="cs_hod" noStyle>
-                    <Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
-                  </Form.Item>
-                </Col>
-                {[
-                  { label: 'LPO',       files: docs?.lpoFiles || [] },
-                  { label: 'INVOICE',   files: docs?.invoiceFiles || [] },
-                ].map(({ label, files }) => (
-                  <Col key={label} xs={24} md={8}>
-                    <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
-                    {files?.length > 0
-                      ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} showStatus />
-                      : <div style={{ marginTop: 8 }}>
+            {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
+              <div style={{ display: open.documents ? "block" : "none" }}>
+                <Row gutter={[24, 16]}>
+                  <Col xs={24} md={8}>
+                    <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
+                    <Form.Item name="cs_hod" noStyle>
+                      <Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
+                    </Form.Item>
+                  </Col>
+                  {[
+                    { label: 'LPO', files: docs?.lpoFiles || [] },
+                    { label: 'INVOICE', files: docs?.invoiceFiles || [] },
+                  ].map(({ label, files }) => (
+                    <Col key={label} xs={24} md={8}>
+                      <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
+                      {files?.length > 0
+                        ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} showStatus />
+                        : <div style={{ marginTop: 8 }}>
                           <Upload disabled showUploadList={false}>
                             <Button size="small" icon={<UploadOutlined />} disabled style={{ fontSize: 12, color: '#bfbfbf', borderColor: '#d9d9d9' }}>
                               No documents
                             </Button>
                           </Upload>
                         </div>
-                    }
-                  </Col>
-                ))}
-              </Row>
-            </div>
-          </Card>
-
-          {/* ATTACHMENTS AND COMMENTS */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:comment-text-multiple-outline" title="ATTACHMENTS AND COMMENTS" open={open.attachments} onToggle={() => toggle("attachments")} />}>
-            <div style={{ display: open.attachments ? "block" : "none" }}>
-              <Row gutter={32}>
-                <Col xs={24} md={12}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
-                  <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-                    {remarks.map((r, i) => {
-                      const isObject = typeof r === 'object' && r !== null;
-                      const authorName = isObject ? r.user_name : null;
-                      const authorId = isObject ? r.user_id : null;
-                      const canDelete = isAdmin || authorId === user?.id || !authorId;
-                      return (
-                        <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
-                          <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{isObject ? r.text : r}</p>
-                          {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
-                        </div>
-                      );
-                    })}
-                    {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
-                  </div>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} />
-                </Col>
-              </Row>
-            </div>
-          </Card>
-
-          {/* APPROVAL STATUS & HISTORY */}
-          <Card className={Styles.card} bordered title={<CardHeader icon="mdi:check-decagram-outline" title="APPROVAL STATUS & HISTORY" open={open.approvalStatus} onToggle={() => toggle("approvalStatus")} />}>
-            <div style={{ display: open.approvalStatus ? "block" : "none" }}>
-              <Table dataSource={history} columns={[
-                { title: "Stage", dataIndex: "stage" },
-                { title: "Pending With", dataIndex: "pending_with" },
-                { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
-                { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
-                { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
-                { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" }
-              ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
-              
-              <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
-                <Form.Item name="approvalRemarks"><TextArea placeholder="Enter final approval remarks..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
+                      }
+                    </Col>
+                  ))}
+                </Row>
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          {/* ACTION BUTTONS (BOTTOM CENTER) */}
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
-            {(hasPendingDocuments || isDisabled) && (
-              <>
-            <Button
-              size="large"
-              onClick={handleSave}
-              icon={<Icon icon="mdi:content-save-outline" />}
-              loading={loading}
-              disabled={isDocumentUploading || loading}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-            >
-              Save
-            </Button>
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => handleAction("Approved")}
-              icon={<Icon icon="mdi:check-circle" />}
-              loading={loading}
-              disabled={isDocumentUploading || loading}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
-            >
-              Approve (CS HOD)
-            </Button>
-            <Button
-              danger
-              size="large"
-              onClick={() => handleAction("Rejected")}
-              icon={<Icon icon="mdi:close-circle" />}
-              loading={loading}
-              disabled={isDocumentUploading || loading}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-            >
-              Reject
-            </Button>
-              </>
-            )}
-            <Button
-              size="large"
-              onClick={() => navigate("/")}
-              icon={<Icon icon="mdi:close" />}
-              style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </Form>
-      </Spin>
+            {/* ATTACHMENTS AND COMMENTS */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:comment-text-multiple-outline" title="ATTACHMENTS AND COMMENTS" open={open.attachments} onToggle={() => toggle("attachments")} />}>
+              <div style={{ display: open.attachments ? "block" : "none" }}>
+                <Row gutter={32}>
+                  <Col xs={24} md={12}>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
+                    <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+                      {remarks.map((r, i) => {
+                        const isObject = typeof r === 'object' && r !== null;
+                        const authorName = isObject ? r.user_name : null;
+                        const authorId = isObject ? r.user_id : null;
+                        const canDelete = isAdmin || authorId === user?.id || !authorId;
+                        return (
+                          <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
+                            {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
+                            <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{isObject ? r.text : r}</p>
+                            {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
+                          </div>
+                        );
+                      })}
+                      {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
+                    </div>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
+                    <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
+                    <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
+                    <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} />
+                  </Col>
+                </Row>
+              </div>
+            </Card>
+
+            {/* APPROVAL STATUS & HISTORY */}
+            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:check-decagram-outline" title="APPROVAL STATUS & HISTORY" open={open.approvalStatus} onToggle={() => toggle("approvalStatus")} />}>
+              <div style={{ display: open.approvalStatus ? "block" : "none" }}>
+                <Table dataSource={history} columns={[
+                  { title: "Stage", dataIndex: "stage" },
+                  { title: "Pending With", dataIndex: "pending_with" },
+                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
+                  { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
+                  { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
+                  { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" }
+                ]} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
+
+                <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
+                  <Form.Item name="approvalRemarks"><TextArea placeholder="Enter final approval remarks..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
+                </div>
+              </div>
+            </Card>
+
+            {/* ACTION BUTTONS (BOTTOM CENTER) */}
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
+              {(hasPendingDocuments || isDisabled) && (
+                <>
+                  <Button
+                    size="large"
+                    onClick={handleSave}
+                    icon={<Icon icon="mdi:content-save-outline" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="large"
+                    onClick={() => handleAction("Approved")}
+                    icon={<Icon icon="mdi:check-circle" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Approve (CS HOD)
+                  </Button>
+                  <Button
+                    danger
+                    size="large"
+                    onClick={() => handleAction("Rejected")}
+                    icon={<Icon icon="mdi:close-circle" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
+              <Button
+                size="large"
+                onClick={() => navigate("/")}
+                icon={<Icon icon="mdi:close" />}
+                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </Form>
+        </Spin>
       </UploadActivityContext.Provider>
       <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
         {previewLoading && (
@@ -754,7 +754,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
           />
         )}
       </Modal>
-      
+
       {/* Rejection Remarks Modal */}
       <Modal
         title="Reject Job"
