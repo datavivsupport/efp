@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* ── DESIGN TOKENS ────────────────────────────────────────────────────────────
+   Taken from extra_file/DMS_Liner_CrossTrade_Prototype_updated.html so every
+   page shares the same teal palette, section bands and read-only greys. */
+:root {
+  --dms-teal: #17a2b8;
+  --dms-teal-dark: #0e7c8a;
+  --dms-teal-grad: linear-gradient(135deg, #17a2b8 0%, #0e7c8a 100%);
+  --dms-teal-grad-hover: linear-gradient(135deg, #1bb3cb 0%, #108a99 100%);
+  --dms-teal-soft: #f2fafc;
+  --dms-band: #eff8ff;
+  --dms-band-border: #e1effa;
+  --dms-page: #f4f8fd;
+  --dms-line: #e7eef6;
+  --dms-border: #d9d9d9;
+  --dms-divider: #f0f0f0;
+  --dms-ink: #1f2a37;
+  --dms-ink-2: #3f4b58;
+  --dms-label: #5a6672;
+  --dms-muted: #8a97a5;
+  --dms-ro-bg: #f5f5f5;
+  --dms-radius: 6px;
+  --dms-radius-lg: 10px;
+  --dms-shadow: 0 1px 2px rgba(16, 42, 67, 0.05), 0 4px 14px rgba(16, 42, 67, 0.05);
+}
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -13,7 +38,7 @@ html, body, #root {
 }
 
 .main-container {
-  background-color: #eff8ff;
+  background-color: var(--dms-page);
   min-height: 100vh;
 }
 
@@ -79,37 +104,44 @@ html, body, #root {
 }
 
 .ant-btn-primary {
-  background: linear-gradient(to right, #003A75, #19D0C6) !important;
+  background: var(--dms-teal-grad) !important;
   border: none;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(14, 124, 138, 0.25);
   transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* hover state */
 .ant-btn-primary:hover {
   border: none !important;
-  background: linear-gradient(to right, #00458A, #1FDBD1) !important;
+  background: var(--dms-teal-grad-hover) !important;
   color: #ffffff;
 }
 
 /* active state */
 .ant-btn-primary:active {
-  background: linear-gradient(to right, #002a57, #15B8AC);
+  background: linear-gradient(135deg, #0e7c8a, #0a6470);
   color: #ffffff;
 }
 
 .ant-btn-primary:disabled,
 .ant-btn-primary[disabled] {
-  background: #cbd5e1 !important; 
+  background: #cbd5e1 !important;
   color: #94a3b8 !important;
-  border: 1px solid linear-gradient(to right, #00458A, #1FDBD1) !important;
+  border: none !important;
   box-shadow: none;
+}
+
+/* Outline buttons: grey border, teal on hover — matches the prototype's .btn-out */
+.ant-btn-default:not(:disabled):not(.ant-btn-dangerous):hover {
+  border-color: var(--dms-teal) !important;
+  color: var(--dms-teal-dark) !important;
 }
 
 
 .navTab {
-  background: linear-gradient(to right, #003A75, #19D0C6) !important;
+  background: var(--dms-teal-grad) !important;
   color: #ffffff !important;
   border: none !important;
   border-radius: 8px;
