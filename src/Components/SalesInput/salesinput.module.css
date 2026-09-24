@@ -1,29 +1,44 @@
-/* ================= MAIN CARDS ================= */
+/* Visual language follows extra_file/DMS_Liner_CrossTrade_Prototype_updated.html:
+   white card, light-blue section band, teal gradient icon, teal table header.
+   Tokens (--dms-*) are defined in src/index.css. */
 .card {
-  border-radius: 14px;
+  border-radius: var(--dms-radius-lg);
+  border: 1px solid var(--dms-line) !important;
   margin-top: 15px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: var(--dms-shadow);
+  transition: box-shadow 0.3s ease;
 }
 
 .card:hover {
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.06), 0 6px 18px rgba(16, 42, 67, 0.08);
 }
 
-/* ================= CARD HEADER ================= */
 .card :global(.ant-card-head) {
-  background: linear-gradient(to right, rgb(248, 250, 252), rgb(239, 246, 255)) !important;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 8px 16px !important;
+  background: var(--dms-band) !important;
+  border-bottom: 1px solid var(--dms-band-border);
+  border-radius: var(--dms-radius-lg) var(--dms-radius-lg) 0 0 !important;
+  padding: 4px 16px !important;
+  min-height: 52px !important;
+}
+
+.card :global(.ant-card-head-title),
+.card :global(.ant-card-head .ant-typography) {
+  color: #1e2a36;
+  font-size: 0.90625rem !important; /* 14.5px */
+  font-weight: 700;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
 }
 
 .card :global(.ant-card-body) {
-  padding: 16px 20px !important;
-  font-size: 14px !important;
+  padding: 16px 16px 12px !important;
+  font-size: 0.875rem !important; /* 14px */
 }
 
 .formLabel :global(.ant-form-item-label > label) {
-  font-size: 14px;
+  font-size: 0.78125rem; /* 12.5px */
+  color: var(--dms-label);
+  font-weight: 500;
 }
 
 /* ================= HEADER ICON ================= */
@@ -31,17 +46,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 35px;
-  height: 35px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #003a75, #19d0c6);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--dms-teal-grad);
   color: #fff;
+  flex: none;
 }
 
 /* ================= FORM SPACING ================= */
-/* Only affect forms inside this component */
 .card :global(.ant-form-item) {
   margin-bottom: 16px;
+}
+
+/* Read-only / disabled fields: flat grey like the prototype's .ro */
+.card :global(.ant-input-disabled),
+.card :global(.ant-input-affix-wrapper-disabled),
+.card :global(.ant-input-number-disabled),
+.card :global(.ant-picker-disabled),
+.card :global(.ant-select-disabled .ant-select-selector),
+.card :global(.ant-select-disabled.ant-select-outlined) {
+  background: var(--dms-ro-bg) !important;
+  border-color: var(--dms-border) !important;
+}
+
+.card :global(.ant-input:focus),
+.card :global(.ant-input-focused),
+.card :global(.ant-input-affix-wrapper-focused),
+.card :global(.ant-picker-focused),
+.card :global(.ant-input-number-focused),
+.card :global(.ant-select-focused .ant-select-selector) {
+  border-color: var(--dms-teal) !important;
+  box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.12) !important;
 }
 
 /* ================= TYPOGRAPHY ================= */
@@ -49,10 +85,84 @@
   margin-bottom: 0 !important;
 }
 
+/* ================= TAGS ================= */
+.card :global(.ant-tag) {
+  font-size: 0.6875rem; /* 11px */
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ================= TABLE ================= */
+.card :global(.ant-table-wrapper .ant-table) {
+  border: 1px solid var(--dms-line);
+  border-radius: var(--dms-radius);
+}
+
+.card :global(.ant-table-thead > tr > th) {
+  background: var(--dms-teal) !important;
+  font-size: 0.78125rem; /* 12.5px */
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ffffff !important;
+  white-space: nowrap;
+  border-bottom: none !important;
+}
+
+.card :global(.ant-table-thead > tr > th:not(:last-child)) {
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+.card :global(.ant-table-thead > tr > th::before) {
+  display: none;
+}
+
+.card :global(.ant-table-thead .anticon),
+.card :global(.ant-table-thead .ant-table-column-sorter) {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.card :global(.ant-table-tbody > tr > td) {
+  font-size: 0.8125rem; /* 13px */
+  vertical-align: top;
+  padding: 8px 12px !important;
+  color: var(--dms-ink-2);
+  border-bottom: 1px solid var(--dms-divider);
+}
+
+/* antd's hidden width-measuring row (tables with scroll.x) must stay 0 high —
+   the td padding above would otherwise show as a blank gap under the header */
+.card :global(.ant-table-tbody > tr.ant-table-measure-row > td) {
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Switch labels stay white on the teal track; the global dark-value rule in
+   index.css would otherwise be inherited by the Yes/No text */
+.card :global(.ant-switch-inner-checked),
+.card :global(.ant-switch-inner-unchecked) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Skip rows that carry the status colours from index.css (.light-red etc.) */
+.card :global(.ant-table-tbody > tr:not(.light-red):not(.light-yellow):not(.light-green):hover > td) {
+  background: #f7fbfe !important;
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
-  .card :global(.ant-card-head-title) {
-    font-size: 16px;
+  .card :global(.ant-card-head) {
+    padding: 4px 12px !important;
+    min-height: 48px !important;
+  }
+
+  .card :global(.ant-card-head-title),
+  .card :global(.ant-card-head .ant-typography) {
+    font-size: 0.84375rem !important; /* 13.5px */
+    letter-spacing: 0;
+    white-space: normal;
+    line-height: 1.3;
   }
 
   .mainhead {
@@ -67,7 +177,12 @@
 
 @media (max-width: 576px) {
   .card :global(.ant-card-body) {
-    padding: 14px !important;
+    padding: 12px !important;
+  }
+
+  .card :global(.ant-table-thead > tr > th),
+  .card :global(.ant-table-tbody > tr > td) {
+    padding: 8px 10px !important;
   }
 }
 

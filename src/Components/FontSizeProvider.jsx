@@ -45,6 +45,9 @@ const FontSizeProvider = ({ children }) => {
           token: {
             fontSize: FONT_SIZES[fontSize].antdFontSize,
             colorTextPlaceholder: "rgba(0, 0, 0, 0.45)",
+            colorPrimary: "#17a2b8",
+            colorLink: "#0e7c8a",
+            borderRadius: 6,
           },
         }}
       >

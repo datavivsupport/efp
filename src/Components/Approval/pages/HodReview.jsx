@@ -50,6 +50,7 @@ import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
+import SalesSubmittedDetails from "../components/Common/SalesSubmittedDetails";
 import Styles from "../Approval.module.css";
 
 const { TextArea } = Input;
@@ -297,6 +298,10 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = true;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
+  // Cross Trade: the Sales HOD sees the submitted details laid out as on Sales Input
+  // (SalesSubmittedDetails). The page's own detail cards stay mounted but hidden so
+  // Approve / Save send exactly the same values as before.
+  const crossTradeSalesStyle = isCrossTrade ? { display: "none" } : undefined;
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin, currentStage: "2",
@@ -498,8 +503,18 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       <Spin spinning={loading}>
         <Form layout="vertical" form={form} onFinish={onFinish} initialValues={{ containerRows: [{}], placementRows: [{}] }}>
 
+          {/* ════════ CROSS TRADE: the details exactly as the Sales Executive submitted them ════════ */}
+          {isCrossTrade && (
+            <SalesSubmittedDetails
+              jobData={jobData}
+              documents={executiveDocs.length > 0
+                ? <FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} />
+                : null}
+            />
+          )}
+
           {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
-          <Card
+          <Card style={crossTradeSalesStyle}
             className={Styles.card} bordered
             title={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
@@ -533,7 +548,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ OTHERS JOB DETAILS ════════ */}
           {(isOthers || isMasterMode) && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="OTHERS JOB DETAILS" open={open.others} onToggle={() => toggle("others")} />}>
+            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="OTHERS JOB DETAILS" open={open.others} onToggle={() => toggle("others")} />}>
               <div style={{ display: open.others ? "block" : "none" }}>
                 {showDocumentUploads && (
                   <>
@@ -559,7 +574,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ CONTAINER DETAILS ════════ */}
           {!isOthers && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="octicon:container-24" title="CONTAINER DETAILS" open={open.container} onToggle={() => toggle("container")} />}>
+            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="octicon:container-24" title="CONTAINER DETAILS" open={open.container} onToggle={() => toggle("container")} />}>
               <div style={{ display: open.container ? "block" : "none" }}>
                 <Form.List name="containerRows">
                   {(fields, { add, remove }) => (
@@ -597,7 +612,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ OTHER DETAILS (POL/POD etc) ════════ */}
           {(!isOthers || isMasterMode) && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
+            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
               <div style={{ display: open.otherDetails ? "block" : "none" }}>
                 <Row gutter={16}>
                   {!isOthers && (
@@ -612,8 +627,6 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                </Row>
-                <Row gutter={16}>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>
                 <Row gutter={16}>
@@ -628,7 +641,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
           {(!isOthers || isMasterMode) && showPlacement && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (

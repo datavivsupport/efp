@@ -32,8 +32,8 @@
 }
 
 .selected {
-  border-color: #19d0c6;
-  box-shadow: 0 0 0 2px rgba(25, 208, 198, 0.35), 0 4px 20px rgba(0, 0, 0, 0.05);
+  border-color: var(--dms-teal);
+  box-shadow: 0 0 0 2px rgba(23, 162, 184, 0.35), 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .card::after {

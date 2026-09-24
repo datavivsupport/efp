@@ -1,11 +1,4 @@
-/**
- * Validates form values before performing an "Approved" action.
- *
- * Returns an error string if validation fails, or null if everything is OK.
- *
- * @param {object} values        - Antd form values
- * @param {object} ctx           - context flags & file arrays
- */
+ 
 export const validateApprovalAction = (values, ctx) => {
   const {
     stage,
@@ -20,9 +13,12 @@ export const validateApprovalAction = (values, ctx) => {
     haulageCostFiles,
     haulierNoteFiles,
     loadListFiles,
+  
+    isCrossTrade = false,
+    isReleaseOrderRequired = true,
   } = ctx;
 
-  // ── Stage 2: CS must fill booking + upload RO ──────────────────────────────
+   
   if (stage === "2" && isCS) {
     const missing = [];
     if (!values.afsys_job_no)       missing.push("AFSYS Job No.");
@@ -34,7 +30,7 @@ export const validateApprovalAction = (values, ctx) => {
     if (!values.booking_ref_no)     missing.push("Booking Reference No.");
     if (!values.ll_cut_off_datetime) missing.push("Load List Cut-Off Date & Time");
     if (!values.si_cut_off_date)    missing.push("SI Cut-Off Date & Time");
-    if (!releaseOrderFiles.length)  missing.push("Release Order");
+    if (!releaseOrderFiles.length && !(isCrossTrade && !isReleaseOrderRequired)) missing.push("Release Order");
     if (missing.length) {
       return `Please fill/upload required fields: ${missing.join(", ")}`;
     }

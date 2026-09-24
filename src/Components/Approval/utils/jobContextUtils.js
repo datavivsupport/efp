@@ -1,10 +1,4 @@
-/**
- * ─── JOB TYPE CONFIG ─────────────────────────────────────────────────────────
- * Add new job types here. Each key maps to the substring matched against
- * jobData.job_type (case-insensitive). To add a new job type, add an entry
- * and then use the returned flag in Approval.jsx.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+
 const JOB_TYPE_CONFIG = {
   LINER:       ["LINER"],
   CROSS_TRADE: ["CROSS_TRADE", "CROSS TRADE"],
@@ -15,18 +9,40 @@ const JOB_TYPE_CONFIG = {
 const matchJobType = (jobTypeUpper, keywords) =>
   keywords.some((kw) => jobTypeUpper.includes(kw));
 
+
+export const isSalesOwnerOfJob = (jobData, user) => {
+  if (!jobData || !user) return false;
+  const creatorId =
+    jobData.created_by_user ??
+    (jobData.approval_history || []).find((h) => h.stage === "Sales Created")?.updated_by_user;
+  if (creatorId != null && user.id != null && String(creatorId) === String(user.id)) return true;
+  const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim().toLowerCase();
+  if (!fullName) return false;
+  // List rows (dashboard) only carry created_by_name, so match that as well
+  return [jobData.name_of_executive, jobData.created_by_name]
+    .some((n) => String(n || "").trim().toLowerCase() === fullName);
+};
+
+/**
+ * True when the viewer is this job's named Sales HOD (matched by full name, the same way
+ * resolveApprovalRoute identifies the Sales HOD).
+ */
+export const isSalesHodOfJob = (jobData, user) => {
+  const fullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim().toLowerCase();
+  return !!fullName && String(jobData?.sales_hod || "").trim().toLowerCase() === fullName;
+};
+
+/** True for a Cross Trade job — for pages that don't build the full job context. */
+export const isCrossTradeJob = (jobData) =>
+  matchJobType((jobData?.job_type || "").toUpperCase(), JOB_TYPE_CONFIG.CROSS_TRADE);
+
 /**
  * ─── TERMINAL STATUSES ───────────────────────────────────────────────────────
  * Statuses that mean the job is closed and no further action is possible.
  */
 export const TERMINAL_STATUSES = ["rejected", "REJECTED-CLOSED", "Completed", "completed"];
 
-/**
- * True once the job has run through every desk. A finished job comes back from
- * the sales-input detail API with pending_with "Completed" (status "approved",
- * current_stage "9" on Forwarding). "WORKFLOW COMPLETED" — the Export Report's
- * filter value — and a "completed" status are accepted too.
- */
+
 const COMPLETED_PENDING_WITH = ["COMPLETED", "WORKFLOW COMPLETED"];
 
 export const isWorkflowCompleted = (jobData) =>
@@ -36,20 +52,12 @@ export const isWorkflowCompleted = (jobData) =>
 /** Stage as a number — "4B" counts as 4. */
 const stageNumber = (jobData) => parseInt(jobData?.current_stage, 10) || 0;
 
-/**
- * Once a desk has submitted, the mandatory documents it handed over can no
- * longer be deleted by that desk (new uploads are still allowed).
- */
+
 
 /** CS has submitted LPO / Invoice to the CS HOD — the job has left stage 4. */
 export const isCsDocumentsSubmitted = (jobData) =>
   stageNumber(jobData) >= 5 || isWorkflowCompleted(jobData);
 
-/**
- * CNF has submitted Haulier Note / Load List: on stage 2 that is flagged by
- * is_cnf_loadlist_uploaded (as CnfUpdate's cnfAlreadySubmitted); from stage 3
- * the job moves on to stage 4.
- */
 export const isCnfSubmitted = (jobData) =>
   (stageNumber(jobData) === 2 && !!jobData?.is_cnf_loadlist_uploaded) ||
   stageNumber(jobData) >= 4 ||

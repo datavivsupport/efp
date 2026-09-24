@@ -21,6 +21,9 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
+import { isCrossTradeJob } from "../utils/jobContextUtils";
+import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -192,7 +195,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState({
-    export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true
+    export: true, container: true, otherDetails: true, placement: true, booking: true, cnfDetails: true, documents: true, attachments: true, approvalStatus: true, crossTradeDocs: true
   });
 
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -245,6 +248,29 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   }, []);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+
+  // Cross Trade: the CS HOD sees the documents exactly as the CS team set them up
+  // (same Cross Trade Documents section, read-only). Display only — Approve / Save
+  // don't read any of it, so their payloads are unchanged.
+  const isCrossTrade = isCrossTradeJob(initialJob);
+  const ctFiles = (k) => docs?.[k] || [];
+  // A flag the backend doesn't return yet falls back to "Yes if a file was uploaded"
+  const ctFlag = (value, files, fallback) => (value == null ? (files.length > 0 || fallback) : normalizeBoolean(value));
+  const ctRO = ctFlag(initialJob?.is_release_order_required, ctFiles("releaseOrderFiles"), false);
+  const ctBOC = ctFlag(initialJob?.is_boc_required, ctFiles("bocFiles"), false);
+  const ctLPO = normalizeBoolean(initialJob?.is_lpo_required, true);
+  const ctInvoice = normalizeBoolean(initialJob?.is_invoice_required, true);
+  const ctPreAlert = ctFlag(initialJob?.is_pre_alert_required, ctFiles("preAlertFiles"), false);
+  const ctCsHod = ctLPO || ctInvoice || ctFiles("lpoFiles").length > 0 || ctFiles("invoiceFiles").length > 0;
+  const ctNone = <span className={Styles.roEmpty}>No document uploaded.</span>;
+  const ctList = (k, extra = {}) => ctFiles(k).length
+    ? <FileChipList files={ctFiles(k)} onPreview={(i) => openPreview(ctFiles(k), i)} user={user} isAdmin={isAdmin} disabled {...extra} />
+    : ctNone;
+  const ctSlot = (label, required, list) => (
+    <DocSlot label={label} rule={required ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={required} /> }}>
+      {list}
+    </DocSlot>
+  );
   // Keep backend order as-is
   const history = initialJob?.approval_history || [];
   const ad = initialJob?.approval_details || {};
@@ -535,13 +561,13 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  {!isCrossTrade && <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>}
                 </Row>
               </div>
             </Card>
 
-            {/* PLACEMENT DETAILS */}
-            <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            {/* PLACEMENT DETAILS — none for Cross Trade */}
+            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields) => fields.map(({ key, name, ...restField }) => (
@@ -556,7 +582,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   ))}
                 </Form.List>
               </div>
-            </Card>
+            </Card>}
 
             {/* BOOKING DETAILS (TECHNICAL DOCUMENTS) */}
             <Card className={Styles.card} bordered title={<CardHeader icon="fluent:box-24-filled" title="BOOKING DETAILS" open={open.booking} onToggle={() => toggle("booking")} />}>
@@ -575,15 +601,15 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
                 </Row>
-                <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+                {!isCrossTrade && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={docs?.bocFiles || []} onPreview={(i) => openPreview(docs?.bocFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                </Row>
+                </Row>}
               </div>
             </Card>
 
-            {/* CNF DETAILS */}
-            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            {/* CNF DETAILS — no CNF stage in Cross Trade */}
+            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
               <div style={{ display: open.cnfDetails ? "block" : "none" }}>
                 <Row gutter={[16, 16]}>
                   <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
@@ -601,10 +627,30 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
                 </Row>
               </div>
-            </Card>
+            </Card>}
 
-            {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) */}
-            <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
+            {/* CROSS TRADE DOCUMENTS — as set up by the CS team (read-only) */}
+            {isCrossTrade && (
+              <CrossTradeDocuments open={open.crossTradeDocs} onToggle={() => toggle("crossTradeDocs")}>
+                <Gate title="Release Order & BOC">
+                  {ctSlot("Release Order(s)", ctRO, ctList("releaseOrderFiles"))}
+                  {ctSlot("BOC Attachment", ctBOC, ctList("bocFiles"))}
+                </Gate>
+                <Gate title="LPO, Invoice & CS HOD" description="CS HOD approval is required when LPO or Invoice is required (or uploaded), and not needed when both are No.">
+                  {ctSlot("LPO", ctLPO, ctList("lpoFiles", { additionalFiles: getAdditionalDocs(ctFiles("lpoFiles")), showStatus: true }))}
+                  {ctSlot("Invoice", ctInvoice, ctList("invoiceFiles", { additionalFiles: getAdditionalDocs(ctFiles("invoiceFiles")), showStatus: true }))}
+                  {ctSlot("CS HOD Approval", ctCsHod, ctCsHod
+                    ? <Form.Item name="cs_hod" noStyle><Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: "100%" }} /></Form.Item>
+                    : <span className={Styles.roEmpty}>CS HOD approval not required.</span>)}
+                  {ctSlot("Pre-Alert", ctPreAlert, ctList("preAlertFiles"))}
+                  <DocSlot label="HBL">{ctList("hblFiles")}</DocSlot>
+                  <DocSlot label="HCS">{ctList("hcsFiles")}</DocSlot>
+                </Gate>
+              </CrossTradeDocuments>
+            )}
+
+            {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) — Cross Trade uses the section above */}
+            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
               <div style={{ display: open.documents ? "block" : "none" }}>
                 <Row gutter={[24, 16]}>
                   <Col xs={24} md={8}>
@@ -633,7 +679,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   ))}
                 </Row>
               </div>
-            </Card>
+            </Card>}
 
             {/* ATTACHMENTS AND COMMENTS */}
             <Card className={Styles.card} bordered title={<CardHeader icon="mdi:comment-text-multiple-outline" title="ATTACHMENTS AND COMMENTS" open={open.attachments} onToggle={() => toggle("attachments")} />}>

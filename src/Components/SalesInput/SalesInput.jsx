@@ -20,6 +20,7 @@ import {
   Timeline,
   Modal,
   Spin,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -45,6 +46,7 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
+import { isSalesOwnerOfJob } from "../Approval/utils/jobContextUtils";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -65,7 +67,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
             <Space>
               <ScrollSafeTooltip title="Preview">
-                <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
+                <Button icon={<EyeOutlined/>} type="link" size="small" disabled={false} onClick={() => onPreview(i)}/>
               </ScrollSafeTooltip>
               {!disabled && (
                 <ScrollSafeTooltip title="Delete">
@@ -272,7 +274,7 @@ const DocUploadField = ({
         {(!disabled || restrictionMessage) && (
           <Space size={8}>
             <Upload multiple showUploadList={false} accept=".pdf" beforeUpload={handleBeforeUpload}>
-              <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading} loading={uploading}>
+              <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading || undefined} loading={uploading}>
                 {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
               </Button>
             </Upload>
@@ -378,6 +380,7 @@ const SalesInput = () => {
   const isOthers = jobType?.toUpperCase() === "OTHERS";
   const isLiner = jobType?.toUpperCase() === "LINER";
   const isForwarding = jobType?.toUpperCase() === "FORWARDING";
+  const isCrossTrade = jobType?.toUpperCase() === "CROSS TRADE";
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
 
@@ -390,6 +393,11 @@ const SalesInput = () => {
   });
   const [approvalHistory, setApprovalHistory] = useState([]);
   const [instanceStatus, setInstanceStatus] = useState("draft");
+  // View mode on a CS-rejected job: its Sales Executive edits the form and resubmits, or rejects it
+  const [createdByUser, setCreatedByUser] = useState(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectRemarks, setRejectRemarks] = useState("");
+  const [rejectLoading, setRejectLoading] = useState(false);
   const [freightManifestFiles, setFreightManifestFiles] = useState([]);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -442,7 +450,20 @@ const SalesInput = () => {
 
   // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
-  const isReadOnly = false; // Removed role and terminal restrictions for SalesInput page
+  // PRD Section 3: no role/terminal restrictions while creating or editing.
+  // `?view=1` opens an existing job read-only, laid out exactly as it was filled in
+  // (used by the dashboard "View" for Cross Trade jobs).
+  const isViewMode = searchParams.get("view") === "1";
+  // CS rejected the job back to Sales: its Sales Executive may resubmit (edit + submit) or reject it
+  // Cross Trade only
+  const isCsRejected = isCrossTrade && instanceStatus === "CS-REJECTED";
+  const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
+    { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
+    user,
+  );
+  const lastRejection = [...approvalHistory].reverse().find((h) => /reject/i.test(h?.status || ""));
+  // A CS-rejected job opens editable for its Sales Executive; every other view stays read-only
+  const isReadOnly = isViewMode && !canActOnRejection;
 
   const addCommodity = () => {
     if (commodityInput.trim() && !commodities.includes(commodityInput.trim())) {
@@ -564,6 +585,7 @@ const SalesInput = () => {
           });
           setApprovalHistory(data.approval_history || []);
           setInstanceStatus(data.status);
+          setCreatedByUser(data.created_by_user ?? null);
 
           // Load documents into state
           const docs = data.documents || [];
@@ -909,11 +931,32 @@ const SalesInput = () => {
 
   const navigate = useNavigate();
 
+  // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
+  const handleConfirmReject = async () => {
+    if (!rejectRemarks.trim()) { message.warning("Please enter rejection remarks"); return; }
+    setRejectLoading(true);
+    try {
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, { remarks: rejectRemarks.trim() });
+      if (res.data?.status === "success") {
+        message.success(res.data?.message || "Job rejected successfully");
+        setRejectModalOpen(false);
+        navigate("/dashboard");
+      } else {
+        message.error(res.data?.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      setRejectLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
       <Form
         layout="vertical"
         form={form}
+        disabled={isReadOnly}
         onFinish={onFinish}
         onFinishFailed={handleFinishFailed}
         initialValues={{
@@ -922,6 +965,21 @@ const SalesInput = () => {
         }}
       >
         <>
+          {isViewMode && isCsRejected && (
+            <Alert
+              type="error"
+              showIcon
+              style={{ marginBottom: 12 }}
+              message="Rejected by CS"
+              description={
+                <>
+                  {lastRejection?.remarks ? <div>Remarks: {lastRejection.remarks}</div> : <div>This job was returned by the CS team.</div>}
+                  {canActOnRejection && <div style={{ marginTop: 4 }}>Correct the details below and press Resubmit, or Reject the job.</div>}
+                </>
+              }
+            />
+          )}
+
           {/* EXPORT DETAILS / HEADER */}
           <Card
             className={Styles.card}
@@ -1594,27 +1652,29 @@ const SalesInput = () => {
                       DOCUMENTATION
                     </Checkbox>
                   </Col>
-                  <Col xs={24} md={6}>
-                    <Checkbox
-                      className={Styles.checkboxSpaced}
-                      disabled={isReadOnly}
-                      checked={additionalService.showTransportation}
-                      onChange={(e) => {
-                        setAdditionalService((prev) => ({
-                          ...prev,
-                          showTransportation: e.target.checked,
-                        }));
-                        if (e.target.checked) {
-                          const current = form.getFieldValue("transportationRows") || [];
-                          if (current.length === 0) {
-                            form.setFieldsValue({ transportationRows: [{}] });
+                  {!isCrossTrade && (
+                    <Col xs={24} md={6}>
+                      <Checkbox
+                        className={Styles.checkboxSpaced}
+                        disabled={isReadOnly}
+                        checked={additionalService.showTransportation}
+                        onChange={(e) => {
+                          setAdditionalService((prev) => ({
+                            ...prev,
+                            showTransportation: e.target.checked,
+                          }));
+                          if (e.target.checked) {
+                            const current = form.getFieldValue("transportationRows") || [];
+                            if (current.length === 0) {
+                              form.setFieldsValue({ transportationRows: [{}] });
+                            }
                           }
-                        }
-                      }}
-                    >
-                      TRANSPORTATION
-                    </Checkbox>
-                  </Col>
+                        }}
+                      >
+                        TRANSPORTATION
+                      </Checkbox>
+                    </Col>
+                  )}
                 </Row>
 
 
@@ -1663,7 +1723,7 @@ const SalesInput = () => {
               </div>
             </Card>
           )}
-          {additionalService.showTransportation && !isOthers && (
+          {additionalService.showTransportation && !isOthers && !isCrossTrade && (
             <Card
               className={Styles.card}
               bordered
@@ -1930,7 +1990,27 @@ const SalesInput = () => {
             </div>
           </Card>
 
-          {!isReadOnly && (
+          {canActOnRejection && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", width: "100%", marginTop: "1rem" }}>
+              {/* Same submit call as a new job (PUT with status "submitted") */}
+              <Button
+                icon={<Icon icon="mdi:send-check" />}
+                type="primary"
+                onClick={() => form.validateFields().then(values => onFinish(values, "submitted")).catch(handleFinishFailed)}
+                loading={loading}
+              >
+                Resubmit
+              </Button>
+              <Button danger icon={<Icon icon="mdi:close-circle" />} onClick={() => { setRejectRemarks(""); setRejectModalOpen(true); }} disabled={loading}>
+                Reject
+              </Button>
+              {/* Discards unsaved edits */}
+              <Button icon={<Icon icon="mdi:refresh" />} onClick={() => window.location.reload()} disabled={loading}>
+                Reset
+              </Button>
+            </div>
+          )}
+          {!isReadOnly && !canActOnRejection && (
             <div
               style={{
                 display: "flex",
@@ -1972,10 +2052,31 @@ const SalesInput = () => {
               <Typography.Text type="secondary" italic>
                 This job is currently in the approval workflow and is read-only.
               </Typography.Text>
+              {/* Editing and workflow actions stay on the approval page, unchanged */}
+              {id && !isTerminal && !canActOnRejection && (
+                <div style={{ marginTop: 12 }}>
+                  <Button type="primary" disabled={false} icon={<Icon icon="mdi:open-in-new" />} onClick={() => navigate(`/approval?id=${id}`)}>
+                    Open workflow page
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </>
       </Form>
+
+      <Modal
+        title="Reject Job"
+        open={rejectModalOpen}
+        onCancel={() => setRejectModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectModalOpen(false)}>Cancel</Button>,
+          <Button key="reject" danger type="primary" loading={rejectLoading} onClick={handleConfirmReject}>Confirm Rejection</Button>,
+        ]}
+      >
+        <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+        <Input.TextArea rows={4} value={rejectRemarks} onChange={(e) => setRejectRemarks(e.target.value)} placeholder="Enter rejection reason" />
+      </Modal>
 
       {/* ════════ PREVIEW MODAL ════════ */}
       {/* <Modal

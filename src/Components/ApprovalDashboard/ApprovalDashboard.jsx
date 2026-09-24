@@ -11,6 +11,8 @@ import apiClient from "../../api/apiclient";
 import dayjs from "../../dayjs-config";
 
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
+import { computeUserRoles } from "../Approval/utils/roleUtils";
+import { isCrossTradeJob, isSalesOwnerOfJob } from "../Approval/utils/jobContextUtils";
 
 const { RangePicker } = DatePicker;
 
@@ -905,7 +907,15 @@ useEffect(() => {
                 } else {
                   console.log(record)
                   const path = resolveApprovalRoute(record, user);
-                  url = path ? `${window.location.origin}${path}` : `${window.location.origin}/approval?id=${record.id}`;
+                  const r = computeUserRoles(user);
+                  // Cross Trade, Sales Executive: show the job exactly as it was filled in (read-only
+                  // Sales Input). Other teams and other job types keep their existing routing.
+                  const salesViewsCrossTrade = !path && isCrossTradeJob(record) &&
+                    (isSalesOwnerOfJob(record, user) ||
+                      (r.isSalesExecutive && !r.isCS && !r.isCNF && !r.isAccountsTeam && !r.isAdmin));
+                  url = salesViewsCrossTrade
+                    ? `${window.location.origin}/sales-input?id=${record.id}&view=1`
+                    : path ? `${window.location.origin}${path}` : `${window.location.origin}/approval?id=${record.id}`;
                 }
                 window.open(url, "_blank", "noopener,noreferrer");
               }}

@@ -21,11 +21,7 @@ export const buildApprovalDetails = (values) => ({
   is_payment_processing_required: values.is_payment_processing_required,
 });
 
-/**
- * Maps the Placement Details form rows onto the API's transportation_rows shape.
- * Shared by the full payload below and by pages that send the rows on their own
- * request shape (CsDocuments).
- */
+ 
 export const buildTransportationRows = (values) =>
   values.placementRows?.map((r) => ({
     id: r.id,
@@ -99,6 +95,7 @@ export const buildCommonPayload = (values, fileState, extraState) => {
     is_invoice_required: values.is_invoice_required,
     is_lpo_invoice_required: values.is_lpo_invoice_required,
     is_release_order_required: values.is_release_order_required,
+    is_boc_required: values.is_boc_required,
     is_payment_processing_required: values.is_payment_processing_required,
     is_payment_docs_required: values.is_payment_docs_required,
     is_load_list_required: values.is_load_list_required,
