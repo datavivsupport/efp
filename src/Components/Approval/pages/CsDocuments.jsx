@@ -339,9 +339,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const csHodRequired = !isCrossTrade || csHodForced;
   // Cross Trade: Release Order / BOC Yes/No (set on the CS Update stage) — uploads are off when No
   const isROReqCT = normalizeBoolean(initialJob?.is_release_order_required);
-  const isBOCReqCT = normalizeBoolean(initialJob?.is_boc_required);
+  // Cross Trade BOC Yes/No — the same answer as on CS Update, editable here too so CS can
+  // switch it to Yes and upload the BOC any time after submitting. Missing value = Yes.
+  const isBOCReqCT = normalizeBoolean(Form.useWatch("is_boc_required", form), initialJob?.is_boc_required ?? true);
   // A Yes can't be switched back to No while that document still has files — delete them first.
-  const YES_LOCKED_HINT = "To change this to No, delete the uploaded document(s) first.";
+  const YES_LOCKED_HINT = "Delete the file first to choose No.";
 
   useEffect(() => {
     if (isCrossTrade) form.setFieldsValue({ is_cs_hod_required: csHodForced });
@@ -395,6 +397,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       is_lpo_required: normalizeBoolean(initialJob.is_lpo_required, true),
       is_invoice_required: normalizeBoolean(initialJob.is_invoice_required, true),
       is_pre_alert_required: normalizeBoolean(initialJob.is_pre_alert_required, true),
+      is_boc_required: normalizeBoolean(initialJob.is_boc_required, true),
       is_cs_hod_required: normalizeBoolean(initialJob.is_cs_hod_required, true),
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
@@ -498,6 +501,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     is_invoice_required: invoiceToggle,
     is_cs_hod_required: csHodForced,
     is_pre_alert_required: preAlertToggle,
+    is_boc_required: isBOCReqCT,
   } : {});
 
   const handleAction = async (action) => {
@@ -523,6 +527,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
       if (csHodRequired && !csHodValue) missing.push("CS HOD");
+      // Cross Trade: Pre-Alert answered Yes must be uploaded before submitting
+      if (isCrossTrade && preAlertToggle && !preAlertFiles.length) missing.push("Pre-Alert");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
 
@@ -812,11 +818,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
             {isCrossTrade && (
               <CrossTradeDocuments open={open.crossTradeDocs} onToggle={() => toggle("crossTradeDocs")}>
                 {/* Release Order / BOC Yes/No are set on the CS Update stage; shown here for reference */}
-                <Gate title="Release Order & BOC" description="Required Yes/No was set on the CS Update stage.">
-                  <DocSlot label="Release Order(s)" rule={isROReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }} hint={!isROReqCT ? "Answered No on the CS Update stage — Release Order upload is turned off." : null}>
+                <Gate title="Release Order & BOC" description="Release Order Yes/No is set on the CS Update stage. BOC can be switched to Yes and uploaded any time.">
+                  <DocSlot label="Release Order(s)" rule={isROReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }} hint={!isROReqCT ? "Not needed." : null}>
                     <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
                   </DocSlot>
-                  <DocSlot label="BOC Attachment" rule={isBOCReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={isBOCReqCT} /> }} hint={!isBOCReqCT ? "Answered No on the CS Update stage — BOC upload is turned off." : null}>
+                  <DocSlot label="BOC Attachment" rule={isBOCReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" hasFiles={bocFiles.length > 0} /> }} hint={isBOCReqCT && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReqCT ? "Not needed. Choose Yes to upload." : null}>
                     <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
                   </DocSlot>
                 </Gate>
@@ -825,7 +831,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     label="LPO"
                     rule={lpoRequired ? "required" : "notRequired"}
                     toggle={{ label: "Required?", node: <RequirementSwitch name="is_lpo_required" hasFiles={lpoFiles.length > 0} /> }}
-                    hint={!lpoRequired ? "Answered No — LPO is not required." : !lpoFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
+                    hint={!lpoRequired ? "Not needed. Choose Yes to upload." : !lpoFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
                     warn={lpoRequired && !lpoFiles.length}
                   >
                     <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus disabled={!lpoRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} />
@@ -834,7 +840,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     label="Invoice"
                     rule={invoiceRequired ? "required" : "notRequired"}
                     toggle={{ label: "Required?", node: <RequirementSwitch name="is_invoice_required" hasFiles={invoiceFiles.length > 0} /> }}
-                    hint={!invoiceRequired ? "Answered No — Invoice is not required." : !invoiceFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
+                    hint={!invoiceRequired ? "Not needed. Choose Yes to upload." : !invoiceFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
                     warn={invoiceRequired && !invoiceFiles.length}
                   >
                     <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus disabled={!invoiceRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} />
@@ -854,7 +860,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <DocSlot
                     label="Pre-Alert"
                     toggle={{ label: "Required?", node: <RequirementSwitch name="is_pre_alert_required" hasFiles={preAlertFiles.length > 0} /> }}
-                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Answered No — Pre-Alert upload is turned off." : null}
+                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Must be uploaded before you submit."}
+                    warn={preAlertToggle && !preAlertFiles.length}
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>

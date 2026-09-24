@@ -328,7 +328,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const releaseOrderRequirementMet = isROReq || (!isLiner && !isExtended) || isMasterMode;
   
   // Cross Trade: the Release Order / BOC uploads follow their Yes/No toggles for every user
-  const isBOCReq = normalizeBoolean(isBOCReqForm, jobData?.is_boc_required);
+  // Cross Trade: the backend doesn't return is_boc_required yet, so a missing value means Yes
+  // (otherwise the upload would be switched off on every reload). Other job types unchanged.
+  const isBOCReq = normalizeBoolean(isBOCReqForm, isCrossTrade ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
   const crossTradeRODisabled = isCrossTrade && !isROReq;
   const crossTradeBOCDisabled = isCrossTrade && !isBOCReq;
 
@@ -344,7 +346,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const csHodForcedCT = isLpoReqCT || isInvoiceReqCT || lpoFiles.length > 0 || invoiceFiles.length > 0;
   const csHodRequiredCT = csHodForcedCT;
   // A Yes can't be switched back to No while that document still has files — delete them first.
-  const YES_LOCKED_HINT = "To change this to No, delete the uploaded document(s) first.";
+  const YES_LOCKED_HINT = "Delete the file first to choose No.";
 
   const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled;
   const releaseOrderRestrictionMessage = (() => {
@@ -354,6 +356,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     return null;
   })();
   const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || crossTradeBOCDisabled;
+  // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
+  // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
+  const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled;
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
     if (crossTradeBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
@@ -404,6 +409,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         is_lpo_required: normalizeBoolean(jobData.is_lpo_required, true),
         is_invoice_required: normalizeBoolean(jobData.is_invoice_required, true),
         is_pre_alert_required: normalizeBoolean(jobData.is_pre_alert_required, true),
+        is_boc_required: normalizeBoolean(jobData.is_boc_required, true),
       });
     }
     if (jobData.documents) {
@@ -831,7 +837,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   label="Release Order(s)"
                   rule={isROReq ? "required" : "notRequired"}
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_release_order_required" disabled={isRequirementSelectorLocked} hasFiles={releaseOrderFiles.length > 0} /> }}
-                  hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Answered No — Release Order upload is turned off." : null}
+                  hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Not needed. Choose Yes to upload." : null}
                 >
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
@@ -841,10 +847,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   label="BOC Attachment"
                   rule={isBOCReq ? "required" : "notRequired"}
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" disabled={isRequirementSelectorLocked} hasFiles={bocFiles.length > 0} /> }}
-                  hint={isBOCReq && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReq ? "Answered No — BOC upload is turned off." : null}
+                  hint={isBOCReq && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReq ? "Not needed. Choose Yes to upload." : null}
                 >
                   {(showDocumentUploads || showROBOCForCS)
-                    ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                    ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={crossTradeBocUploadDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
               </Gate>
@@ -853,7 +859,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   label="LPO"
                   rule={isLpoReqCT ? "required" : "notRequired"}
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_lpo_required" disabled={isRequirementSelectorLocked} hasFiles={lpoFiles.length > 0} /> }}
-                  hint={isLpoReqCT && lpoFiles.length > 0 ? YES_LOCKED_HINT : !isLpoReqCT ? "Answered No — LPO is not required." : null}
+                  hint={isLpoReqCT && lpoFiles.length > 0 ? YES_LOCKED_HINT : !isLpoReqCT ? "Not needed. Choose Yes to upload." : null}
                 >
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={baseLocked || !isLpoReqCT} restrictionMessage={!isLpoReqCT ? "LPO upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus />
@@ -863,7 +869,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   label="Invoice"
                   rule={isInvoiceReqCT ? "required" : "notRequired"}
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_invoice_required" disabled={isRequirementSelectorLocked} hasFiles={invoiceFiles.length > 0} /> }}
-                  hint={isInvoiceReqCT && invoiceFiles.length > 0 ? YES_LOCKED_HINT : !isInvoiceReqCT ? "Answered No — Invoice is not required." : null}
+                  hint={isInvoiceReqCT && invoiceFiles.length > 0 ? YES_LOCKED_HINT : !isInvoiceReqCT ? "Not needed. Choose Yes to upload." : null}
                 >
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={baseLocked || !isInvoiceReqCT} restrictionMessage={!isInvoiceReqCT ? "Invoice upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus />
@@ -887,7 +893,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <DocSlot
                   label="Pre-Alert"
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_pre_alert_required" disabled={isRequirementSelectorLocked} hasFiles={preAlertFiles.length > 0} /> }}
-                  hint={isPreAlertReqCT && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !isPreAlertReqCT ? "Answered No — Pre-Alert upload is turned off." : null}
+                  hint={isPreAlertReqCT && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !isPreAlertReqCT ? "Not needed. Choose Yes to upload." : null}
                 >
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={baseLocked || !isPreAlertReqCT} restrictionMessage={!isPreAlertReqCT ? "Pre-Alert upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />

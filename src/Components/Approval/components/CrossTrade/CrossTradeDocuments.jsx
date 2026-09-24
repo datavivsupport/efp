@@ -15,7 +15,7 @@ const GuardedSwitch = ({ checked, onChange, hasFiles, disabled, ...rest }) => (
     disabled={disabled}
     onChange={(next, e) => {
       if (!next && checked && hasFiles) {
-        message.warning("Delete the uploaded document(s) first, then you can change this to No.");
+        message.warning("Delete the file first to choose No.");
         return;
       }
       onChange?.(next, e);

@@ -113,7 +113,9 @@ const DocUploadField = ({
   user,
   isAdmin,
   onAutoSave,
-  isOthers
+  isOthers,
+  // false = any file type, no "PDF only" note (Cross Trade attachments)
+  pdfOnly = true
 }) => {
   const [uploading, setUploading] = useState(false);
   const pendingCountRef = useRef(0);
@@ -128,7 +130,7 @@ const DocUploadField = ({
       return false;
     }
     const isPdf = file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
+    if (pdfOnly && !isPdf) {
       message.error(`${file.name} is not a PDF. Only .pdf files are allowed.`);
       return false;
     }
@@ -273,14 +275,16 @@ const DocUploadField = ({
       <div>
         {(!disabled || restrictionMessage) && (
           <Space size={8}>
-            <Upload multiple showUploadList={false} accept=".pdf" beforeUpload={handleBeforeUpload}>
+            <Upload multiple showUploadList={false} accept={pdfOnly ? ".pdf" : undefined} beforeUpload={handleBeforeUpload}>
               <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading || undefined} loading={uploading}>
                 {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
               </Button>
             </Upload>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              PDF only
-            </Typography.Text>
+            {pdfOnly && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                PDF only
+              </Typography.Text>
+            )}
           </Space>
         )}
 
@@ -932,8 +936,33 @@ const SalesInput = () => {
   const navigate = useNavigate();
 
   // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
-  const handleConfirmReject = async () => {
+  // Resubmit a CS-rejected job: check the form first, then ask for confirmation
+  const handleResubmit = () => {
+    form.validateFields().then((values) => {
+      Modal.confirm({
+        title: "Resubmit this job?",
+        content: "The job will be sent again for approval with the details you entered.",
+        okText: "Yes, resubmit",
+        cancelText: "Cancel",
+        onOk: () => onFinish(values, "submitted"),
+      });
+    }).catch(handleFinishFailed);
+  };
+
+  // Reject: remarks are entered in the Reject modal, then confirmed here before sending
+  const handleConfirmReject = () => {
     if (!rejectRemarks.trim()) { message.warning("Please enter rejection remarks"); return; }
+    Modal.confirm({
+      title: "Reject this job?",
+      content: "This cannot be undone.",
+      okText: "Yes, reject",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: sendReject,
+    });
+  };
+
+  const sendReject = async () => {
     setRejectLoading(true);
     try {
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, { remarks: rejectRemarks.trim() });
@@ -1985,6 +2014,7 @@ const SalesInput = () => {
                   docType="Sales Executive"
                   user={user}
                   isAdmin={isAdmin}
+                  pdfOnly={!isCrossTrade}
                 />
               </div>
             </div>
@@ -1996,7 +2026,7 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="mdi:send-check" />}
                 type="primary"
-                onClick={() => form.validateFields().then(values => onFinish(values, "submitted")).catch(handleFinishFailed)}
+                onClick={handleResubmit}
                 loading={loading}
               >
                 Resubmit
