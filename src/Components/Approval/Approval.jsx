@@ -1119,6 +1119,15 @@ const Approval = () => {
                       <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col> */}
+                  {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
+                      (not a form field, so Save / Submit send the same values as before) */}
+                  {isCrossTrade && (
+                    <Col xs={24} md={12}>
+                      <Form.Item className={Styles.formLabel} label="Remarks">
+                        <TextArea value={jobData?.remarks || ""} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                      </Form.Item>
+                    </Col>
+                  )}
                   {executiveDocs.length > 0 ? (
                     <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   ) : null}
