@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
-import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob } from "./utils/jobContextUtils";
+import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
@@ -423,8 +423,7 @@ const Approval = () => {
     String(jobData?.cs_hod ?? "") !== String(user?.id ?? "");
   const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
 
-  // A CS-rejected Cross Trade job is resubmitted or rejected by its Sales Executive on the
-  // read-only Sales Input view, so send them there when they land here (e.g. from a link).
+
   const redirectToSalesView = hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED";
   useEffect(() => {
     if (redirectToSalesView && id) navigate(`/sales-input?id=${id}&view=1`, { replace: true });
@@ -501,10 +500,7 @@ const Approval = () => {
 
 
 
-  // STOP Alert Visibility for Liner/Cross-Trade
-  // Cross Trade doesn't use the combined LPO/Invoice flag behind isPaymentReq (it has separate
-  // is_lpo_required / is_invoice_required), so this check always misfired for it; a real Cross
-  // Trade stop is still caught by isStoppedCrossTrade below.
+
   const showLinerStopAlert = isLiner && currentStage === "5" && !isPaymentReq;
 
   const isStoppedCrossTrade = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
@@ -1109,7 +1105,7 @@ const Approval = () => {
                       <Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isCNF && isForwarding && currentStage === "3" && !isCNFDone)} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={12}>
+                  <Col xs={24} md={isCrossTrade ? 9 : 12}>
                     <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
                       <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
@@ -1122,9 +1118,9 @@ const Approval = () => {
                   {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
                       (not a form field, so Save / Submit send the same values as before) */}
                   {isCrossTrade && (
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={9}>
                       <Form.Item className={Styles.formLabel} label="Remarks">
-                        <TextArea value={jobData?.remarks || ""} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                        <TextArea value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
                       </Form.Item>
                     </Col>
                   )}

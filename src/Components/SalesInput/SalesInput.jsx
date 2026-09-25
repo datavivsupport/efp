@@ -46,7 +46,7 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
-import { isSalesOwnerOfJob } from "../Approval/utils/jobContextUtils";
+import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -619,7 +619,7 @@ const SalesInput = () => {
             special_instructions: data.special_instructions,
             // Cross Trade: bring back the saved Shipment Remarks, so viewing / resubmitting
             // a returned job doesn't show (and resend) an empty Remarks box
-            ...((data.job_type || "").toUpperCase() === "CROSS TRADE" && { remarks: data.remarks || "" }),
+            ...((data.job_type || "").toUpperCase() === "CROSS TRADE" && { remarks: getShipmentRemarks(data) }),
             other_charges_remarks: data.approval_details?.other_charges_remarks,
             export_created_date: data.export_created_date ? dayjs(data.export_created_date, "YYYY-MM-DD") : dayjs(),
             export_number: data.export_number || "N/A",

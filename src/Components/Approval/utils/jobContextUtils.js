@@ -32,6 +32,19 @@ export const isSalesHodOfJob = (jobData, user) => {
   return !!fullName && String(jobData?.sales_hod || "").trim().toLowerCase() === fullName;
 };
 
+/**
+ * The Remarks the Sales Executive typed in Shipment Details. The backend doesn't return a
+ * `remarks` field on the job; it keeps that text as the note of the "Sales Created" (or
+ * resubmission) history entry, with "Job created and submitted" when nothing was typed.
+ */
+export const getShipmentRemarks = (jobData) => {
+  if (jobData?.remarks) return jobData.remarks;
+  const entry = [...(jobData?.approval_history || [])].reverse()
+    .find((h) => /^sales (created|re-?submit)/i.test(h?.stage || ""));
+  const text = String(entry?.remarks || "").trim();
+  return text && text.toLowerCase() !== "job created and submitted" ? text : "";
+};
+
 /** True for a Cross Trade job — for pages that don't build the full job context. */
 export const isCrossTradeJob = (jobData) =>
   matchJobType((jobData?.job_type || "").toUpperCase(), JOB_TYPE_CONFIG.CROSS_TRADE);
