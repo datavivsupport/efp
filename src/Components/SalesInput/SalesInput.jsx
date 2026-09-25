@@ -47,6 +47,7 @@ import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewe
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
 import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
+import { confirmAction } from "../Approval/utils/confirmAction";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -941,28 +942,15 @@ const SalesInput = () => {
   // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
   // Resubmit a CS-rejected job: check the form first, then ask for confirmation
   const handleResubmit = () => {
-    form.validateFields().then((values) => {
-      Modal.confirm({
-        title: "Resubmit this job?",
-        content: "The job will be sent again for approval with the details you entered.",
-        okText: "Yes, resubmit",
-        cancelText: "Cancel",
-        onOk: () => onFinish(values, "submitted"),
-      });
+    form.validateFields().then(async (values) => {
+      if (await confirmAction("resubmit")) onFinish(values, "submitted");
     }).catch(handleFinishFailed);
   };
 
   // Reject: remarks are entered in the Reject modal, then confirmed here before sending
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!rejectRemarks.trim()) { message.warning("Please enter rejection remarks"); return; }
-    Modal.confirm({
-      title: "Reject this job?",
-      content: "This cannot be undone.",
-      okText: "Yes, reject",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: sendReject,
-    });
+    if (await confirmAction("reject", null, { content: "This cannot be undone." })) sendReject();
   };
 
   const sendReject = async () => {
@@ -2058,7 +2046,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="mdi:tick-circle" />}
                 type="primary"
-                onClick={() => form.validateFields().then(values => onFinish(values, "submitted"))}
+                onClick={() => form.validateFields().then(async (values) => {
+                  if (await confirmAction("submit")) onFinish(values, "submitted");
+                })}
                 loading={loading}
               >
                 Submit

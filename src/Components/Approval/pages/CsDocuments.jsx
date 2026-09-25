@@ -20,6 +20,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { confirmAction } from "../utils/confirmAction";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -541,6 +542,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      const confirmed = await confirmAction("approve", setLoading, {
+        title: "Submit documents & approve?",
+        content: "The documents will be submitted and the job will move to the next step.",
+        okText: "Yes, submit",
+      });
+      if (!confirmed) return;
       const resolved = await uploadAllPending();
 
       const payload = {
@@ -598,6 +605,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setRejectionLoading(true);
 
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const endpoint = `/liner/sales-input/${id}/reject/`;
       const payload = {
         remarks: rejectionRemarks

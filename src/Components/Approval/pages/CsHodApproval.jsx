@@ -23,6 +23,7 @@ import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { confirmAction } from "../utils/confirmAction";
 import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -360,6 +361,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("approve", setLoading))) return;
       const endpoint = `/liner/sales-input/${id}/approve/`;
 
       let payload;
@@ -396,6 +398,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setRejectionLoading(true);
 
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const endpoint = `/liner/sales-input/${id}/reject/`;
       const payload = {
         remarks: rejectionRemarks

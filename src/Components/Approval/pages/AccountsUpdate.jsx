@@ -9,6 +9,7 @@ import dayjs from "../../../dayjs-config";
 import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
+import { confirmAction } from "../utils/confirmAction";
 import { partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -245,7 +246,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     setLoading(true);
     try {
       const values = await form.validateFields();
-      
+      const confirmed = actionType === "Approved"
+        ? await confirmAction("approve", setLoading)
+        : await confirmAction("reject", setLoading, { content: "The job will be sent back." });
+      if (!confirmed) return;
+
       let payload;
       if (actionType === "Approved") {
         // For approval
@@ -380,9 +385,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           </div>
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
-            <Form.Item label="Approval Remarks" name="approvalRemarks">
-              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" disabled={isDisabled} />
-            </Form.Item>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <Button size="large" onClick={() => navigate("/")}>Cancel</Button>
               <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam || isDisabled}>Save Update</Button>

@@ -44,6 +44,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
+import { confirmAction } from "../utils/confirmAction";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -518,7 +519,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         });
         if (validationError) { message.error(validationError); setLoading(false); actionThrottleRef.current = false; return; }
       }
-      
+      if (!(await confirmAction(actionType === "Submit" ? "submit" : "verify", setLoading))) return;
+
       let payload;
       if (actionType === "Rejected") {
         // For rejection - send only remarks
@@ -554,6 +556,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setRejectionLoading(true);
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const payload = { remarks: rejectionRemarks.trim() };
       const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (response.data.status === "success") {

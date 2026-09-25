@@ -19,6 +19,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
+import { confirmAction } from "../utils/confirmAction";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -495,6 +496,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
+      const confirmed = await confirmAction("verify", setLoading, {
+        title: "Submit & verify this job?",
+        okText: "Yes, submit",
+      });
+      if (!confirmed) return;
 
       const resolvedDocs = {
             releaseOrderFiles,
@@ -558,6 +564,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setRejectionLoading(true);
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const payload = { remarks: rejectionRemarks.trim() };
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (res.data.status === "success") {
