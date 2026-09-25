@@ -18,6 +18,7 @@ import {
   Upload,
   Tag,
   Timeline,
+  Table,
   Modal,
   Spin,
   Alert,
@@ -44,10 +45,10 @@ import { deleteDocument } from "../../utils/documentApi";
 import { uploadErrorMessage } from "../../api/uploadError";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
-import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
+import ScrollSafeTooltip, { ClampedText, RemarksCell } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
 import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
-import { confirmAction, confirmDiscard } from "../Approval/utils/confirmAction";
+import { confirmAction } from "../Approval/utils/confirmAction";
 import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
 // const { Title } = Typography;
@@ -270,13 +271,13 @@ const DocUploadField = ({
     <Spin spinning={uploading} size="small">
       <div>
         {(!disabled || restrictionMessage) && (
-          <Space size={8}>
+          <Space size={8} wrap>
             <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
               <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading || undefined} loading={uploading}>
                 {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
               </Button>
             </Upload>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
               Max {MAX_UPLOAD_MB} MB
             </Typography.Text>
           </Space>
@@ -459,9 +460,28 @@ const SalesInput = () => {
     { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
     user,
   );
-  const lastRejection = [...approvalHistory].reverse().find((h) => /reject/i.test(h?.status || ""));
   // A CS-rejected job opens editable for its Sales Executive; every other view stays read-only
   const isReadOnly = isViewMode && !canActOnRejection;
+
+  // Cross Trade: history shown as the same "Approval Status & History" table as the Approval pages
+  const approvalColumns = [
+    { title: "Stage", dataIndex: "stage", key: "stage" },
+    { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
+    {
+      title: "Updated By",
+      dataIndex: "updated_by_user_name",
+      key: "updated_by_user_name",
+      render: (name, record) => (
+        <Space direction="vertical" size={0}>
+          <span>{name || record.updated_by_name || "N/A"}</span>
+          <span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span>
+        </Space>
+      ),
+    },
+    { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={s === "Submitted" ? "processing" : "default"}>{s?.toUpperCase()}</Tag> },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
+    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => (d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A") },
+  ];
 
   const addCommodity = () => {
     if (commodityInput.trim() && !commodities.includes(commodityInput.trim())) {
@@ -979,21 +999,6 @@ const SalesInput = () => {
         }}
       >
         <>
-          {isViewMode && isCsRejected && (
-            <Alert
-              type="error"
-              showIcon
-              style={{ marginBottom: 12 }}
-              message="Rejected by CS"
-              description={
-                <>
-                  {lastRejection?.remarks ? <div>Remarks: {lastRejection.remarks}</div> : <div>This job was returned by the CS team.</div>}
-                  {canActOnRejection && <div style={{ marginTop: 4 }}>Correct the details below and press Resubmit, or Reject the job.</div>}
-                </>
-              }
-            />
-          )}
-
           {/* EXPORT DETAILS / HEADER */}
           <Card
             className={Styles.card}
@@ -1869,8 +1874,8 @@ const SalesInput = () => {
             </Card>
           )}
 
-          {/* AUDIT TRAIL / APPROVAL HISTORY */}
-          {approvalHistory.length > 0 && (
+          {/* AUDIT TRAIL / APPROVAL HISTORY (other job types) */}
+          {!isCrossTrade && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered
@@ -2005,6 +2010,26 @@ const SalesInput = () => {
             </div>
           </Card>
 
+          {/* Cross Trade: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
+          {isCrossTrade && approvalHistory.length > 0 && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <Space align="center">
+                  <div className={Styles.mainhead}>
+                    <Icon icon="mdi:check-decagram-outline" width="18" height="18" />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0 }}>
+                    APPROVAL STATUS & HISTORY
+                  </Typography.Title>
+                </Space>
+              }
+            >
+              <Table dataSource={approvalHistory} columns={approvalColumns} rowKey="id" pagination={false} size="small" scroll={{ x: "max-content" }} />
+            </Card>
+          )}
+
           {canActOnRejection && (
             <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", width: "100%", marginTop: "1rem" }}>
               {/* Same submit call as a new job (PUT with status "submitted") */}
@@ -2020,7 +2045,9 @@ const SalesInput = () => {
                 Reject
               </Button>
               {/* Discards unsaved edits */}
-              <Button icon={<Icon icon="mdi:refresh" />} onClick={confirmDiscard} disabled={loading}>
+              <Button icon={<Icon icon="mdi:refresh" />} onClick={async () => {
+                if (await confirmAction("cancel", null, { title: "Discard your changes?", content: "The page will reload and your unsaved edits will be lost.", okText: "Yes, discard", cancelText: "Keep editing" })) window.location.reload();
+              }} disabled={loading}>
                 Reset
               </Button>
             </div>

@@ -23,7 +23,7 @@ import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
-import { confirmAction, confirmDiscard } from "../utils/confirmAction";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -782,7 +782,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               )}
               <Button
                 size="large"
-                onClick={confirmDiscard}
+                onClick={() => confirmLeave(navigate)}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >

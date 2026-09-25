@@ -20,7 +20,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
-import { confirmAction, confirmDiscard } from "../utils/confirmAction";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
@@ -983,7 +983,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Button>
               <Button
                 size="large"
-                onClick={confirmDiscard}
+                onClick={() => confirmLeave(navigate)}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >

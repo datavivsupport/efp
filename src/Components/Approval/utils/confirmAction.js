@@ -34,10 +34,10 @@ const PRESETS = {
     okText: "Yes, save",
   },
   cancel: {
-    title: "Discard your changes?",
-    content: "Anything you have not saved will be undone and the page will show the last saved details.",
-    okText: "Yes, discard",
-    cancelText: "Keep editing",
+    title: "Leave this page?",
+    content: "Any changes you have not saved will be lost.",
+    okText: "Yes, leave",
+    cancelText: "Stay",
   },
 };
 
@@ -64,7 +64,7 @@ export const confirmAction = (kind, setBusy, overrides = {}) =>
     });
   });
 
-/** Page Cancel button: ask first, then stay on the page and reload the last saved details. */
-export const confirmDiscard = async () => {
-  if (await confirmAction("cancel")) window.location.reload();
+/** Page Cancel button: ask first, then go back to the home page. */
+export const confirmLeave = async (navigate) => {
+  if (await confirmAction("cancel")) navigate("/");
 };

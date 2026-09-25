@@ -42,7 +42,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
-import { confirmAction, confirmDiscard } from "../utils/confirmAction";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -746,7 +746,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               </Button>
               <Button
                 size="large"
-                onClick={confirmDiscard}
+                onClick={() => confirmLeave(navigate)}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >
@@ -764,7 +764,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} disabled={isDocumentUploading || loading} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Submit
               </Button>
-              <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+              <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
             </div>

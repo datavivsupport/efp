@@ -44,7 +44,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
-import { confirmAction, confirmDiscard } from "../utils/confirmAction";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
@@ -1035,7 +1035,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </>
               )}
               {!jobData?.is_cs_updated && (
-                <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                   Cancel
                 </Button>
               )}
@@ -1048,7 +1048,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
-              <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
             </div>
