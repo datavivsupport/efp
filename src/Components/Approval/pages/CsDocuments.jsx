@@ -21,6 +21,7 @@ import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
 import { confirmAction } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -118,6 +119,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       message.error("Document type or category is missing");
       return false;
     }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;

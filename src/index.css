@@ -133,6 +133,15 @@ html, body, #root {
   box-shadow: none;
 }
 
+/* Confirmation popups (confirmAction): keep the Reject button red */
+.dms-confirm .ant-btn-primary.ant-btn-dangerous {
+  background: #ef4444 !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+}
+.dms-confirm .ant-btn-primary.ant-btn-dangerous:hover {
+  background: #dc2626 !important;
+}
+
 /* Outline buttons: grey border, teal on hover — matches the prototype's .btn-out */
 .ant-btn-default:not(:disabled):not(.ant-btn-dangerous):hover {
   border-color: var(--dms-teal) !important;

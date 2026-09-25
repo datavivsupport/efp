@@ -7,6 +7,7 @@ import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
 import { normalizeBoolean } from "./utils/formUtils";
 import { buildCommonPayload } from "./utils/payloadBuilders";
 import { validateApprovalAction } from "./utils/approvalValidations";
+import { isWithinUploadLimit } from "./utils/fileSizeLimit";
 import { deleteDocument } from "../../utils/documentApi";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelector } from "react-redux";
@@ -180,6 +181,7 @@ const DocUploadField = ({
       message.warning("Save the draft first before uploading documents");
       return false;
     }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;

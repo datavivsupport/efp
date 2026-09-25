@@ -24,6 +24,7 @@ import DocStatusTags from "../components/Common/DocStatusTags";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
 import { confirmAction } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -100,6 +101,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   const uploadActivity = useContext(UploadActivityContext);
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) { message.warning("Job ID missing — cannot upload"); return false; }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     pendingCountRef.current += 1;
     const formData = new FormData();

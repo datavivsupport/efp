@@ -10,6 +10,7 @@ import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
 import { confirmAction } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -56,6 +57,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, disabled, user, isAdmin }) => {
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) return false;
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     const formData = new FormData();
     formData.append("file", file);

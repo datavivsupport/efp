@@ -20,6 +20,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
 import { confirmAction } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -110,6 +111,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
 
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;

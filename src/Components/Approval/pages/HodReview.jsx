@@ -43,6 +43,7 @@ import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -117,6 +118,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     pendingCountRef.current += 1;
     const formData = new FormData();

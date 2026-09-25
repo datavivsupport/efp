@@ -48,6 +48,7 @@ import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
 import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
 import { confirmAction } from "../Approval/utils/confirmAction";
+import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -115,8 +116,6 @@ const DocUploadField = ({
   isAdmin,
   onAutoSave,
   isOthers,
-  // false = any file type, no "PDF only" note (Cross Trade attachments)
-  pdfOnly = true
 }) => {
   const [uploading, setUploading] = useState(false);
   const pendingCountRef = useRef(0);
@@ -130,11 +129,7 @@ const DocUploadField = ({
       message.warning("Uploads are disabled in View-Only Mode");
       return false;
     }
-    const isPdf = file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf");
-    if (pdfOnly && !isPdf) {
-      message.error(`${file.name} is not a PDF. Only .pdf files are allowed.`);
-      return false;
-    }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;
@@ -276,16 +271,14 @@ const DocUploadField = ({
       <div>
         {(!disabled || restrictionMessage) && (
           <Space size={8}>
-            <Upload multiple showUploadList={false} accept={pdfOnly ? ".pdf" : undefined} beforeUpload={handleBeforeUpload}>
+            <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
               <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading || undefined} loading={uploading}>
                 {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
               </Button>
             </Upload>
-            {pdfOnly && (
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                PDF only
-              </Typography.Text>
-            )}
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Max {MAX_UPLOAD_MB} MB
+            </Typography.Text>
           </Space>
         )}
 
@@ -1339,6 +1332,7 @@ const SalesInput = () => {
                       className={Styles.formLabel}
                       label="E-mail"
                       name="email"
+                      rules={[{ type: "email", message: "Please enter a valid email address" }]}
                     >
                       <Input placeholder="E-mail" disabled={isReadOnly} />
                     </Form.Item>
@@ -2006,7 +2000,6 @@ const SalesInput = () => {
                   docType="Sales Executive"
                   user={user}
                   isAdmin={isAdmin}
-                  pdfOnly={!isCrossTrade}
                 />
               </div>
             </div>
