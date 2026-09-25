@@ -47,7 +47,7 @@ import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewe
 import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
 import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
-import { confirmAction } from "../Approval/utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../Approval/utils/confirmAction";
 import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
 // const { Title } = Typography;
@@ -2020,7 +2020,7 @@ const SalesInput = () => {
                 Reject
               </Button>
               {/* Discards unsaved edits */}
-              <Button icon={<Icon icon="mdi:refresh" />} onClick={() => window.location.reload()} disabled={loading}>
+              <Button icon={<Icon icon="mdi:refresh" />} onClick={confirmDiscard} disabled={loading}>
                 Reset
               </Button>
             </div>
@@ -2049,7 +2049,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="mdi:content-save-edit" />}
                 type="primary"
-                onClick={() => onFinish(form.getFieldsValue(), "draft")}
+                onClick={async () => {
+                  if (await confirmAction("save", null, { title: "Save as draft?", content: "Your details will be saved as a draft." })) onFinish(form.getFieldsValue(), "draft");
+                }}
                 loading={loading}
               >
                 Save Draft
@@ -2057,7 +2059,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="tabler:refresh" />}
                 type="primary"
-                onClick={handleCancel}
+                onClick={async () => {
+                  if (await confirmAction("cancel", null, { title: "Clear the form?", content: "Everything you entered and have not saved will be removed.", okText: "Yes, clear", cancelText: "Keep editing" })) handleCancel();
+                }}
                 disabled={loading}
               >
                 Refresh

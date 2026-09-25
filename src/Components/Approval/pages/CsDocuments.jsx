@@ -20,7 +20,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
-import { confirmAction } from "../utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
@@ -353,6 +353,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const isBOCReqCT = normalizeBoolean(Form.useWatch("is_boc_required", form), initialJob?.is_boc_required ?? true);
   // A Yes can't be switched back to No while that document still has files — delete them first.
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
+  // Cross Trade: HBL / HCS can only be uploaded when the Sales Executive ticked them
+  const hblSelected = normalizeBoolean(initialJob?.hbl);
+  const hcsSelected = normalizeBoolean(initialJob?.fac);
+  const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
   useEffect(() => {
     if (isCrossTrade) form.setFieldsValue({ is_cs_hod_required: csHodForced });
@@ -637,6 +641,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const resolved = await uploadAllPending();
       const payload = {
         general_remarks: remarks,
@@ -883,11 +888,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
-                  <DocSlot label="HBL" rule="optional">
-                    <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} />
+                  <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
+                    <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
                   </DocSlot>
-                  <DocSlot label="HCS" rule="optional">
-                    <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} />
+                  <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>
+                    <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hcsSelected} />
                   </DocSlot>
                 </Gate>
               </CrossTradeDocuments>
@@ -978,7 +983,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Button>
               <Button
                 size="large"
-                onClick={() => navigate("/")}
+                onClick={confirmDiscard}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >

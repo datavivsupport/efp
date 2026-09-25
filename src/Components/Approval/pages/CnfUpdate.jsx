@@ -19,7 +19,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
-import { confirmAction } from "../utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
@@ -593,6 +593,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       if (canUpdateTransportation) {
         const values = form.getFieldsValue();
         const payload = buildCommonPayload(
@@ -1017,7 +1018,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Button>
                 <Button
                   size="large"
-                  onClick={() => navigate("/")}
+                  onClick={confirmDiscard}
                   icon={<Icon icon="mdi:close" />}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
                 >
@@ -1039,7 +1040,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Button>
                   <Button
                     size="large"
-                    onClick={() => navigate("/")}
+                    onClick={confirmDiscard}
                     icon={<Icon icon="mdi:close" />}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
                   >

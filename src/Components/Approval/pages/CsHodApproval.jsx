@@ -23,7 +23,7 @@ import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
-import { confirmAction } from "../utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -430,6 +430,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const existingApprovalById = new Map(
         (initialJob?.documents || [])
           .filter((d) => d?.id != null)
@@ -650,8 +651,9 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     ? <Form.Item name="cs_hod" noStyle><Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: "100%" }} /></Form.Item>
                     : <span className={Styles.roEmpty}>CS HOD approval not required.</span>)}
                   {ctSlot("Pre-Alert", ctPreAlert, ctList("preAlertFiles"))}
-                  <DocSlot label="HBL">{ctList("hblFiles")}</DocSlot>
-                  <DocSlot label="HCS">{ctList("hcsFiles")}</DocSlot>
+                  {/* HBL / HCS are only uploaded when the Sales Executive ticked them */}
+                  <DocSlot label="HBL" rule={normalizeBoolean(initialJob?.hbl) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.hbl) ? null : "Not selected by Sales Executive."}>{ctList("hblFiles")}</DocSlot>
+                  <DocSlot label="HCS" rule={normalizeBoolean(initialJob?.fac) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.fac) ? null : "Not selected by Sales Executive."}>{ctList("hcsFiles")}</DocSlot>
                 </Gate>
               </CrossTradeDocuments>
             )}
@@ -780,7 +782,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               )}
               <Button
                 size="large"
-                onClick={() => navigate("/")}
+                onClick={confirmDiscard}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >

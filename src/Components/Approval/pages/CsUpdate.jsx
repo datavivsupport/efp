@@ -44,7 +44,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
-import { confirmAction } from "../utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
@@ -355,6 +355,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const csHodRequiredCT = csHodForcedCT;
   // A Yes can't be switched back to No while that document still has files — delete them first.
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
+  const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
   const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled;
   const releaseOrderRestrictionMessage = (() => {
@@ -585,6 +586,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: "Updated Level 2" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
@@ -919,14 +921,15 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     ? <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={baseLocked || !isPreAlertReqCT} restrictionMessage={!isPreAlertReqCT ? "Pre-Alert upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={preAlertFiles} disabled onPreview={(i) => openPreview(preAlertFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
-                <DocSlot label="HBL">
+                {/* HBL / HCS can only be uploaded when the Sales Executive ticked them */}
+                <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
                   {(showDocumentUploads || showROBOCForCS)
-                    ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                    ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
-                <DocSlot label="HCS">
+                <DocSlot label="HCS" rule={facFlag ? undefined : "notRequired"}>
                   {(showDocumentUploads || showROBOCForCS)
-                    ? <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={baseLocked} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                    ? <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={baseLocked || !facFlag} restrictionMessage={facFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={hcsFiles} disabled onPreview={(i) => openPreview(hcsFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
               </Gate>
@@ -1032,7 +1035,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </>
               )}
               {!jobData?.is_cs_updated && (
-                <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                   Cancel
                 </Button>
               )}
@@ -1045,7 +1048,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
-              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+              <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
             </div>

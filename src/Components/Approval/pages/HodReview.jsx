@@ -42,7 +42,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
-import { confirmAction } from "../utils/confirmAction";
+import { confirmAction, confirmDiscard } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -473,6 +473,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...getCommonPayload(values), status: "Updated Level 2" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
@@ -745,7 +746,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               </Button>
               <Button
                 size="large"
-                onClick={() => navigate("/")}
+                onClick={confirmDiscard}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >
@@ -763,7 +764,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} disabled={isDocumentUploading || loading} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Submit
               </Button>
-              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+              <Button size="large" onClick={confirmDiscard} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
             </div>
