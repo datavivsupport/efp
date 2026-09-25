@@ -62,6 +62,8 @@ const { Option } = Select;
 
 const STATUS_COLOR = { Submitted: "processing", Draft: "default" };
 const UploadActivityContext = createContext(null);
+// Ids of files that may no longer be deleted (Cross Trade, after CS Verify & Confirm)
+const LockedDocsContext = createContext(null);
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -80,7 +82,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockedDocIds }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -98,7 +100,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !lockedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -118,6 +120,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
   const uploadActivity = useContext(UploadActivityContext);
+  const lockedDocIds = useContext(LockedDocsContext);
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
@@ -189,6 +192,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             onRemove={(i) => {
               const f = files[i];
               if (!f) return;
+              if (f.id && lockedDocIds?.has(f.id)) return;
               if (f.id) {
                 Modal.confirm({
                   title: "Delete attachment?",
@@ -212,6 +216,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
                 setFiles((p) => p.filter((_, j) => j !== i));
               }
             }}
+            lockedDocIds={lockedDocIds}
             onPreview={(i) => onPreview(files, i)}
             onRemarkChange={handleRemarkChange}
             disabled={disabled}
@@ -383,6 +388,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   // the sales-section lock.
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
+  // Cross Trade: after CS Verify & Confirm, files already on the job can't be deleted here
+  // (new uploads in this visit stay deletable). Same rule as the CS Documents page.
+  const lockedDocIds = new Set(
+    isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)
+      ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
+      : []
+  );
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin: isAdminForCsUpdate, currentStage: "2",
@@ -605,6 +617,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           onUploaded: () => setHasUploadedDoc(true),
         }}
       >
+      <LockedDocsContext.Provider value={lockedDocIds}>
       <Spin spinning={loading}>
         <Form layout="vertical" form={form} onFinish={onFinish} initialValues={{ containerRows: [{}], placementRows: [{}] }}>
 
@@ -1067,6 +1080,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           </Modal>
         </Form>
       </Spin>
+      </LockedDocsContext.Provider>
       </UploadActivityContext.Provider>
     </div>
   );

@@ -246,7 +246,13 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const lpoInvoiceDeleteLocked = isCsDocumentsSubmitted(initialJob);
   // Files attached when CS presses Save can no longer be deleted on this screen; anything
   // uploaded afterwards stays deletable until the next Save.
-  const [savedDocIds, setSavedDocIds] = useState(() => new Set());
+  // Cross Trade: once CS has done Verify & Confirm, every file already on the job when this
+  // page opens is locked the same way — only new uploads here stay deletable until Save.
+  const [savedDocIds, setSavedDocIds] = useState(() => new Set(
+    isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)
+      ? (initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
+      : []
+  ));
   // Placement Details stays open to CS until they submit the documents — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin, isCS, currentStage, jobData: initialJob,
