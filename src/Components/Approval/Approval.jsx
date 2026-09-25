@@ -502,7 +502,10 @@ const Approval = () => {
 
 
   // STOP Alert Visibility for Liner/Cross-Trade
-  const showLinerStopAlert = (isLiner || isCrossTrade) && currentStage === "5" && !isPaymentReq;
+  // Cross Trade doesn't use the combined LPO/Invoice flag behind isPaymentReq (it has separate
+  // is_lpo_required / is_invoice_required), so this check always misfired for it; a real Cross
+  // Trade stop is still caught by isStoppedCrossTrade below.
+  const showLinerStopAlert = isLiner && currentStage === "5" && !isPaymentReq;
 
   const isStoppedCrossTrade = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
   const executiveDocs = useMemo(
@@ -1542,7 +1545,7 @@ const Approval = () => {
           )}
 
           {(isCSHODStage && isCSHOD && (isLiner || isCrossTrade) || isMasterMode) && (
-            <Card className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
+            <Card style={salesHiddenStyle} className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item name="lpo_invoice_selection" rules={[{ required: true, message: 'Please select YES to proceed or NO to stop flow.' }]}>

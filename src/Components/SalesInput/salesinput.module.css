@@ -204,3 +204,48 @@
   -webkit-text-fill-color: #1f2937 !important;
   padding: 8px 12px !important;
 }
+/* ================= READ-ONLY VIEW (?view=1) =================
+   Matches the Sales HOD's read-only details (Approval.module.css .roChecks):
+   no input hints, no required marks, clear ticks. */
+.readOnlyView :global(input::placeholder),
+.readOnlyView :global(textarea::placeholder),
+.readOnlyView :global(.ant-select-placeholder),
+.readOnlyView :global(.ant-select-selection-placeholder) {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.readOnlyView :global(.ant-form-item-required::before),
+.readOnlyView :global(.ant-form-item-required::after) {
+  display: none !important;
+}
+
+.readOnlyView :global(.ant-checkbox-wrapper) {
+  margin: 4px 0 14px;
+}
+
+/* Ticks: checked box in teal, label in normal ink — not the faded disabled grey */
+.readOnlyView :global(.ant-checkbox-wrapper-disabled),
+.readOnlyView :global(.ant-checkbox-wrapper-disabled span),
+.readOnlyView :global(.ant-checkbox-disabled + span) {
+  color: var(--dms-ink) !important;
+  -webkit-text-fill-color: var(--dms-ink) !important;
+  cursor: default !important;
+}
+
+.readOnlyView :global(.ant-checkbox-disabled),
+.readOnlyView :global(.ant-checkbox-disabled .ant-checkbox-inner) {
+  background: #ffffff !important;
+  border-color: #b6c2cd !important;
+}
+
+.readOnlyView :global(.ant-checkbox-checked.ant-checkbox-disabled),
+.readOnlyView :global(.ant-checkbox-checked .ant-checkbox-inner) {
+  background: var(--dms-teal) !important;
+  border-color: var(--dms-teal) !important;
+}
+
+.readOnlyView :global(.ant-checkbox-checked.ant-checkbox-disabled::after),
+.readOnlyView :global(.ant-checkbox-checked .ant-checkbox-inner::after) {
+  border-color: #ffffff !important;
+}

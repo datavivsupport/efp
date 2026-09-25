@@ -4,15 +4,13 @@ import {
   Card, Row, Col, Typography, Form, Input, DatePicker, Button, Space, Spin, message, Modal, Tag, Table, Tabs
 } from "antd";
 import { Icon } from "@iconify/react";
-import { EyeOutlined, DeleteOutlined, UploadOutlined, PlusOutlined } from "@ant-design/icons";
+import { EyeOutlined, DeleteOutlined, UploadOutlined } from "@ant-design/icons";
 import dayjs from "../../../dayjs-config";
 import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
 import { partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
-import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
-import { isCrossTradeJob } from "../utils/jobContextUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
@@ -177,12 +175,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
 
-  // Cross Trade: general remarks (comments), same as the other approval pages —
-  // sent as general_remarks with Save Update and Approve
-  const isCrossTrade = isCrossTradeJob(jobData);
-  const [remarks, setRemarks] = useState([]);
-  const [newRemark, setNewRemark] = useState("");
-
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -205,8 +197,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setEdFiles(docs.edFiles);
       setExecutiveDocuments(docs.executiveDocuments || []);
       setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
-
-      setRemarks(jobData.general_remarks || []);
 
       form.setFieldsValue({
         carrier_name_2: jobData.carrier_name_2,
@@ -264,7 +254,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           account_remarks: values.account_remarks,
           action: actionType,
           remarks: values.approvalRemarks || "",
-          ...(isCrossTrade && { general_remarks: remarks }),
         };
       } else {
         // For rejection - send only remarks
@@ -297,7 +286,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       const payload = {
         carrier_name_2: values.carrier_name_2,
         account_remarks: values.account_remarks,
-        ...(isCrossTrade && { general_remarks: remarks }),
       };
       await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       message.success("Accounts details updated");
@@ -390,31 +378,6 @@ const AccountsUpdatePage = ({ jobData, user }) => {
               </Col>
             </Row>
           </div>
-
-          {isCrossTrade && (
-            <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
-              <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
-              <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-                {remarks.map((r, i) => {
-                  const isObject = typeof r === 'object' && r !== null;
-                  const text = isObject ? r.text : r;
-                  const authorName = isObject ? r.user_name : null;
-                  return (
-                    <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                      {canDeleteRemark(r) && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
-                      <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                      {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
-                    </div>
-                  );
-                })}
-                {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
-              </div>
-              <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-              <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} disabled={!isAccountsTeam || isDisabled} />
-              <Button type="primary" icon={<PlusOutlined />} disabled={!isAccountsTeam || isDisabled} onClick={() => { if (newRemark.trim()) { setRemarks((p) => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }}>Add Remark</Button>
-              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>Added remarks are saved with Save Update or Approve.</Typography.Text>
-            </div>
-          )}
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
             <Form.Item label="Approval Remarks" name="approvalRemarks">

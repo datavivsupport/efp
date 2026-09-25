@@ -1,3 +1,5 @@
+import { isCrossTradeJob } from "./utils/jobContextUtils";
+
 /**
  * ─── APPROVAL ROUTE CONFIG ───────────────────────────────────────────────────
  *
@@ -28,7 +30,8 @@ export const APPROVAL_ROUTE_CONFIG = {
   "cnf-update": {
     label: "CNF Update",
     allowedStages: ["2", "3","4", "5", "6", "7","9","8"],
-    check: ({ roles }) => roles.isCNF,
+    // Cross Trade has no CNF stage
+    check: ({ roles, jobData }) => roles.isCNF && !isCrossTradeJob(jobData),
   },
 
   "cs-documents": {

@@ -986,6 +986,7 @@ const SalesInput = () => {
         layout="vertical"
         form={form}
         disabled={isReadOnly}
+        className={isReadOnly ? Styles.readOnlyView : undefined}
         onFinish={onFinish}
         onFinishFailed={handleFinishFailed}
         initialValues={{

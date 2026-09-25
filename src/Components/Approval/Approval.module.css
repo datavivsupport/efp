@@ -477,48 +477,9 @@
      padding: 12px;
    }
  }
-/* ================= SALES SUBMITTED DETAILS (read-only) =================
-   components/Common/SalesSubmittedDetails.jsx — looks like a form field
-   without being one */
-.roField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  min-width: 0;
-}
 
-.roField > label {
-  font-size: 0.78125rem; /* 12.5px */
-  color: var(--dms-label);
-  font-weight: 500;
-}
-
-.roField :global(.ant-input-disabled),
-.roField :global(textarea.ant-input-disabled) {
-  background: var(--dms-ro-bg) !important;
-}
-
-.roTags {
-  min-height: 32px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  background: var(--dms-ro-bg);
-}
-
+/* Muted "nothing here" text — used by the CS HOD page's Cross Trade section */
 .roEmpty {
   color: var(--dms-muted);
   font-size: 0.8125rem;
-}
-
-.roChecks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  margin: 2px 0 14px;
 }
