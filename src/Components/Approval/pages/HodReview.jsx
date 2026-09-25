@@ -529,7 +529,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" disabled /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -605,18 +605,18 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Row gutter={16}>
                   {!isOthers && (
                     <>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading" rules={[{ required: true }]}><Input placeholder="Port of Loading" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge" rules={[{ required: true }]}><Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}><Input placeholder="Port of Loading" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}><Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
                     </>
                   )}
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}><Option value="prepaid">Prepaid</Option><Option value="collect">Collect</Option></Select></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
-                  <Col xs={24} md={isCrossTrade ? 9 : 12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
                       (not a form field, so Approve / Save send the same values as before) */}
-                  {isCrossTrade && <Col xs={24} md={9}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
+                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>

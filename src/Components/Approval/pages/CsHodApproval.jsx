@@ -22,7 +22,7 @@ import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
-import { isCrossTradeJob } from "../utils/jobContextUtils";
+import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
 import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -547,12 +547,14 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             <Card className={Styles.card} bordered title={<CardHeader icon="mingcute:ship-fill" title="OTHER DETAILS" open={open.otherDetails} onToggle={() => toggle("otherDetails")} />}>
               <div style={{ display: open.otherDetails ? "block" : "none" }}>
                 <Row gutter={16}>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Haulier Code" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                  {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details (read-only, not a form field) */}
+                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(initialJob)} disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>

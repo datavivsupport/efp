@@ -891,7 +891,7 @@ const Approval = () => {
                 )}
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
-                    <Input readOnly variant="filled" />
+                    <Input readOnly variant="filled" disabled />
                   </Form.Item>
                 </Col>
               </Row>
@@ -1076,17 +1076,17 @@ const Approval = () => {
                   {!isOthers && (
                     <>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="POL" name="port_of_loading" rules={[{ required: true }]}>
+                        <Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}>
                           <Input placeholder="Port of Loading" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge" rules={[{ required: true }]}>
+                        <Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}>
                           <Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="FPOD" name="final_pod">
+                        <Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod">
                           <Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
@@ -1105,7 +1105,7 @@ const Approval = () => {
                       <Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isCNF && isForwarding && currentStage === "3" && !isCNFDone)} />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={isCrossTrade ? 9 : 12}>
+                  <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
                       <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
@@ -1118,9 +1118,9 @@ const Approval = () => {
                   {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
                       (not a form field, so Save / Submit send the same values as before) */}
                   {isCrossTrade && (
-                    <Col xs={24} md={9}>
+                    <Col xs={24} md={6}>
                       <Form.Item className={Styles.formLabel} label="Remarks">
-                        <TextArea value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                        <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
                       </Form.Item>
                     </Col>
                   )}

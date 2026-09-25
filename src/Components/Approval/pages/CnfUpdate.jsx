@@ -771,9 +771,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           >
             <div style={{ display: open.otherDetails ? "block" : "none" }}>
               <Row gutter={16}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}>
                   <Form.Item label="Haulier Code" name="haulier_code" className={Styles.formLabel}>
