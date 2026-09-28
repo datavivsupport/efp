@@ -49,8 +49,10 @@ export const resolveApprovalRoute = (jobData, user) => {
 
   // Stage 2 or 3 — CNF
 
-  // Stage 4 — CS documents
-  if ((currentStage === "4"|| currentStage=="6"|| currentStage === "5"|| currentStage === "7"|| currentStage === "9") && roles.isCS && String(user?.id) !== String(jobData?.cs_hod) && !isSalesHod) {
+  // Stage 4 — CS documents. Forwarding stage 3 (CNF Load List) lands here too, so CS can
+  // keep editing the ETAs / cut-offs and Placement Details while CNF works.
+  const isForwardingStage3 = currentStage === "3" && jobData?.job_type?.toUpperCase() === "FORWARDING";
+  if ((isForwardingStage3 || currentStage === "4"||currentStage=="6"|| currentStage === "5"|| currentStage === "7"|| currentStage === "9") && roles.isCS && String(user?.id) !== String(jobData?.cs_hod) && !isSalesHod) {
     return `/approval/${id}/cs-documents`;
   }
   // Stage 5 — Assigned CS HOD (ID match)

@@ -252,6 +252,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   // CS may change only Date/Time, Pickup/Delivery and Remarks; the rows ride
   // along on the page's existing Save / Submit calls.
   const placementLocked = !canEditPlacement;
+  // Forwarding stage 3: the job is with CNF for the Load List. CS may still move the
+  // ETAs / ETD / cut-offs and Placement Details, and only Save — documents and the
+  // submit to the CS HOD wait for stage 4.
+  const isCnfLoadListStage = currentStage === "3" && initialJob?.job_type?.toUpperCase() === "FORWARDING";
+  const canEditEtaDates = canEditBookingTechnical || isCnfLoadListStage;
 
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState({
@@ -575,6 +580,31 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (isCnfLoadListStage) {
+        // Only what CS may edit here. No documents list: CNF is uploading at the same
+        // time, and a list from this page could drop files it has not loaded.
+        const dateOrNull = (name) => form.getFieldValue(name) ? form.getFieldValue(name).format("YYYY-MM-DD") : null;
+        const siCutOff = form.getFieldValue("si_cut_off_date");
+        const ll = form.getFieldValue("ll_cut_off_datetime");
+        const res = await apiClient.patch(`/liner/sales-input/${id}/`, {
+          general_remarks: remarks,
+          vsl_initial_eta: dateOrNull("vsl_initial_eta"),
+          vsl_latest_eta: dateOrNull("vsl_latest_eta"),
+          vsl_etd: dateOrNull("vsl_etd"),
+          pod_eta: dateOrNull("pod_eta"),
+          ...(canEditPlacement && { transportation_rows: buildTransportationRows(form.getFieldsValue()) }),
+          approval_details: {
+            id: initialJob?.approval_details?.id,
+            vessel_eta: dateOrNull("vessel_eta"),
+            ll_cut_off_datetime: ll ? ll.format("YYYY-MM-DD HH:mm") : null,
+            si_cut_off_date: siCutOff ? siCutOff.tz("Asia/Dubai").format("YYYY-MM-DD") : null,
+            si_cut_off_time: siCutOff ? siCutOff.tz("Asia/Dubai").format("HH:mm") : null,
+          },
+        });
+        if (res.data.status === "success" || res.status === 200 || res.status === 201) message.success(res.data.message || "Saved successfully");
+        else message.error(res.data.message || "Save failed");
+        return;
+      }
       const resolved = await uploadAllPending();
       const payload = {
         general_remarks: remarks,
@@ -704,7 +734,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                       <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
                       <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Volume"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled variant="filled" /></Form.Item></Col>
                       <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
+                      <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
                       <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
                       <Col xs={24} md={4}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} rows={1} /></Form.Item></Col>
                     </Row>
@@ -720,8 +750,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="AFSYS Job No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditEtaDates} format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditEtaDates} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
@@ -732,7 +762,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 </Row>
                 <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || isCnfLoadListStage} /></Form.Item></Col>
                 </Row>
               </div>
             </Card>
@@ -752,7 +782,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Card>
             )}
 
-            {/* DOCUMENTS (ACTIONABLE) */}
+            {/* DOCUMENTS (ACTIONABLE) — stage 4 work, not shown while CNF has the job */}
+            {!isCnfLoadListStage && (
             <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
               <div style={{ display: open.documents ? "block" : "none" }}>
                 <Row gutter={[16, 16]}>
@@ -765,6 +796,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 </Row>
               </div>
             </Card>
+            )}
 
             {/* ATTACHMENTS AND COMMENTS */}
             <Card className={Styles.card} bordered title={<CardHeader icon="mdi:comment-text-multiple-outline" title="ATTACHMENTS AND COMMENTS" open={open.attachments} onToggle={() => toggle("attachments")} />}>
@@ -792,7 +824,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                     <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                   </Col>
-                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
+                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={isCnfLoadListStage} /></Col>
                 </Row>
               </div>
             </Card>
@@ -827,6 +859,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               >
                 Save
               </Button>
+              {!isCnfLoadListStage && (<>
               <Button
                 type="primary"
                 size="large"
@@ -849,6 +882,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               >
                 Reject
               </Button>
+              </>)}
               <Button
                 size="large"
                 onClick={() => navigate("/")}

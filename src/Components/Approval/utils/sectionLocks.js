@@ -42,6 +42,9 @@ export const canCSEditPlacement = ({
     // Sales HOD has approved yet.
     case "2":
       return true;
+    // Forwarding CNF Load List stage — CS keeps the slots while CNF works.
+    case "3":
+      return String(jobData?.job_type || "").toUpperCase() === "FORWARDING";
     // CS Documents desk — open until CS hands the job to the CS HOD.
     case "4":
     case "4B":
