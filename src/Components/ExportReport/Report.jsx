@@ -4,6 +4,7 @@ import apiClient from "../../api/apiclient";
 import dayjs from "../../dayjs-config";
 import { message, Tag, Select, Input, Button, DatePicker } from "antd";
 import CommonTable from "../Commontable/Commontable";
+import useReportExport from "./useReportExport";
 import { Icon } from "@iconify/react";
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
 
@@ -23,6 +24,29 @@ const EMPTY_FILTERS = {
   pol: "",
   fpod: "",
   pendingWith: "all",
+};
+
+// Query params for the active filters, shared by the list request and the Excel export
+// so both always describe the same set of records. Unset filters are left out.
+const buildFilterParams = (f = {}) => {
+  const params = {};
+  if (f.pendingWith && f.pendingWith !== "all") params.pending_with = f.pendingWith;
+  if (f.jobType)       params.job_type = f.jobType;
+  if (f.exportNumber)  params.export_number = f.exportNumber;
+  // export_created_date, not created_at: the "Created Date" column in the table below
+  // renders export_created_date, and the two diverge on back-dated and migrated jobs -
+  // so a range on created_at hid rows whose visible date was inside it.
+  if (f.createdAtFrom) params.export_created_date_gte = dayjs(f.createdAtFrom).format("YYYY-MM-DD");
+  if (f.createdAtTo)   params.export_created_date_lte = dayjs(f.createdAtTo).format("YYYY-MM-DD");
+  if (f.createdBy)     params.created_by = f.createdBy;
+  if (f.carrier)       params.carrier = f.carrier;
+  if (f.customerName)  params.customer_name = f.customerName;
+  if (f.afsysJobNo)    params.afsys_job_no = f.afsysJobNo;
+  if (f.bookingRef)    params.booking_ref = f.bookingRef;
+  if (f.salesName)     params.sales_name = f.salesName;
+  if (f.pol)           params.pol = f.pol;
+  if (f.fpod)          params.fpod = f.fpod;
+  return params;
 };
 
 const ExportReport = () => {
@@ -49,25 +73,21 @@ const ExportReport = () => {
   const [pendingWith, setPendingWith] = useState("all");
 
   const debounceRef = useRef(null);
+  const { exporting, startExport } = useReportExport();
+
+  const handleExport = () => {
+    startExport(buildFilterParams({
+      jobType, exportNumber, createdAtFrom, createdAtTo,
+      createdBy, carrier, customerName, afsysJobNo,
+      bookingRef, salesName, pol, fpod, pendingWith,
+    }));
+  };
 
   const buildUrl = useCallback((page, size, f = {}) => {
     let url = `/liner/sales-input/reports/?page=${page}&page_size=${size}`;
-    if (f.pendingWith && f.pendingWith !== "all") url += `&pending_with=${encodeURIComponent(f.pendingWith)}`;
-    if (f.jobType)       url += `&job_type=${encodeURIComponent(f.jobType)}`;
-    if (f.exportNumber)  url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
-    // export_created_date, not created_at: the "Created Date" column in the table below
-    // renders export_created_date, and the two diverge on back-dated and migrated jobs -
-    // so a range on created_at hid rows whose visible date was inside it.
-    if (f.createdAtFrom) url += `&export_created_date_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
-    if (f.createdAtTo)   url += `&export_created_date_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
-    if (f.createdBy)     url += `&created_by=${encodeURIComponent(f.createdBy)}`;
-    if (f.carrier)       url += `&carrier=${encodeURIComponent(f.carrier)}`;
-    if (f.customerName)  url += `&customer_name=${encodeURIComponent(f.customerName)}`;
-    if (f.afsysJobNo)    url += `&afsys_job_no=${encodeURIComponent(f.afsysJobNo)}`;
-    if (f.bookingRef)    url += `&booking_ref=${encodeURIComponent(f.bookingRef)}`;
-    if (f.salesName)     url += `&sales_name=${encodeURIComponent(f.salesName)}`;
-    if (f.pol)           url += `&pol=${encodeURIComponent(f.pol)}`;
-    if (f.fpod)          url += `&fpod=${encodeURIComponent(f.fpod)}`;
+    Object.entries(buildFilterParams(f)).forEach(([key, value]) => {
+      url += `&${key}=${encodeURIComponent(value)}`;
+    });
     return url;
   }, []);
 
@@ -221,6 +241,16 @@ const ExportReport = () => {
                       }}>{extra}</span>
                     ) : null;
                   })()}
+                </Button>
+
+                <Button
+                  type="primary"
+                  onClick={handleExport}
+                  loading={exporting}
+                  icon={<Icon icon="lucide:download" width="16" height="16" />}
+                  style={{ borderRadius: 8, fontWeight: 500 }}
+                >
+                  Export
                 </Button>
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
