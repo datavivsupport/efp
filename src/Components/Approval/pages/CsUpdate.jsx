@@ -342,11 +342,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   // Placement Details stays open to CS until CS submits this stage — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin: isAdminForCsUpdate, isCS: true,
-    currentStage, isMasterMode, isTerminal, jobData,
+    currentStage, isMasterMode, isTerminal, isForwarding, jobData,
   });
-  // CS may change only Date/Time, Pickup/Delivery and Remarks; they ride along
-  // on the page's existing Save / Submit calls. Equipment, volume, category keep
-  // the sales-section lock.
+
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
@@ -513,7 +511,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
-      const payload = { ...getCommonPayload(values), status: "Updated Level 2" };
+      const payload = { ...getCommonPayload(values), status: "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
