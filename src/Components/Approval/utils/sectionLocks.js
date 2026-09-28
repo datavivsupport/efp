@@ -25,7 +25,9 @@ export const isCnfDataVisibleToCS = (jobData) => {
  * edits go out on the existing PATCH /liner/sales-input/:id/ call — so a plain
  * Save persists them, and Submit/Approve carries the final rows.
  *
- * Once the desk submits/approves, the section goes read-only for that desk again.
+ * CS keeps it through the whole of stage 2 — after its own Verify & Confirm too,
+ * while the Sales HOD approval is still pending. From stage 4 it closes once CS
+ * hands the job to the CS HOD.
  */
 export const canCSEditPlacement = ({
   isAdmin, isCS, currentStage, isMasterMode, isTerminal, jobData,
@@ -36,9 +38,10 @@ export const canCSEditPlacement = ({
   if (TERMINAL_STATUSES.includes(jobData?.status)) return false;
 
   switch (String(currentStage || "")) {
-    // CS Update desk — open until CS marks the job updated.
+    // CS Update desk — open before and after CS verifies, whether or not the
+    // Sales HOD has approved yet.
     case "2":
-      return !jobData?.is_cs_updated;
+      return true;
     // CS Documents desk — open until CS hands the job to the CS HOD.
     case "4":
     case "4B":

@@ -18,7 +18,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
-import { isCnfSubmitted } from "../utils/jobContextUtils";
+import { isCnfSubmitted, TERMINAL_STATUSES } from "../utils/jobContextUtils";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -240,8 +240,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const mandatoryDocsLocked = cnfHasSubmitted;
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
-  // with them — i.e. right up to the submit/approve that hands it on.
-  const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
+  // with them — i.e. right up to the submit/approve that hands it on. At stage 2
+  // that holds whether or not the Sales HOD has approved yet.
+  const canEditPlacement =
+    !isAdmin && isCNF && isStage2or3 && !cnfHasSubmitted &&
+    !TERMINAL_STATUSES.includes(initialJob?.status);
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
