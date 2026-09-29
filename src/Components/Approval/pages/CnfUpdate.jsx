@@ -244,7 +244,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — i.e. right up to the submit/approve that hands it on.
-  const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
+  // Liner: CNF also works the job in save-only mode at stage 2 before Sales HOD approval,
+  // so placement stays editable there too until CNF submits.
+  const canEditPlacement = !isAdmin && isCNF &&
+    (showSubmitAction || (isLiner && currentStage === "2" && !cnfHasSubmitted));
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
