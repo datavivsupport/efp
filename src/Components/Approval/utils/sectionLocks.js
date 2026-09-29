@@ -25,9 +25,11 @@ export const isCnfDataVisibleToCS = (jobData) => {
  * edits go out on the existing PATCH /liner/sales-input/:id/ call — so a plain
  * Save persists them, and Submit/Approve carries the final rows.
  *
- * At stage 2, CS keeps editing rights even after they submit (is_cs_updated),
- * since the job then just sits waiting on Sales HOD — CS can still correct
- * placement until the HOD actually approves (is_hod_approved).
+ * Stage 2A (CS) and Stage 2B (Sales HOD) run in parallel and can finish in
+ * either order. CS keeps editing rights on Placement Details until BOTH sides
+ * are done — whichever finishes last: CS submitting (is_cs_updated) and Sales
+ * HOD approving (is_hod_approved). Gating on only one of the two locks CS out
+ * the moment the *other* side finishes, even if CS hasn't done its own part yet.
  *
  * Once the desk submits/approves, the section goes read-only for that desk again.
  */
@@ -40,10 +42,11 @@ export const canCSEditPlacement = ({
   if (TERMINAL_STATUSES.includes(jobData?.status)) return false;
 
   switch (String(currentStage || "")) {
-    // CS Update desk — open until Sales HOD actually approves, so CS can keep
-    // adjusting placement even after submitting while it's waiting on HOD.
+    // CS Update desk — open until both CS has submitted and Sales HOD has
+    // approved, so CS can keep adjusting placement regardless of which of
+    // the two parallel steps finishes first.
     case "2":
-      return !jobData?.is_hod_approved;
+      return !(jobData?.is_cs_updated && jobData?.is_hod_approved);
     // CS Documents desk — open until CS hands the job to the CS HOD.
     case "4":
     case "4B":
