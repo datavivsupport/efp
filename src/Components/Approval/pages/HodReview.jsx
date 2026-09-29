@@ -303,6 +303,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   // Cross Trade has no transportation: Placement Details and the Transportation tick are hidden
   // (kept mounted, so Approve / Save send the same values). Everything else is laid out as for Forwarding.
   const crossTradeSalesStyle = isCrossTrade ? { display: "none" } : undefined;
+  // Placement rows only exist when Sales ticked Transportation; otherwise the card would be an empty heading.
+  const transportationFlag = normalizeBoolean(Form.useWatch("transportation", form), jobData?.transportation);
+  const placementStyle = isCrossTrade || !transportationFlag ? { display: "none" } : undefined;
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin, currentStage: "2",
@@ -638,7 +641,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
           {(!isOthers || isMasterMode) && showPlacement && (
-            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            <Card style={placementStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (
