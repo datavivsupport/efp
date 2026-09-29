@@ -959,12 +959,15 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     ? <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={baseLocked || !isPreAlertReqCT} restrictionMessage={!isPreAlertReqCT ? "Pre-Alert upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={preAlertFiles} disabled onPreview={(i) => openPreview(preAlertFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
-                {/* HBL / HCS can only be uploaded when the Sales Executive ticked them */}
-                <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
-                  {(showDocumentUploads || showROBOCForCS)
-                    ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
-                    : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
-                </DocSlot>
+                {/* HBL / HCS can only be uploaded when the Sales Executive ticked them; HBL is hidden
+                    when not ticked unless files were already uploaded */}
+                {(hblFlag || hblFiles.length > 0) && (
+                  <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
+                    {(showDocumentUploads || showROBOCForCS)
+                      ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                      : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
+                  </DocSlot>
+                )}
                 <DocSlot label="HCS" rule={facFlag ? undefined : "notRequired"}>
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={baseLocked || !facFlag} restrictionMessage={facFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />

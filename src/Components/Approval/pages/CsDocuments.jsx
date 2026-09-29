@@ -907,9 +907,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
-                  <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
-                    <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
-                  </DocSlot>
+                  {(hblSelected || hblFiles.length > 0) && (
+                    <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
+                      <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
+                    </DocSlot>
+                  )}
                   <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>
                     <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hcsSelected} />
                   </DocSlot>
