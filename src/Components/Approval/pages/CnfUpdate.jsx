@@ -40,12 +40,7 @@ const STATUS_COLOR = {
   REJECTED: "error"
 };
 
-/**
- * CNF's second pass — the stages it may still file documents on after the CS HOD has
- * signed off. Approving at stage 5 sends the job to stage 6 when a payment is due
- * (Accounts holds it for the slip) and straight to stage 7 when none is, and CNF is
- * expected to hand in its optional Haulage Cost Sheet / ED on either.
- */
+ 
 const CNF_POST_CS_HOD_STAGES = ["6", "7"];
 
 /* ── Collapsible Card Header ── */
@@ -100,11 +95,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
   </div>
 );
 
-/* ── Upload field wrapper ── */
-/**
- * deleteLocked — saved files can no longer be deleted (uploads still allowed).
- * Used for the mandatory CNF documents once CNF has submitted.
- */
+ 
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
@@ -229,6 +220,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isStage3     = currentStage === "3";
   const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
+  const isLiner       = initialJob?.job_type === "LINER";
   const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const { isCNF } = computeUserRoles(user);
@@ -405,8 +397,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
   const isDocumentUploading = hasPendingFiles();
 
-  // The two documents handleAction enforces, so the button matches the rule it fires.
-  const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
+  // LINER: the Haulier Cost Sheet is the one document handleAction enforces —
+  // mandatory and locked until Sales HOD approval. Load List is Yes/No (optional)
+  // and no longer gates Submit.
+  // Forwarding (and any other type still on this page): unchanged — Haulier Note
+  // + Load List remain the two documents handleAction enforces.
+  const hasRequiredDocs = isLiner
+    ? haulageCostFiles.length > 0
+    : haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
   // Save stays live while the job still sits with CNF — a document upload is not
   // required, editing Placement Details or the remarks is enough. Only the approve
@@ -899,8 +897,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               )}
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                  <Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}>
-                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} />
+                  <Form.Item label={<span>Haulage Cost Sheet {isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isLiner && mandatoryDocsLocked} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -909,8 +907,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                  <Form.Item label={<span>Load List {!isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={!isLiner && mandatoryDocsLocked} disabled={!isLiner && !initialJob?.is_hod_approved} restrictionMessage={!isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -1038,6 +1036,21 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   >
                     Save
                   </Button>
+                  {/* Liner: CNF can reject before Sales HOD approves too — the reject endpoint
+                      and its modal are stage-agnostic already, this button was just missing here. */}
+                  {isLiner && (
+                    <Button
+                      danger
+                      size="large"
+                      onClick={() => handleAction("Rejected")}
+                      icon={<Icon icon="mdi:close-circle" />}
+                      loading={loading}
+                      disabled={isDocumentUploading || loading}
+                      style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                    >
+                      Reject
+                    </Button>
+                  )}
                   <Button
                     size="large"
                     onClick={() => confirmLeave(navigate)}

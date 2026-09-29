@@ -449,18 +449,17 @@ const SalesInput = () => {
 
   // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
-  // PRD Section 3: no role/terminal restrictions while creating or editing.
-  // `?view=1` opens an existing job read-only, laid out exactly as it was filled in
-  // (used by the dashboard "View" for Cross Trade jobs).
+   
   const isViewMode = searchParams.get("view") === "1";
-  // CS rejected the job back to Sales: its Sales Executive may resubmit (edit + submit) or reject it
-  // Cross Trade only
-  const isCsRejected = isCrossTrade && instanceStatus === "CS-REJECTED";
+ 
+  const isCsRejected =
+    (isCrossTrade && instanceStatus === "CS-REJECTED") ||
+    (isLiner && (instanceStatus === "CS-REJECTED" || instanceStatus === "CNF-REJECTED"));
   const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
     { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
     user,
   );
-  // A CS-rejected job opens editable for its Sales Executive; every other view stays read-only
+  // A CS/CNF-rejected job opens editable for its Sales Executive; every other view stays read-only
   const isReadOnly = isViewMode && !canActOnRejection;
 
   // Cross Trade: history shown as the same "Approval Status & History" table as the Approval pages
@@ -1874,8 +1873,9 @@ const SalesInput = () => {
             </Card>
           )}
 
-          {/* AUDIT TRAIL / APPROVAL HISTORY (other job types) */}
-          {!isCrossTrade && approvalHistory.length > 0 && (
+          {/* AUDIT TRAIL / APPROVAL HISTORY (Forwarding / Others) — Liner uses the
+              APPROVAL STATUS & HISTORY table below, same as Cross Trade. */}
+          {!isCrossTrade && !isLiner && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered
@@ -2010,8 +2010,8 @@ const SalesInput = () => {
             </div>
           </Card>
 
-          {/* Cross Trade: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
-          {isCrossTrade && approvalHistory.length > 0 && (
+          {/* Cross Trade and Liner: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
+          {(isCrossTrade || isLiner) && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered

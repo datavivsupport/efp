@@ -426,7 +426,11 @@ const Approval = () => {
   const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
 
 
-  const redirectToSalesView = hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED";
+  // Liner has no equivalent "hide other team sections" view — CS/CNF rejection just needs
+  // to land its Sales Executive on the page that has the Resubmit/Reject buttons.
+  const redirectToSalesView =
+    (hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED") ||
+    (isLiner && isJobSalesOwner && (jobData?.status === "CS-REJECTED" || jobData?.status === "CNF-REJECTED"));
   useEffect(() => {
     if (redirectToSalesView && id) navigate(`/sales-input?id=${id}&view=1`, { replace: true });
   }, [redirectToSalesView, id, navigate]);

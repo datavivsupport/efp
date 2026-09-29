@@ -338,7 +338,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   // Cross Trade: the Release Order / BOC uploads follow their Yes/No toggles for every user
   // Cross Trade: the backend doesn't return is_boc_required yet, so a missing value means Yes
   // (otherwise the upload would be switched off on every reload). Other job types unchanged.
-  const isBOCReq = normalizeBoolean(isBOCReqForm, isCrossTrade ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
+  const isBOCReq = normalizeBoolean(isBOCReqForm, (isCrossTrade || isLiner) ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
+  const bocRequirementMet = isBOCReq || (!isLiner && !isExtended) || isMasterMode;
   const crossTradeRODisabled = isCrossTrade && !isROReq;
   const crossTradeBOCDisabled = isCrossTrade && !isBOCReq;
 
@@ -364,12 +365,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     if (crossTradeRODisabled) return "Release Order upload is disabled until the requirement is turned on.";
     return null;
   })();
-  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || crossTradeBOCDisabled;
+  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled;
   // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
   // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
   const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled;
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
+    if (!bocRequirementMet && !isCS) return "BOC upload is disabled until the requirement is turned on.";
     if (crossTradeBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
     return null;
   })();
@@ -803,8 +805,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: true, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea className={Styles.noResize} autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item></Col>
 
-                  {/* Workflow Configuration — Cross Trade uses the Cross Trade Documents section below */}
-                  {!isCrossTrade && (isLiner || isMasterMode) && (
+                  {/* Workflow Configuration — Cross Trade and Liner both use the Gate/DocSlot UI
+                      below for RO/BOC instead; this plain box is now only for the switches that
+                      still apply to other job types (or to Liner in admin master mode). */}
+                  {!isCrossTrade && isMasterMode && (
                     <Col span={24}>
                       <div className={Styles.workflowConfigBox}>
                         <div className={Styles.workflowConfigHeader}>
@@ -817,7 +821,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         </div>
                         <Row gutter={16}>
                           {!isLiner && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Payment Req?" name="is_payment_processing_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>}
-                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="RO Req?" name="is_release_order_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                           <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Req?" name="is_load_list_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                           <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Note Req?" name="is_haulier_note_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                         </Row>
@@ -826,11 +829,39 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   )}
                 </Row>
 
-                {!isCrossTrade && (showDocumentUploads || showROBOCForCS) && (
+                {/* Release Order / BOC — Liner uses the same Gate/DocSlot UI as Cross Trade
+                    (see the CROSS TRADE DOCUMENTS block below); Forwarding/Others keep the
+                    plain upload row. */}
+                {!isCrossTrade && !isLiner && (showDocumentUploads || showROBOCForCS) && (
                   <Row gutter={16}>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="BOC Attachment"><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   </Row>
+                )}
+
+                {isLiner && (
+                  <Gate title="Release Order & BOC" description="Answer Yes or No for each document. Uploads open when the answer is Yes.">
+                    <DocSlot
+                      label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      rule={isROReq ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_release_order_required" disabled={isRequirementSelectorLocked} hasFiles={releaseOrderFiles.length > 0} /> }}
+                      hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Not needed. Choose Yes to upload." : null}
+                    >
+                      {(showDocumentUploads || showROBOCForCS)
+                        ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        : <FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} />}
+                    </DocSlot>
+                    <DocSlot
+                      label="BOC Attachment"
+                      rule={isBOCReq ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" disabled={isRequirementSelectorLocked} hasFiles={bocFiles.length > 0} /> }}
+                      hint={isBOCReq && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReq ? "Not needed. Choose Yes to upload." : null}
+                    >
+                      {(showDocumentUploads || showROBOCForCS)
+                        ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        : <FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} />}
+                    </DocSlot>
+                  </Gate>
                 )}
 
                 {showDocumentUploads && !hideCnfFromCS && (
