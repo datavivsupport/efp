@@ -414,23 +414,26 @@ const Approval = () => {
   // Disable ALL uploads if user doesn't have allowed role
   const disableAllUploads = !hasAllowedRole;
 
-  // Cross Trade viewed by the Sales Executive: show only what Sales entered at creation.
-  // Booking (Release Order / BOC), CNF and Accounts sections belong to other teams, so they
-  // are hidden — kept mounted, so Save / Submit send exactly the same values as before.
+  // Cross Trade and Liner viewed by the Sales Executive: show only what Sales entered at
+  // creation. Booking (Release Order / BOC / Workflow Configuration), CNF and Accounts
+  // sections belong to other teams, so they are hidden — kept mounted, so Save / Submit
+  // send exactly the same values as before.
   // The job's own Sales Executive (creator / named executive) and its named Sales HOD see
   // only the Sales details; the CS HOD assigned to this job always keeps the full page.
   const isJobSalesOwner = isSalesOwnerOfJob(jobData, user);
   const hideOtherTeamSectionsForSales =
-    isCrossTrade && (isJobSalesOwner || isSalesHodOfJob(jobData, user)) &&
+    (isCrossTrade || isLiner) && (isJobSalesOwner || isSalesHodOfJob(jobData, user)) &&
     String(jobData?.cs_hod ?? "") !== String(user?.id ?? "");
   const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
 
 
-  // Liner has no equivalent "hide other team sections" view — CS/CNF rejection just needs
-  // to land its Sales Executive on the page that has the Resubmit/Reject buttons.
+  // CS/CNF rejection just needs to land its Sales Executive on the page that has the
+  // Resubmit/Reject buttons — CS-REJECTED is covered by hideOtherTeamSectionsForSales
+  // above for both types now; CNF-REJECTED only ever applies to Liner (Cross Trade has
+  // no CNF stage).
   const redirectToSalesView =
     (hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED") ||
-    (isLiner && isJobSalesOwner && (jobData?.status === "CS-REJECTED" || jobData?.status === "CNF-REJECTED"));
+    (isLiner && isJobSalesOwner && jobData?.status === "CNF-REJECTED");
   useEffect(() => {
     if (redirectToSalesView && id) navigate(`/sales-input?id=${id}&view=1`, { replace: true });
   }, [redirectToSalesView, id, navigate]);

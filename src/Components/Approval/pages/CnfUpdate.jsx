@@ -481,11 +481,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
-    // Submitting stages require mandatory docs
+    // Submitting stages require mandatory docs — same rule hasRequiredDocs enforces on the
+    // Submit button: Liner needs the Haulier Cost Sheet, everyone else needs Haulier Note + Load List.
     if (action === "Approved" && showSubmitAction) {
       const missing = [];
-      if (!haulierNoteFiles.length) missing.push("Haulier Note");
-      if (!loadListFiles.length)    missing.push("Load List");
+      if (isLiner) {
+        if (!haulageCostFiles.length) missing.push("Haulier Cost Sheet");
+      } else {
+        if (!haulierNoteFiles.length) missing.push("Haulier Note");
+        if (!loadListFiles.length)    missing.push("Load List");
+      }
       if (missing.length) {
         message.error(`Please upload required CNF documents: ${missing.join(", ")}`);
         return;
