@@ -588,6 +588,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         const ll = form.getFieldValue("ll_cut_off_datetime");
         const res = await apiClient.patch(`/liner/sales-input/${id}/`, {
           general_remarks: remarks,
+          booking_vessel: form.getFieldValue("booking_vessel"),
+          booking_voyage: form.getFieldValue("booking_voyage"),
           vsl_initial_eta: dateOrNull("vsl_initial_eta"),
           vsl_latest_eta: dateOrNull("vsl_latest_eta"),
           vsl_etd: dateOrNull("vsl_etd"),
@@ -595,6 +597,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(form.getFieldsValue()) }),
           approval_details: {
             id: initialJob?.approval_details?.id,
+            booking_vessel: form.getFieldValue("booking_vessel"),
+            booking_voyage: form.getFieldValue("booking_voyage"),
             vessel_eta: dateOrNull("vessel_eta"),
             ll_cut_off_datetime: ll ? ll.format("YYYY-MM-DD HH:mm") : null,
             si_cut_off_date: siCutOff ? siCutOff.tz("Asia/Dubai").format("YYYY-MM-DD") : null,
@@ -748,8 +752,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               <div style={{ display: open.booking ? "block" : "none" }}>
                 <Row gutter={[16, 8]}>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no"><Input placeholder="AFSYS Job No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel"><Input placeholder="Booking Vessel" disabled={false} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditEtaDates} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditEtaDates} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
