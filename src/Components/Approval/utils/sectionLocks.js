@@ -55,6 +55,33 @@ export const canCSEditPlacement = ({
 };
 
 /**
+ * CNF's counterpart to canCSEditPlacement. CNF can already open this job at
+ * stage 2 regardless of Sales HOD approval (see approvalRouteConfig.js, which
+ * gates "cnf-update" on role only, not on is_hod_approved), so placement stays
+ * editable there too instead of waiting on the HOD. At stage 3 it stays open
+ * until CNF hands the load list over.
+ */
+export const canCNFEditPlacement = ({
+  isAdmin, isCNF, currentStage, isTerminal, jobData,
+}) => {
+  if (isAdmin) return true;
+  if (!isCNF || isTerminal) return false;
+  // Callers that don't compute isTerminal still must not edit a closed job.
+  if (TERMINAL_STATUSES.includes(jobData?.status)) return false;
+
+  switch (String(currentStage || "")) {
+    // Stage 2 — open even before Sales HOD approves.
+    case "2":
+      return true;
+    // Stage 3 — open until CNF hands the job on (load list uploaded).
+    case "3":
+      return !jobData?.is_cnf_loadlist_uploaded;
+    default:
+      return false;
+  }
+};
+
+/**
  * Computes all section-level read/write lock flags for Approval.jsx.
  *
  * Every "disabled" prop on a form field traces back to one of these flags.

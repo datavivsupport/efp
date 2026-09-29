@@ -19,6 +19,7 @@ import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
+import { canCNFEditPlacement } from "../utils/sectionLocks";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -240,8 +241,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const mandatoryDocsLocked = isCnfSubmitted(initialJob);
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
-  // with them — i.e. right up to the submit/approve that hands it on.
-  const canEditPlacement = !isAdmin && isCNF && showSubmitAction;
+  // with them — including at stage 2 before Sales HOD approves — right up to
+  // the submit/approve that hands it on. See sectionLocks.js.
+  const canEditPlacement = canCNFEditPlacement({
+    isAdmin, isCNF, currentStage, isTerminal: false, jobData: initialJob,
+  });
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the existing Submit/Approve payload.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
@@ -556,7 +560,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
-      if (canUpdateTransportation) {
+      // Also PATCH for CNF (not just admin) so placement edits they made
+      // (Date/Time, Pickup/Delivery, Remarks) actually persist on plain Save.
+      if (canUpdateTransportation || isCNF) {
         const values = form.getFieldsValue();
         const payload = buildCommonPayload(
           values,
@@ -951,7 +957,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={handleSave}
                   icon={<Icon icon="mdi:content-save-outline" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading || !hasUploadedDoc}
+                  disabled={isDocumentUploading || loading || (!isCNF && !hasUploadedDoc)}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                 >
                   Save
@@ -973,7 +979,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     onClick={handleSave}
                     icon={<Icon icon="mdi:content-save-outline" />}
                     loading={loading}
-                    disabled={isDocumentUploading || loading || !hasUploadedDoc}
+                    disabled={isDocumentUploading || loading || (!isCNF && !hasUploadedDoc)}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                   >
                     Save
