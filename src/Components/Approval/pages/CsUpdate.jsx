@@ -338,7 +338,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = transportationFlag || isMasterMode;
-  // Placement Details stays open to CS until CS submits this stage — see sectionLocks.js
+  // Placement Details stays open to CS until Sales HOD approves — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin: isAdminForCsUpdate, isCS: true,
     currentStage, isMasterMode, isTerminal, jobData,
