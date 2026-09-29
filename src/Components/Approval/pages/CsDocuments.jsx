@@ -807,7 +807,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 </Row>
                 {!isCrossTrade && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
+                  {/* Liner only: isBOCReqCT reads the same is_boc_required value CS set at
+                      Stage 2A, so this locks the upload when BOC was answered No there.
+                      Explicitly scoped to isLiner rather than relying on isBOCReqCT's own
+                      default, so Forwarding/Others behave exactly as before regardless of
+                      what is_boc_required happens to hold for them. */}
+                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || (isLiner && !isBOCReqCT)} /></Form.Item></Col>
                 </Row>}
               </div>
             </Card>
