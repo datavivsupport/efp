@@ -84,11 +84,13 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockedDocIds }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockedDocIds, allowAnyDelete = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner);
+      // Liner RO / BOC: any CS user may delete until CS verifies & confirms
+      const canDeleteFile = canEditFile || (!disabled && allowAnyDelete);
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -102,7 +104,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && !lockedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canDeleteFile && !lockedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -117,7 +119,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false, allowAnyDelete = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -228,6 +230,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             isAdmin={isAdmin}
             additionalFiles={additionalFiles}
             showStatus={showStatus}
+            allowAnyDelete={allowAnyDelete}
           />
         )}
       </div>
@@ -352,6 +355,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const bocRequirementMet = isBOCReq || (!isLiner && !isExtended) || isMasterMode;
   const crossTradeRODisabled = isCrossTrade && !isROReq;
   const crossTradeBOCDisabled = isCrossTrade && !isBOCReq;
+  // Liner uses the same Yes/No slots: No closes the upload for CS too
+  const linerRODisabled = isLiner && !isROReq;
+  const linerBOCDisabled = isLiner && !isBOCReq;
 
   // Cross Trade: LPO / Invoice can be handled on this stage alongside Release Order / BOC.
   // They stay optional here — Stage 4 enforces them.
@@ -368,21 +374,21 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
-  const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled;
+  const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) return isLiner ? "CNF is allowed to upload it" : null;
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";
-    if (crossTradeRODisabled) return "Release Order upload is disabled until the requirement is turned on.";
+    if (crossTradeRODisabled || linerRODisabled) return "Release Order upload is disabled until the requirement is turned on.";
     return null;
   })();
-  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled;
+  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled || linerBOCDisabled;
   // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
   // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
   const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled || (csViewOnly && currentStage !== "2");
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
     if (!bocRequirementMet && !isCS) return "BOC upload is disabled until the requirement is turned on.";
-    if (crossTradeBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
+    if (crossTradeBOCDisabled || linerBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
     return null;
   })();
   const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
@@ -868,7 +874,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Not needed. Choose Yes to upload." : null}
                     >
                       {(showDocumentUploads || showROBOCForCS)
-                        ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} allowAnyDelete restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                         : <FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} />}
                     </DocSlot>
                     <DocSlot
@@ -878,7 +884,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       hint={isBOCReq && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReq ? "Not needed. Choose Yes to upload." : null}
                     >
                       {(showDocumentUploads || showROBOCForCS)
-                        ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} allowAnyDelete restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                         : <FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} />}
                     </DocSlot>
                   </Gate>
