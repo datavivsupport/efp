@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -63,12 +63,16 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => (
+// Liner: until CS submits the documents, any CS user may delete files in the open slots
+const CsPreSubmitDeleteContext = createContext(false);
+
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds, preSubmitDelete = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner || isPending);
+      const canDeleteFile = canEditFile || (!disabled && preSubmitDelete);
       // Only mandatory documents (the fields given submittedAtStage) are ever locked.
       const isDeleteLocked = submittedAtStage != null && !isPending && isMandatoryDocDeleteLocked(file, deleteLocked, submittedAtStage);
       return (
@@ -87,7 +91,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canEditFile && !isDeleteLocked && !savedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canDeleteFile && !isDeleteLocked && (preSubmitDelete || !savedDocIds?.has(file.id)) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -102,9 +106,11 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 
-const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => {
+const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds, ownerOnlyDelete = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
+  // ED (CNF-owned) and general attachments keep the uploader-only rule
+  const preSubmitDelete = useContext(CsPreSubmitDeleteContext) && !ownerOnlyDelete;
 
   const handleBeforeUpload = async (file) => {
     if (!file) {
@@ -192,7 +198,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
             const f = files[i];
             if (!f) return;
             if (submittedAtStage != null && f.id && !f.pending && isMandatoryDocDeleteLocked(f, deleteLocked, submittedAtStage)) return;
-            if (f.id && savedDocIds?.has(f.id)) return;
+            if (f.id && !preSubmitDelete && savedDocIds?.has(f.id)) return;
             if (f?.id && !f.pending) {
               Modal.confirm({
                 title: "Delete attachment?",
@@ -226,6 +232,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           deleteLocked={deleteLocked}
           submittedAtStage={submittedAtStage}
           savedDocIds={savedDocIds}
+          preSubmitDelete={preSubmitDelete}
         />
       )}
     </div>
@@ -333,6 +340,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
  
   const isCrossTrade = isCrossTradeJob(initialJob);
   const isLiner = initialJob?.job_type === "LINER";
+  const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
   const lpoToggle = normalizeBoolean(Form.useWatch("is_lpo_required", form), initialJob?.is_lpo_required ?? true);
   const invoiceToggle = normalizeBoolean(Form.useWatch("is_invoice_required", form), initialJob?.is_invoice_required ?? true);
   // Yes/No (defaults to Yes); upload is off when No — shared by Cross Trade and Liner
@@ -696,6 +704,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   return (
       <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
         <Spin spinning={loading}>
+          <CsPreSubmitDeleteContext.Provider value={csPreSubmitDelete}>
           <Form form={form} layout="vertical">
 
             {/* EXPORT DETAILS */}
@@ -846,7 +855,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField ownerOnlyDelete label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
                   </Row>
                 </div>
@@ -1005,7 +1014,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                     <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                   </Col>
-                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
+                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField ownerOnlyDelete label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
                 </Row>
               </div>
             </Card>
@@ -1072,6 +1081,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Button>
             </div>
           </Form>
+          </CsPreSubmitDeleteContext.Provider>
         </Spin>
         <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
           {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
