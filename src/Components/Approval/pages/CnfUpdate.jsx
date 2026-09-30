@@ -23,6 +23,8 @@ import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
+import { normalizeBoolean } from "../utils/formUtils";
+import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -248,6 +250,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // so placement stays editable there too until CNF submits.
   const canEditPlacement = !isAdmin && isCNF &&
     (showSubmitAction || (isLiner && currentStage === "2" && !cnfHasSubmitted));
+
+  // Liner: Load List is CNF's own Yes/No (defaults to Yes). Optional either way — it never gates Submit.
+  const loadListToggle = normalizeBoolean(Form.useWatch("is_load_list_required", form), initialJob?.is_load_list_required ?? true);
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
@@ -325,7 +330,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     if (!initialJob) return;
     form.setFieldsValue(mapJobToFormValues(initialJob));
-    
+    // The switch needs a real boolean; a Liner job that never answered it starts on Yes.
+    if (isLiner) form.setFieldsValue({ is_load_list_required: normalizeBoolean(initialJob.is_load_list_required, true) });
+
     if (initialJob.documents) {
       const docs = partitionDocuments(initialJob.documents, initialJob.name_of_executive);
       setReleaseOrderFiles(docs.releaseOrderFiles);
@@ -370,7 +377,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
       })(),
     });
-  }, [initialJob, form, ad]);
+  }, [initialJob, form, ad, isLiner]);
 
   const openPreview = (filesArray, idx) => {
     const filesWithMime = filesArray.map((file) => {
@@ -640,6 +647,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
           ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
+          ...(isLiner && !mandatoryDocsLocked && { is_load_list_required: loadListToggle }),
         };
 
         if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
@@ -804,7 +812,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
-                <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                {/* Liner: shown only when HBL was ticked at creation */}
+                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                 <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
@@ -915,9 +924,20 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Load List {!isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={!isLiner && mandatoryDocsLocked} disabled={!isLiner && !initialJob?.is_hod_approved} restrictionMessage={!isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
-                  </Form.Item>
+                  {isLiner ? (
+                    <DocSlot
+                      label="Load List"
+                      rule={loadListToggle ? "optional" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked} hasFiles={loadListFiles.length > 0} /> }}
+                      hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : null}
+                    >
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
+                    </DocSlot>
+                  ) : (
+                    <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                    </Form.Item>
+                  )}
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item label="ED" className={Styles.formLabel}>

@@ -656,6 +656,7 @@ const Approval = () => {
           stage, isCS, isCNF, isForwarding, isLiner, needsLpoInvoice,
           releaseOrderFiles, lpoFiles, invoiceFiles,
           haulageCostFiles, haulierNoteFiles, loadListFiles, edFiles,
+          isReleaseOrderRequired: isROReq,
         });
         if (validationError) {
           message.error(validationError);
@@ -1148,7 +1149,8 @@ const Approval = () => {
                   </Col>
                 </Row>
                 <Row gutter={16}>
-                  {!isLiner && (
+                  {/* Liner: shown only when HBL was ticked at creation */}
+                  {(!isLiner || normalizeBoolean(jobData?.hbl)) && (
                     <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
                   )}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>

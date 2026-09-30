@@ -256,6 +256,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   // (same Cross Trade Documents section, read-only). Display only — Approve / Save
   // don't read any of it, so their payloads are unchanged.
   const isCrossTrade = isCrossTradeJob(initialJob);
+  const isLiner = initialJob?.job_type === "LINER";
   const ctFiles = (k) => docs?.[k] || [];
   // A flag the backend doesn't return yet falls back to "Yes if a file was uploaded"
   const ctFlag = (value, files, fallback) => (value == null ? (files.length > 0 || fallback) : normalizeBoolean(value));
@@ -566,7 +567,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
-                  <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                  {/* Liner: shown only when HBL was ticked at creation */}
+                  {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {!isCrossTrade && <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>}

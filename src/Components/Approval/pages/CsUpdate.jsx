@@ -849,7 +849,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 {isLiner && (
                   <Gate title="Release Order & BOC" description="Answer Yes or No for each document. Uploads open when the answer is Yes.">
                     <DocSlot
-                      label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      label={<span>Release Order(s){isStage2 && isROReq && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
                       rule={isROReq ? "required" : "notRequired"}
                       toggle={{ label: "Required?", node: <RequirementSwitch name="is_release_order_required" disabled={isRequirementSelectorLocked} hasFiles={releaseOrderFiles.length > 0} /> }}
                       hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Not needed. Choose Yes to upload." : null}
