@@ -814,8 +814,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
                 </Row>}
 
-                {/* Liner: same Release Order & BOC section as CS Update. The Yes/No answers are
-                    given there, so they are read-only here and a No keeps the upload locked. */}
+
                 {isLiner && (
                   <Gate title="Release Order & BOC" description="Release Order and BOC Yes/No are set on the CS Update stage. Uploads open when the answer is Yes.">
                     <DocSlot

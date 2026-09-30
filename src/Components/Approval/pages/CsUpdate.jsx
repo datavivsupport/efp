@@ -302,6 +302,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2, stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD,
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
+  // Past the CS stage the page opens read-only, so CS sees the same layout they filled in
+  const csViewOnly = !isMasterMode && currentStage !== "2";
+
   const {
     baseLocked,
     isSalesSectionLocked, isBookingSectionLocked,
@@ -312,7 +315,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   } = computeSectionLocks({
     isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
-    currentStage: "2", isMasterMode, isTerminal, isForwarding,
+    currentStage: "2", isMasterMode, isTerminal: isTerminal || csViewOnly, isForwarding,
     isLiner, isExtended, isOthers,
     isStage2: true, isCNFStage: false, isCSHODStage: false, isAccountsStage: false,
     stage2: { ...stage2, creatorLocked: false }, isCSDoneWaitingHOD, jobData,
@@ -871,7 +874,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   </Gate>
                 )}
 
-                {showDocumentUploads && !hideCnfFromCS && (
+                {/* CNF documents stay off this page for CS (as when CS fills it in); only master/view-all mode shows them */}
+                {isMasterMode && showDocumentUploads && !hideCnfFromCS && (
                   <>
                     <Row gutter={16}>
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulage Cost Sheet"><DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Cost" disabled={isCNFUploadLocked} restrictionMessage={isLiner ? "CNF is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
@@ -1045,7 +1049,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:check-decagram-outline" title="APPROVAL STATUS & HISTORY" open={open.approvalStatus} onToggle={() => toggle("approvalStatus")} />}>
             <div style={{ display: open.approvalStatus ? "block" : "none" }}>
               <Table dataSource={approvalHistory} columns={approvalColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
-              {!isTerminal && canApprove && (
+              {!isTerminal && !csViewOnly && canApprove && (
                 <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
                   <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
@@ -1084,7 +1088,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           )}
 
           {/* ════════ BOTTOM BUTTONS ════════ */}
-          {!isMasterMode && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
+          {!isMasterMode && !csViewOnly && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
               <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save

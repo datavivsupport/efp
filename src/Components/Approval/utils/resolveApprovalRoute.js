@@ -29,8 +29,8 @@ export const resolveApprovalRoute = (jobData, user) => {
      return null 
   }
 
-  // Stage 2 — CS (only if not yet updated)
-  if (currentStage === "2" && roles.isCS && !isSalesHod) {
+  // Stage 2 — CS fills the page; stage 3 — same page, opened read-only
+  if ((currentStage === "2" || currentStage === "3") && roles.isCS && !isSalesHod) {
     return `/approval/${id}/cs-update`;
   }
 

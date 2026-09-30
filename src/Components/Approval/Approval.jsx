@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
+import { resolveApprovalRoute } from "./utils/resolveApprovalRoute";
 import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
@@ -568,6 +569,13 @@ const Approval = () => {
       const response = await apiClient.get(`/liner/sales-input/${id}/`);
       if (response.data.status === "success") {
         const data = response.data.data;
+
+        // CS opening /approval?id= directly (notification, report link) lands on their own page
+        const csRoute = computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null;
+        if (csRoute) {
+          navigate(csRoute, { replace: true });
+          return;
+        }
         setJobData(data);
 
         // Map to main form

@@ -638,9 +638,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       let saveMessage = "Saved successfully";
 
       if (isCNF) {
-        // Only what CNF can edit on this page. Documents are left out - each file is saved on
-        // upload and its remarks on edit, and a documents list would rename types or drop files
-        // this page did not load. Booking fields are CS's and read-only here, so not sent back.
+
         const values = form.getFieldsValue();
         const cnfPayload = {
           general_remarks: remarks,
@@ -651,17 +649,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         };
 
         if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
-          // save-documents stores the payload and is also CNF's commit at stage 7: it locks CNF's
-          // attachments, mails the pending list and moves the job to stage 9 once all docs are in.
-          // At stage 6 it only saves — the job stays on the Accounts desk — and it is the one route
-          // that lifts the API's HOD/GM read-only rule, which a plain PATCH trips for the CNF users
-          // who carry an HOD role. It also reports what is still outstanding.
+       
           const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
           if (typeof res.data?.message === "string") saveMessage = res.data.message;
         } else if (!canUpdateTransportation) {
-          // Same as CS's Save. Admins already sent the full PATCH above. Stage 2 goes
-          // through here too, so remarks typed there are kept rather than dropped —
-          // this PATCH must never advance the stage, only the approve POST does that.
+          
           await apiClient.patch(`/liner/sales-input/${id}/`, cnfPayload);
         }
       }
