@@ -338,14 +338,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   // Yes/No (defaults to Yes); upload is off when No — shared by Cross Trade and Liner
   const preAlertToggle = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), initialJob?.is_pre_alert_required ?? true);
   const hasLpoOrInvoice = lpoFiles.length > 0 || invoiceFiles.length > 0;
+  // Cross Trade and Liner: CS HOD is required only when an LPO or Invoice is Yes or uploaded.
   const csHodForced = lpoToggle || invoiceToggle || hasLpoOrInvoice;
-  // Liner: LPO or Invoice on forces CS HOD to Yes; with both off, CS HOD is its own Yes/No.
-  const csHodToggleLiner = normalizeBoolean(Form.useWatch("is_cs_hod_required", form), initialJob?.is_cs_hod_required ?? true);
-  const csHodRequiredLiner = csHodForced || csHodToggleLiner;
   const lpoRequired = (!isCrossTrade && !isLiner) || lpoToggle;
   const invoiceRequired = (!isCrossTrade && !isLiner) || invoiceToggle;
 
-  const csHodRequired = isCrossTrade ? csHodForced : isLiner ? csHodRequiredLiner : true;
+  const csHodRequired = (isCrossTrade || isLiner) ? csHodForced : true;
   // Cross Trade: Release Order / BOC Yes/No (set on the CS Update stage) — uploads are off when No
   const isROReqCT = normalizeBoolean(initialJob?.is_release_order_required);
  
@@ -358,17 +356,13 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
   useEffect(() => {
-    if (isCrossTrade) form.setFieldsValue({ is_cs_hod_required: csHodForced });
-  }, [isCrossTrade, csHodForced, form]);
+    if (isCrossTrade || isLiner) form.setFieldsValue({ is_cs_hod_required: csHodForced });
+  }, [isCrossTrade, isLiner, csHodForced, form]);
 
+  // Liner: once CS HOD is no longer required, the name is cleared immediately, not just at submit time.
   useEffect(() => {
-    if (isLiner && csHodForced) form.setFieldsValue({ is_cs_hod_required: true });
+    if (isLiner && !csHodForced) form.setFieldsValue({ cs_hod: null });
   }, [isLiner, csHodForced, form]);
-
-  // Liner: "No" clears the CS HOD name immediately, not just at submit time.
-  useEffect(() => {
-    if (isLiner && !csHodRequiredLiner) form.setFieldsValue({ cs_hod: null });
-  }, [isLiner, csHodRequiredLiner, form]);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   // Keep backend order as-is
@@ -526,7 +520,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   } : isLiner ? {
     is_lpo_required: lpoToggle,
     is_invoice_required: invoiceToggle,
-    is_cs_hod_required: csHodRequiredLiner,
+    is_cs_hod_required: csHodForced,
     is_pre_alert_required: preAlertToggle,
   } : {});
 
@@ -815,15 +809,33 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
                 </Row>
-                {!isCrossTrade && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+                {!isCrossTrade && !isLiner && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
-                  {/* Liner only: isBOCReqCT reads the same is_boc_required value CS set at
-                      Stage 2A, so this locks the upload when BOC was answered No there.
-                      Explicitly scoped to isLiner rather than relying on isBOCReqCT's own
-                      default, so Forwarding/Others behave exactly as before regardless of
-                      what is_boc_required happens to hold for them. */}
-                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || (isLiner && !isBOCReqCT)} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
                 </Row>}
+
+                {/* Liner: same Release Order & BOC section as CS Update. The Yes/No answers are
+                    given there, so they are read-only here and a No keeps the upload locked. */}
+                {isLiner && (
+                  <Gate title="Release Order & BOC" description="Release Order and BOC Yes/No are set on the CS Update stage. Uploads open when the answer is Yes.">
+                    <DocSlot
+                      label="Release Order(s)"
+                      rule={isROReqCT ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }}
+                      hint={!isROReqCT ? "Not needed." : null}
+                    >
+                      <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
+                    </DocSlot>
+                    <DocSlot
+                      label="BOC Attachment"
+                      rule={isBOCReqCT ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={isBOCReqCT} /> }}
+                      hint={!isBOCReqCT ? "Not needed." : null}
+                    >
+                      <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
+                    </DocSlot>
+                  </Gate>
+                )}
               </div>
             </Card>
 
@@ -924,7 +936,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
             {isLiner && (
               <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
                 <div style={{ display: open.documents ? "block" : "none" }}>
-                  <Gate title="LPO, Invoice, Pre-Alert & CS HOD" description="Answer Yes or No for each document. CS HOD approval is required whenever LPO or Invoice is Yes.">
+                  <Gate title="LPO, Invoice, Pre-Alert & CS HOD" description="Answer Yes or No for each document. CS HOD approval is required only when LPO or Invoice is Yes.">
                     <DocSlot
                       label={<span>LPO{lpoRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
                       rule={lpoRequired ? "required" : "notRequired"}
@@ -954,10 +966,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <DocSlot
                       label="CS HOD Approval"
                       rule={csHodRequired ? "required" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_cs_hod_required" disabled={csHodForced} /> }}
-                      hint={csHodForced
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequired} /> }}
+                      hint={csHodRequired
                         ? (lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
-                        : csHodRequired ? null : "Not required — the name is cleared."}
+                        : "Not required — LPO and Invoice are both No."}
                     >
                       {csHodRequired
                         ? <Form.Item name="cs_hod" rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
