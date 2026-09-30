@@ -570,8 +570,8 @@ const Approval = () => {
       if (response.data.status === "success") {
         const data = response.data.data;
 
-        // CS opening /approval?id= directly (notification, report link) lands on their own page
-        const csRoute = computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null;
+        // Liner: CS opening /approval?id= directly (notification, report link) lands on their own page
+        const csRoute = data?.job_type?.toUpperCase() === "LINER" && computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null;
         if (csRoute) {
           navigate(csRoute, { replace: true });
           return;

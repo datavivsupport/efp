@@ -303,11 +303,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2, stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD,
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
-  // Once CS has verified & confirmed (or the job moved past the CS stage) the page is view-only:
+  // Liner only: once CS has verified & confirmed (or the job moved past the CS stage) the page is view-only:
   // same layout as when filling it in, but no uploads, edits or Verify / Reject / Save buttons.
   // Cross Trade keeps its own rule (CS may still add the BOC right after confirming), and a job
   // rejected back to CS at stage 2 stays editable so CS can fix and resubmit.
-  const csViewOnly = !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
+  const csViewOnly = isLiner && !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
 
   const {
     baseLocked,
@@ -884,8 +884,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   </Gate>
                 )}
 
-                {/* CNF documents stay off this page for CS (as when CS fills it in); only master/view-all mode shows them */}
-                {isMasterMode && showDocumentUploads && !hideCnfFromCS && (
+                {/* Liner: CNF documents stay off this page for CS (as when CS fills it in); only master/view-all mode shows them */}
+                {(!isLiner || isMasterMode) && showDocumentUploads && !hideCnfFromCS && (
                   <>
                     <Row gutter={16}>
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulage Cost Sheet"><DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Cost" disabled={isCNFUploadLocked} restrictionMessage={isLiner ? "CNF is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>

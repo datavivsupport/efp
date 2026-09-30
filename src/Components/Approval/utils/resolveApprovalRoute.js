@@ -29,8 +29,9 @@ export const resolveApprovalRoute = (jobData, user) => {
      return null 
   }
 
-  // Stage 2 — CS fills the page; stage 3 — same page, opened read-only
-  if ((currentStage === "2" || currentStage === "3") && roles.isCS && !isSalesHod) {
+  // Stage 2 — CS fills the page; Liner stage 3 — same page, opened read-only (other job types keep the old page there)
+  const isLinerJob = jobData?.job_type?.toUpperCase() === "LINER";
+  if ((currentStage === "2" || (currentStage === "3" && isLinerJob)) && roles.isCS && !isSalesHod) {
     return `/approval/${id}/cs-update`;
   }
 
