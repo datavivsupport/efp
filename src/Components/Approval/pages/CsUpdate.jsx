@@ -124,6 +124,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
   const uploadActivity = useContext(UploadActivityContext);
   const lockedDocIds = useContext(LockedDocsContext);
   const handleBeforeUpload = async (file) => {
+    if (disabled) return false;
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
@@ -184,7 +185,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
   return (
     <Spin spinning={uploading} size="small">
       <div>
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled || uploading}>
           <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
         </Upload>
         {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
@@ -302,15 +303,18 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2, stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD,
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
-  // Past the CS stage the page opens read-only, so CS sees the same layout they filled in
-  const csViewOnly = !isMasterMode && currentStage !== "2";
+  // Once CS has verified & confirmed (or the job moved past the CS stage) the page is view-only:
+  // same layout as when filling it in, but no uploads, edits or Verify / Reject / Save buttons.
+  // Cross Trade keeps its own rule (CS may still add the BOC right after confirming), and a job
+  // rejected back to CS at stage 2 stays editable so CS can fix and resubmit.
+  const csViewOnly = !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
 
   const {
     baseLocked,
     isSalesSectionLocked, isBookingSectionLocked,
     isAccountsEditableFieldLocked,
     isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked,
-    isRequirementSelectorLocked,
+    isRequirementSelectorLocked: requirementSelectorLockedBase,
     showDocumentUploads, showROBOCForCS, needsLpoInvoice, hideCnfFromCS,
   } = computeSectionLocks({
     isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
@@ -320,6 +324,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2: true, isCNFStage: false, isCSHODStage: false, isAccountsStage: false,
     stage2: { ...stage2, creatorLocked: false }, isCSDoneWaitingHOD, jobData,
   });
+
+  // Yes/No requirement switches (and CS HOD) are frozen along with everything else once CS has confirmed
+  const isRequirementSelectorLocked = requirementSelectorLockedBase || csViewOnly;
 
   /* ── Form watches ── */
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
@@ -371,7 +378,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled;
   // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
   // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
-  const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled;
+  const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled || (csViewOnly && currentStage !== "2");
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
     if (!bocRequirementMet && !isCS) return "BOC upload is disabled until the requirement is turned on.";
@@ -388,10 +395,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = transportationFlag || isMasterMode;
   // Placement Details stays open to CS until CS submits this stage — see sectionLocks.js
-  const canEditPlacement = canCSEditPlacement({
-    isAdmin: isAdminForCsUpdate, isCS: true,
-    currentStage, isMasterMode, isTerminal, jobData,
-  });
+  // After CS has verified & confirmed (view-only page) Placement Details is the one section that stays open
+  const canEditPlacement = csViewOnly
+    ? !isTerminal && ["2", "3"].includes(currentStage)
+    : canCSEditPlacement({
+        isAdmin: isAdminForCsUpdate, isCS: true,
+        currentStage, isMasterMode, isTerminal, jobData,
+      });
   // CS may change only Date/Time, Pickup/Delivery and Remarks; they ride along
   // on the page's existing Save / Submit calls. Equipment, volume, category keep
   // the sales-section lock.
@@ -592,7 +602,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     setLoading(true);
     try {
       if (!(await confirmAction("save", setLoading))) return;
-      const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: "Updated Level 2" };
+      const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: csViewOnly ? (jobData?.status || "draft") : "Updated Level 2" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
@@ -1067,7 +1077,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           )}
 
           {/* ════════ APPROVER BUTTONS ════════ */}
-          {!isTerminal && canApprove && (
+          {!isTerminal && !csViewOnly && canApprove && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: jobData?.is_cs_updated ? 0 : "40px" }}>
               {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
                 <>
@@ -1093,6 +1103,20 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
               <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
+              <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {/* ════════ AFTER VERIFY & CONFIRM: only Save (Placement Details) and Cancel ════════ */}
+          {!isMasterMode && csViewOnly && !isTerminal && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
+              {canEditPlacement && showPlacement && (
+                <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                  Save
+                </Button>
+              )}
               <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
