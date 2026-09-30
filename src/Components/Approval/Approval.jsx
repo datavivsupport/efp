@@ -119,12 +119,12 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
               </div>
               <Space>
                 <ScrollSafeTooltip title="Preview">
-                <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
+                  <Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} />
                 </ScrollSafeTooltip>
                 {canEditFile && (
-                <ScrollSafeTooltip title="Delete">
-                <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />
-                </ScrollSafeTooltip>
+                  <ScrollSafeTooltip title="Delete">
+                    <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} />
+                  </ScrollSafeTooltip>
                 )}
               </Space>
             </div>
@@ -468,8 +468,8 @@ const Approval = () => {
   })();
   const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
   const isPaymentReq = normalizeBoolean(isLNR_LPO_ReqForm, jobData?.is_lpo_invoice_required) || normalizeBoolean(isPaymentReqForm, jobData?.is_payment_processing_required);
-  const facFlag          = normalizeBoolean(facFlagForm,          jobData?.fac);
-  const hblFlag          = normalizeBoolean(hblFlagForm,          jobData?.hbl);
+  const facFlag = normalizeBoolean(facFlagForm, jobData?.fac);
+  const hblFlag = normalizeBoolean(hblFlagForm, jobData?.hbl);
   const documentationFlag = normalizeBoolean(documentationFlagForm, jobData?.documentation);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
@@ -715,7 +715,7 @@ const Approval = () => {
       const isCSUpdate = isLiner && isCS && (parseInt(currentStage) === 2 || parseInt(currentStage) === 3);
       const payload = {
         ...getCommonPayload(values),
-        status: isCSUpdate ? "Updated Level 2" : (jobData?.status || "draft")
+        status: isCSUpdate ? "submitted Level 2" : (jobData?.status || "draft")
       };
 
       const response = id
@@ -812,575 +812,702 @@ const Approval = () => {
           dec: () => setUploadingDocsCount((prev) => Math.max(0, prev - 1)),
         }}
       >
-      <Spin spinning={loading}>
-        <Form
-          layout="vertical"
-          form={form}
-          onFinish={onFinish}
-          initialValues={{
-            containerRows: [{}],
-            placementRows: [{}]
-          }}
-        >
-
-          {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
-          <Card
-            className={Styles.card}
-            bordered
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <CardHeader
-                  icon="basil:document-solid"
-                  title="EXPORT DETAILS"
-                  open={open.export}
-                  onToggle={() => toggle("export")}
-                />
-                <Space>
-                  {(jobData?.is_hod_approved || isMasterMode) && !isOthers && (
-                    <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
-                  )}
-                  {(isExtended || isMasterMode) && (jobData?.is_cs_hod_approved || isMasterMode) && (
-                    <Tag color="processing" icon={<CheckCircleOutlined />}>CS HOD Approved</Tag>
-                  )}
-                </Space>
-              </div>
-            }
+        <Spin spinning={loading}>
+          <Form
+            layout="vertical"
+            form={form}
+            onFinish={onFinish}
+            initialValues={{
+              containerRows: [{}],
+              placementRows: [{}]
+            }}
           >
-            <div style={{ display: open.export ? "block" : "none" }}>
-              <Row gutter={16}>
-                {isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Job Type">
-                      <Input readOnly variant="filled" value={jobData?.job_type || ""} />
-                    </Form.Item>
-                  </Col>
-                )}
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Number" name="export_number">
-                    <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date">
-                    <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
-                  </Form.Item>
-                </Col>
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}>
-                      <Input placeholder="Customer Name" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name">
-                      <Input placeholder="Carrier Name" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
-                      <Input placeholder="Contact PIC" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Phone" name="phone_no">
-                      <Input placeholder="Phone" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Email" name="email">
-                      <Input placeholder="Email" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                {!isOthers && (
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Commodity" name="commodity">
-                      <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                )}
-                <Col xs={24} md={6}>
-                  <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
-                    <Input readOnly variant="filled" disabled />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
-          </Card>
 
-          {/* ════════ OTHERS JOB DETAILS ════════ */}
-          {(isOthers || isMasterMode) && (
+            {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
             <Card
               className={Styles.card}
               bordered
               title={
-                <CardHeader
-                  icon="fluent:box-24-filled"
-                  title="OTHERS JOB DETAILS"
-                  open={open.others}
-                  onToggle={() => toggle("others")}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <CardHeader
+                    icon="basil:document-solid"
+                    title="EXPORT DETAILS"
+                    open={open.export}
+                    onToggle={() => toggle("export")}
+                  />
+                  <Space>
+                    {(jobData?.is_hod_approved || isMasterMode) && !isOthers && (
+                      <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                    )}
+                    {(isExtended || isMasterMode) && (jobData?.is_cs_hod_approved || isMasterMode) && (
+                      <Tag color="processing" icon={<CheckCircleOutlined />}>CS HOD Approved</Tag>
+                    )}
+                  </Space>
+                </div>
               }
             >
-              <div style={{ display: open.others ? "block" : "none" }}>
-                {showDocumentUploads && (
-                  <>
-                  <Row gutter={16}>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
-                      <Input placeholder="Free text carrier" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="VSL/VOY" name="vessel_voyage_remarks" className={Styles.formLabel}>
-                      <Input placeholder="Free text vessel/voyage" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POL (Port of Loading)" name="pol_remarks" className={Styles.formLabel}>
-                      <Input placeholder="Free text POL" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
-                      <Input placeholder="Free text POD" disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                </Row>
+              <div style={{ display: open.export ? "block" : "none" }}>
                 <Row gutter={16}>
-                  <Col xs={24} md={8}>
-                    <Form.Item label="Export / Import" name="is_export" className={Styles.formLabel}>
-                      <Radio.Group disabled={isSalesSectionLocked} buttonStyle="solid">
-                        <Radio.Button value={true}>Export</Radio.Button>
-                        <Radio.Button value={false}>Import</Radio.Button>
-                      </Radio.Group>
-                    </Form.Item>
-                  </Col>
-                </Row>
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
-                      <DocUploadField label="Freight Manifest" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={true} user={user} isAdmin={isAdmin} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
-                      <DocUploadField label="Sailing Report" files={edFiles} setFiles={setEdFiles} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={true} user={user} isAdmin={isAdmin} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
-                      <DocUploadField label="Other Docs" files={otherDocsFiles} setFiles={setOtherDocsFiles} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={true} user={user} isAdmin={isAdmin} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-                </>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {/* ════════ CONTAINER DETAILS ════════ */}
-          {!isOthers && (
-            <Card
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="octicon:container-24"
-                  title="CONTAINER DETAILS"
-                  open={open.container}
-                  onToggle={() => toggle("container")}
-                />
-              }
-            >
-              <div style={{ display: open.container ? "block" : "none" }}>
-                <Form.List name="containerRows">
-                  {(fields, { add, remove }) => (
-                    <>
-                      {fields.map(({ key, name, ...rest }) => (
-                        <Row gutter={16} key={key} align="middle">
-                          <Col xs={24} md={5}>
-                            <Form.Item
-                              className={Styles.formLabel}
-                              {...rest}
-                              name={[name, "equipment_type"]}
-                              label="Equipment Type"
-                              rules={[{ required: true }]}
-                            >
-                              <EquipmentTypeSelect disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={4}>
-                            <Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty">
-                              <Input placeholder="Qty" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={5}>
-                            <Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category">
-                              <CategorySelect disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={4}>
-                            <Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote">
-                              <TextArea placeholder="Quote" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={4}>
-                            <Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost">
-                              <TextArea placeholder="Cost" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
-                            </Form.Item>
-                          </Col>
-                          <Col xs={24} md={1}>
-                            <Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} />
-                          </Col>
-                          <Col xs={24} md={1}>
-                            {!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}
-                          </Col>
-                        </Row>
-                      ))}
-                    </>
+                  {isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Job Type">
+                        <Input readOnly variant="filled" value={jobData?.job_type || ""} />
+                      </Form.Item>
+                    </Col>
                   )}
-                </Form.List>
-
-                <Row gutter={16} style={{ marginTop: 8 }}>
-                  <Col xs={24}>
-                    <Form.Item className={Styles.formLabel} label="Other Charges">
-                      <Input.TextArea
-                        value={otherChargesDisplay}
-                        placeholder="No other charges"
-                        disabled
-                        variant="filled"
-                        autoSize={{ minRows: 2 }}
-                      />
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Export Number" name="export_number">
+                      <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col>
-                </Row>
-              </div>
-            </Card>
-          )}
-
-          {/* ════════ OTHER DETAILS (POL/POD etc) ════════ */}
-          {(!isOthers || isMasterMode) && (
-            <Card
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="mingcute:ship-fill"
-                  title="OTHER DETAILS"
-                  open={open.otherDetails}
-                  onToggle={() => toggle("otherDetails")}
-                />
-              }
-            >
-              <div style={{ display: open.otherDetails ? "block" : "none" }}>
-                <Row gutter={16}>
+                  <Col xs={24} md={6}>
+                    <Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date">
+                      <Input readOnly variant="filled" disabled={isSalesSectionLocked} />
+                    </Form.Item>
+                  </Col>
                   {!isOthers && (
-                    <>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}>
-                          <Input placeholder="Port of Loading" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}>
-                          <Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod">
-                          <Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
-                        </Form.Item>
-                      </Col>
-                    </>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Customer Name" name="customer_name" rules={[{ required: true }]}>
+                        <Input placeholder="Customer Name" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Carrier Name" name="carrier_name">
+                        <Input placeholder="Carrier Name" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Contact PIC" name="contact_pic">
+                        <Input placeholder="Contact PIC" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Phone" name="phone_no">
+                        <Input placeholder="Phone" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Email" name="email">
+                        <Input placeholder="Email" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                  )}
+                  {!isOthers && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Commodity" name="commodity">
+                        <Input placeholder="Commodity" disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
                   )}
                   <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment">
-                      <Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}>
-                        <Option value="prepaid">Prepaid</Option>
-                        <Option value="collect">Collect</Option>
-                      </Select>
+                    <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
+                      <Input readOnly variant="filled" disabled />
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code">
-                      <Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isCNF && isForwarding && currentStage === "3" && !isCNFDone)} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
-                      <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
-                    </Form.Item>
-                  </Col>
-                  {/* <Col xs={24} md={12}>
+                </Row>
+              </div>
+            </Card>
+
+            {/* ════════ OTHERS JOB DETAILS ════════ */}
+            {(isOthers || isMasterMode) && (
+              <Card
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="fluent:box-24-filled"
+                    title="OTHERS JOB DETAILS"
+                    open={open.others}
+                    onToggle={() => toggle("others")}
+                  />
+                }
+              >
+                <div style={{ display: open.others ? "block" : "none" }}>
+                  {showDocumentUploads && (
+                    <>
+                      <Row gutter={16}>
+                        <Col xs={24} md={6}>
+                          <Form.Item label="CARRIER" name="carrier_remarks" className={Styles.formLabel}>
+                            <Input placeholder="Free text carrier" disabled={isSalesSectionLocked} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item label="VSL/VOY" name="vessel_voyage_remarks" className={Styles.formLabel}>
+                            <Input placeholder="Free text vessel/voyage" disabled={isSalesSectionLocked} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item label="POL (Port of Loading)" name="pol_remarks" className={Styles.formLabel}>
+                            <Input placeholder="Free text POL" disabled={isSalesSectionLocked} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}>
+                            <Input placeholder="Free text POD" disabled={isSalesSectionLocked} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Row gutter={16}>
+                        <Col xs={24} md={8}>
+                          <Form.Item label="Export / Import" name="is_export" className={Styles.formLabel}>
+                            <Radio.Group disabled={isSalesSectionLocked} buttonStyle="solid">
+                              <Radio.Button value={true}>Export</Radio.Button>
+                              <Radio.Button value={false}>Import</Radio.Button>
+                            </Radio.Group>
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Row gutter={16}>
+                        <Col xs={24} md={12}>
+                          <Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}>
+                            <DocUploadField label="Freight Manifest" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={true} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={12}>
+                          <Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}>
+                            <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={true} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <Row gutter={16}>
+                        <Col xs={24} md={12}>
+                          <Form.Item label="TDR/Sailing Report" className={Styles.formLabel}>
+                            <DocUploadField label="Sailing Report" files={edFiles} setFiles={setEdFiles} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={true} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={12}>
+                          <Form.Item label="OTHER DOCS" className={Styles.formLabel}>
+                            <DocUploadField label="Other Docs" files={otherDocsFiles} setFiles={setOtherDocsFiles} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={true} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                    </>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {/* ════════ CONTAINER DETAILS ════════ */}
+            {!isOthers && (
+              <Card
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="octicon:container-24"
+                    title="CONTAINER DETAILS"
+                    open={open.container}
+                    onToggle={() => toggle("container")}
+                  />
+                }
+              >
+                <div style={{ display: open.container ? "block" : "none" }}>
+                  <Form.List name="containerRows">
+                    {(fields, { add, remove }) => (
+                      <>
+                        {fields.map(({ key, name, ...rest }) => (
+                          <Row gutter={16} key={key} align="middle">
+                            <Col xs={24} md={5}>
+                              <Form.Item
+                                className={Styles.formLabel}
+                                {...rest}
+                                name={[name, "equipment_type"]}
+                                label="Equipment Type"
+                                rules={[{ required: true }]}
+                              >
+                                <EquipmentTypeSelect disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={4}>
+                              <Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty">
+                                <Input placeholder="Qty" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={5}>
+                              <Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category">
+                                <CategorySelect disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={4}>
+                              <Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote">
+                                <TextArea placeholder="Quote" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={4}>
+                              <Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost">
+                                <TextArea placeholder="Cost" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} />
+                              </Form.Item>
+                            </Col>
+                            <Col xs={24} md={1}>
+                              <Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                            </Col>
+                            <Col xs={24} md={1}>
+                              {!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}
+                            </Col>
+                          </Row>
+                        ))}
+                      </>
+                    )}
+                  </Form.List>
+
+                  <Row gutter={16} style={{ marginTop: 8 }}>
+                    <Col xs={24}>
+                      <Form.Item className={Styles.formLabel} label="Other Charges">
+                        <Input.TextArea
+                          value={otherChargesDisplay}
+                          placeholder="No other charges"
+                          disabled
+                          variant="filled"
+                          autoSize={{ minRows: 2 }}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </div>
+              </Card>
+            )}
+
+            {/* ════════ OTHER DETAILS (POL/POD etc) ════════ */}
+            {(!isOthers || isMasterMode) && (
+              <Card
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="mingcute:ship-fill"
+                    title="OTHER DETAILS"
+                    open={open.otherDetails}
+                    onToggle={() => toggle("otherDetails")}
+                  />
+                }
+              >
+                <div style={{ display: open.otherDetails ? "block" : "none" }}>
+                  <Row gutter={16}>
+                    {!isOthers && (
+                      <>
+                        <Col xs={24} md={6}>
+                          <Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}>
+                            <Input placeholder="Port of Loading" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}>
+                            <Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={6}>
+                          <Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod">
+                            <Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
+                          </Form.Item>
+                        </Col>
+                      </>
+                    )}
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment">
+                        <Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}>
+                          <Option value="prepaid">Prepaid</Option>
+                          <Option value="collect">Collect</Option>
+                        </Select>
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code">
+                        <Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isCNF && isForwarding && currentStage === "3" && !isCNFDone)} />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
+                        <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
+                      </Form.Item>
+                    </Col>
+                    {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Remarks" name="remarks">
                       <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col> */}
-                  {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
+                    {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
                       (not a form field, so Save / Submit send the same values as before) */}
-                  {isCrossTrade && (
-                    <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Remarks">
-                        <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                    {isCrossTrade && (
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Remarks">
+                          <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                        </Form.Item>
+                      </Col>
+                    )}
+                    {executiveDocs.length > 0 ? (
+                      <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    ) : null}
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        className={Styles.formLabel}
+                        label="Name of Executive"
+                        name="name_of_executive"
+                        rules={[{ required: !isOthers, message: "Required" }]}
+                      >
+                        <Input placeholder="Sales Executive" disabled={true} />
                       </Form.Item>
                     </Col>
-                  )}
-                  {executiveDocs.length > 0 ? (
-                    <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                  ) : null}
-                  <Col xs={24} md={12}>
-                    <Form.Item
-                      className={Styles.formLabel}
-                      label="Name of Executive"
-                      name="name_of_executive"
-                      rules={[{ required: !isOthers, message: "Required" }]}
-                    >
-                      <Input placeholder="Sales Executive" disabled={true} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-                <Row gutter={16}>
-                  {/* Liner: shown only when HBL was ticked at creation */}
-                  {(!isLiner || normalizeBoolean(jobData?.hbl)) && (
-                    <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
-                  )}
-                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                  {/* Cross Trade has no transportation (not asked in Sales Input): hidden, kept mounted so the saved value is unchanged */}
-                  <Col xs={12} md={6} style={isCrossTrade ? { display: "none" } : undefined}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
-                </Row>
-              </div>
-            </Card>
-          )}
+                  </Row>
+                  <Row gutter={16}>
+                    {/* Liner: shown only when HBL was ticked at creation */}
+                    {(!isLiner || normalizeBoolean(jobData?.hbl)) && (
+                      <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                    )}
+                    <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
+                    <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
+                    {/* Cross Trade has no transportation (not asked in Sales Input): hidden, kept mounted so the saved value is unchanged */}
+                    <Col xs={12} md={6} style={isCrossTrade ? { display: "none" } : undefined}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  </Row>
+                </div>
+              </Card>
+            )}
 
 
-          {/* ════════ PLACEMENT DETAILS — hidden for Cross Trade, kept mounted so the saved rows are unchanged ════════ */}
-          {(!isOthers || isMasterMode) && showPlacement && (
-            <Card
-              style={isCrossTrade ? { display: "none" } : undefined}
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="hugeicons:delivery-truck-02"
-                  title="PLACEMENT DETAILS"
-                  open={open.placement}
-                  onToggle={() => toggle("placement")}
-                />
-              }
-            >
-              <div style={{ display: open.placement ? "block" : "none" }}>
-                <Form.List name="placementRows">
-                  {(fields, { add, remove }) => (
-                    <>
-                      {fields.map(({ key, name, ...restField }) => (
-                        <Row key={key} gutter={16} align="middle">
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                          <Col xs={24} md={2}>
-                            <Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} />
-                          </Col>
-                        </Row>
-                      ))}
-                      {!isSalesSectionLocked && <Button type="dashed" onClick={() => add()} block icon={<Icon icon="mdi:plus" />}>Add Placement Detail</Button>}
-                    </>
-                  )}
-                </Form.List>
-              </div>
-            </Card>
-          )}
+            {/* ════════ PLACEMENT DETAILS — hidden for Cross Trade, kept mounted so the saved rows are unchanged ════════ */}
+            {(!isOthers || isMasterMode) && showPlacement && (
+              <Card
+                style={isCrossTrade ? { display: "none" } : undefined}
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="hugeicons:delivery-truck-02"
+                    title="PLACEMENT DETAILS"
+                    open={open.placement}
+                    onToggle={() => toggle("placement")}
+                  />
+                }
+              >
+                <div style={{ display: open.placement ? "block" : "none" }}>
+                  <Form.List name="placementRows">
+                    {(fields, { add, remove }) => (
+                      <>
+                        {fields.map(({ key, name, ...restField }) => (
+                          <Row key={key} gutter={16} align="middle">
+                            <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equip Type"><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
+                            <Col xs={24} md={3}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Vol"><InputNumber placeholder="Vol" precision={0} min={0} style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                            <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
+                            <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                            <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Location" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                            <Col xs={24} md={3}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                            <Col xs={24} md={2}>
+                              <Button danger disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} style={{ marginTop: '1.8rem' }} />
+                            </Col>
+                          </Row>
+                        ))}
+                        {!isSalesSectionLocked && <Button type="dashed" onClick={() => add()} block icon={<Icon icon="mdi:plus" />}>Add Placement Detail</Button>}
+                      </>
+                    )}
+                  </Form.List>
+                </div>
+              </Card>
+            )}
 
-          {/* ════════ BOOKING DETAILS ════════ */}
-          {!isOthers && (
-            <Card
-              style={salesHiddenStyle}
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="mdi:anchor"
-                  title="BOOKING DETAILS"
-                  open={open.booking}
-                  onToggle={() => toggle("booking")}
-                />
-              }
-            >
-              <div style={{ display: open.booking ? "block" : "none" }}>
-                <Row gutter={16}>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={false} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={false} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
+            {/* ════════ BOOKING DETAILS ════════ */}
+            {!isOthers && (
+              <Card
+                style={salesHiddenStyle}
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="mdi:anchor"
+                    title="BOOKING DETAILS"
+                    open={open.booking}
+                    onToggle={() => toggle("booking")}
+                  />
+                }
+              >
+                <div style={{ display: open.booking ? "block" : "none" }}>
+                  <Row gutter={16}>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="AFSYS Job No." name="afsys_job_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Afsys Job No." disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Booking Vessel" name="booking_vessel" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Vessel" disabled={false} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={false} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
 
-                  {/* PRD v3.2 Relocated ETA Fields */}
-                  <Col xs={24} md={6}>
-                    <Form.Item label="Release ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
-                      <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={`${Styles.formLabel} ${Styles.remarksResize}`} label="Booking Remarks" name="booking_remarks"><TextArea rows={1} disabled={isBookingSectionLocked} /></Form.Item>
-                  </Col>
+                    {/* PRD v3.2 Relocated ETA Fields */}
+                    <Col xs={24} md={6}>
+                      <Form.Item label="Release ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                        <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
+                        <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                        <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
+                        <DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item className={`${Styles.formLabel} ${Styles.remarksResize}`} label="Booking Remarks" name="booking_remarks"><TextArea rows={1} disabled={isBookingSectionLocked} /></Form.Item>
+                    </Col>
 
-                  {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
-                  {((isLiner || isCrossTrade ) || isMasterMode) && (
-                    <Col span={24}>
-                      <Alert
-                        message="Workflow Configuration (Action Required)"
-                        description={
-                          <Row gutter={16} style={{ marginTop: 8 }}>
-                            {/* Payment / Load List / Haulier Note don't apply to Cross Trade: hidden, kept mounted so saved values are unchanged */}
-                            {!isLiner && (
-                              <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
-                                <Form.Item label="Payment Req?" name="is_payment_processing_required">
+                    {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
+                    {((isLiner || isCrossTrade) || isMasterMode) && (
+                      <Col span={24}>
+                        <Alert
+                          message="Workflow Configuration (Action Required)"
+                          description={
+                            <Row gutter={16} style={{ marginTop: 8 }}>
+                              {/* Payment / Load List / Haulier Note don't apply to Cross Trade: hidden, kept mounted so saved values are unchanged */}
+                              {!isLiner && (
+                                <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
+                                  <Form.Item label="Payment Req?" name="is_payment_processing_required">
+                                    <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
+                                      <Radio.Button value={true}>Yes</Radio.Button>
+                                      <Radio.Button value={false}>No</Radio.Button>
+                                    </Radio.Group>
+                                  </Form.Item>
+                                </Col>
+                              )}
+                              <Col xs={24} md={6}>
+                                <Form.Item label={isCrossTrade ? "Release Order Required?" : "RO Req?"} name="is_release_order_required">
                                   <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                     <Radio.Button value={true}>Yes</Radio.Button>
                                     <Radio.Button value={false}>No</Radio.Button>
                                   </Radio.Group>
                                 </Form.Item>
                               </Col>
-                            )}
-                            <Col xs={24} md={6}>
-                              <Form.Item label={isCrossTrade ? "Release Order Required?" : "RO Req?"} name="is_release_order_required">
-                                <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
-                                  <Radio.Button value={true}>Yes</Radio.Button>
-                                  <Radio.Button value={false}>No</Radio.Button>
-                                </Radio.Group>
-                              </Form.Item>
-                            </Col>
-                            <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
-                              <Form.Item label="Load List Req?" name="is_load_list_required">
-                                <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
-                                  <Radio.Button value={true}>Yes</Radio.Button>
-                                  <Radio.Button value={false}>No</Radio.Button>
-                                </Radio.Group>
-                              </Form.Item>
-                            </Col>
-                            <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
-                              <Form.Item label="Haulier Note Req?" name="is_haulier_note_required">
-                                <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
-                                  <Radio.Button value={true}>Yes</Radio.Button>
-                                  <Radio.Button value={false}>No</Radio.Button>
-                                </Radio.Group>
-                              </Form.Item>
-                            </Col>
-                          </Row>
-                        }
-                        type="info"
-                        showIcon
-                        style={{ marginBottom: 16 }}
-                      />
-                    </Col>
+                              <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
+                                <Form.Item label="Load List Req?" name="is_load_list_required">
+                                  <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
+                                    <Radio.Button value={true}>Yes</Radio.Button>
+                                    <Radio.Button value={false}>No</Radio.Button>
+                                  </Radio.Group>
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
+                                <Form.Item label="Haulier Note Req?" name="is_haulier_note_required">
+                                  <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
+                                    <Radio.Button value={true}>Yes</Radio.Button>
+                                    <Radio.Button value={false}>No</Radio.Button>
+                                  </Radio.Group>
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          }
+                          type="info"
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      </Col>
+                    )}
+
+                    {showLinerStopAlert && (
+                      <Col span={24}>
+                        <Alert
+                          message={
+                            <div>
+                              <strong>Workflow Halted:</strong> Required Payment Documents (LPO/Invoice) not selected or missing.
+                              <br />
+                              <em>Check YES/NO selectors in Stage 2 or upload required documents.</em>
+                            </div>
+                          }
+                          type="warning"
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      </Col>
+                    )}
+                  </Row>
+
+                  {(showDocumentUploads || showROBOCForCS) && (
+                    <Row gutter={16}>
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="Release Order(s)" name="release_order" rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                          <DocUploadField
+                            label="Release Order"
+                            files={releaseOrderFiles}
+                            setFiles={setReleaseOrderFiles}
+                            color="blue"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Release Order"
+                            disabled={true}
+                            restrictionMessage={releaseOrderRestrictionMessage}
+                            isMasterMode={isMasterMode}
+                            user={user}
+                            isAdmin={isAdmin}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                        <Form.Item className={Styles.formLabel} label="BOC Attachment">
+                          <DocUploadField
+                            label="BOC"
+                            files={bocFiles}
+                            setFiles={setBocFiles}
+                            color="volcano"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="BOC"
+                            disabled={true}
+                            restrictionMessage={
+                              isCNFUploadLocked && !isCS && isLiner && !isCNF
+                                ? "CNF is allowd to uplaod it"
+                                : null
+                            }
+                            isMasterMode={isMasterMode}
+                            user={user}
+                            isAdmin={isAdmin}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
                   )}
 
-                  {showLinerStopAlert && (
-                    <Col span={24}>
-                      <Alert
-                        message={
-                          <div>
-                            <strong>Workflow Halted:</strong> Required Payment Documents (LPO/Invoice) not selected or missing.
-                            <br />
-                            <em>Check YES/NO selectors in Stage 2 or upload required documents.</em>
-                          </div>
-                        }
-                        type="warning"
-                        showIcon
-                        style={{ marginBottom: 16 }}
-                      />
-                    </Col>
+                  {showDocumentUploads && !hideCnfFromCS && (
+                    <>
+                    </>
                   )}
-                </Row>
+                </div>
+              </Card>
+            )}
 
-                {(showDocumentUploads || showROBOCForCS) && (
+            {showDocumentUploads && !hideCnfFromCS && !isOthers && !isSalesHOD && (
+              <Card
+                style={salesHiddenStyle}
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="mdi:file-document-multiple-outline"
+                    title="CNF DOCUMENTS & REMARKS"
+                    open={open.cnfDocuments}
+                    onToggle={() => toggle("cnfDocuments")}
+                  />
+                }
+              >
+                <div style={{ display: open.cnfDocuments ? "block" : "none" }}>
                   <Row gutter={16}>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Release Order(s)" name="release_order" rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                      <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
                         <DocUploadField
-                          label="Release Order"
-                          files={releaseOrderFiles}
-                          setFiles={setReleaseOrderFiles}
-                          color="blue"
+                          label="Haulage Cost"
+                          files={haulageCostFiles}
+                          setFiles={setHaulageCostFiles}
+                          color="orange"
                           onPreview={openPreview}
                           salesInputId={id}
                           category="booking"
-                          docType="Release Order"
+                          docType="Haulage Cost"
                           disabled={true}
-                          restrictionMessage={releaseOrderRestrictionMessage}
-                          isMasterMode={isMasterMode}
+                          restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
                           user={user}
                           isAdmin={isAdmin}
+                          isMasterMode={isMasterMode}
                         />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="BOC Attachment">
+                      <Form.Item className={Styles.formLabel} label="Haulier Note">
                         <DocUploadField
-                          label="BOC"
-                          files={bocFiles}
-                          setFiles={setBocFiles}
-                          color="volcano"
+                          label="Haulier Note"
+                          files={haulierNoteFiles}
+                          setFiles={setHaulierNoteFiles}
+                          color="geekblue"
                           onPreview={openPreview}
                           salesInputId={id}
                           category="booking"
-                          docType="BOC"
+                          docType="Haulage Note"
                           disabled={true}
                           restrictionMessage={
-                            isCNFUploadLocked && !isCS && isLiner && !isCNF
-                              ? "CNF is allowd to uplaod it"
-                              : null
+                            isCNFUploadLocked
+                              ? null
+                              : !haulierNoteEnabled && currentStage !== "4"
+                                ? "Haulier Note uploading is disabled until the requirement is turned on."
+                                : isLiner && !isCNF
+                                  ? "CNF is allowd to uplaod it"
+                                  : null
+                          }
+                          user={user}
+                          isAdmin={isAdmin}
+                          isMasterMode={isMasterMode}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item
+                        className={Styles.formLabel}
+                        label="ED"
+                      >
+                        <DocUploadField
+                          label="ED"
+                          files={edFiles}
+                          setFiles={setEdFiles}
+                          color="geekblue"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="financial"
+                          docType="ED"
+                          disabled={true}
+                          user={user}
+                          isAdmin={isAdmin}
+                          isMasterMode={isMasterMode}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={6}>
+                      <Form.Item
+                        className={Styles.formLabel}
+                        label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                        rules={currentStage === "4" && !hideOtherTeamSectionsForSales ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
+                      >
+                        <DocUploadField
+                          label="Load List"
+                          files={loadListFiles}
+                          setFiles={setLoadListFiles}
+                          color="gold"
+                          onPreview={openPreview}
+                          salesInputId={id}
+                          category="booking"
+                          docType="Load List"
+                          disabled={true}
+                          restrictionMessage={
+                            isCNFUploadLocked
+                              ? null
+                              : !isLLReq && currentStage !== "4"
+                                ? "Load List upload is disabled until the requirement is turned on."
+                                : currentStage === "2" && isCNF
+                                  ? "Disabled until Sales & HOD approval is completed."
+                                  : isLiner && jobData?.is_hod_approved && !isCNF
+                                    ? "CNF is allowd to uplaod it"
+                                    : null
                           }
                           isMasterMode={isMasterMode}
                           user={user}
@@ -1389,333 +1516,206 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                   </Row>
-                )}
+                  <Row gutter={16}>
+                    <Col xs={24} md={24}>
+                      <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
+                        <TextArea disabled={true} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </div>
+              </Card>
+            )}
 
-                {showDocumentUploads && !hideCnfFromCS && (
-                  <>
-                  </>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {showDocumentUploads && !hideCnfFromCS && !isOthers && !isSalesHOD && (
-            <Card
-              style={salesHiddenStyle}
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="mdi:file-document-multiple-outline"
-                  title="CNF DOCUMENTS & REMARKS"
-                  open={open.cnfDocuments}
-                  onToggle={() => toggle("cnfDocuments")}
-                />
-              }
-            >
-              <div style={{ display: open.cnfDocuments ? "block" : "none" }}>
-                <Row gutter={16}>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Haulage Cost Sheet">
-                      <DocUploadField
-                        label="Haulage Cost"
-                        files={haulageCostFiles}
-                        setFiles={setHaulageCostFiles}
-                        color="orange"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="booking"
-                        docType="Haulage Cost"
-                        disabled={true}
-                        restrictionMessage={isLiner && !isCNF ? "CNF is allowd to uplaod it" : null}
-                        user={user}
-                        isAdmin={isAdmin}
-                        isMasterMode={isMasterMode}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item className={Styles.formLabel} label="Haulier Note">
-                      <DocUploadField
-                        label="Haulier Note"
-                        files={haulierNoteFiles}
-                        setFiles={setHaulierNoteFiles}
-                        color="geekblue"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="booking"
-                        docType="Haulage Note"
-                        disabled={true}
-                        restrictionMessage={
-                          isCNFUploadLocked
-                            ? null
-                            : !haulierNoteEnabled && currentStage !== "4"
-                            ? "Haulier Note uploading is disabled until the requirement is turned on."
-                            : isLiner && !isCNF
-                            ? "CNF is allowd to uplaod it"
-                            : null
-                        }
-                        user={user}
-                        isAdmin={isAdmin}
-                        isMasterMode={isMasterMode}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item 
-                      className={Styles.formLabel} 
-                      label="ED"
-                    >
-                      <DocUploadField
-                        label="ED"
-                        files={edFiles}
-                        setFiles={setEdFiles}
-                        color="geekblue"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="financial"
-                        docType="ED"
-                        disabled={true}
-                        user={user}
-                        isAdmin={isAdmin}
-                        isMasterMode={isMasterMode}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={6}>
-                    <Form.Item
-                      className={Styles.formLabel} 
-                      label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
-                      rules={currentStage === "4" && !hideOtherTeamSectionsForSales ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
-                    >
-                      <DocUploadField
-                        label="Load List"
-                        files={loadListFiles}
-                        setFiles={setLoadListFiles}
-                        color="gold"
-                        onPreview={openPreview}
-                        salesInputId={id}
-                        category="booking"
-                        docType="Load List"
-                        disabled={true}
-                        restrictionMessage={
-                          isCNFUploadLocked
-                            ? null
-                            : !isLLReq && currentStage !== "4"
-                            ? "Load List upload is disabled until the requirement is turned on."
-                            : currentStage === "2" && isCNF
-                            ? "Disabled until Sales & HOD approval is completed."
-                            : isLiner && jobData?.is_hod_approved && !isCNF
-                            ? "CNF is allowd to uplaod it"
-                            : null
-                        }
-                        isMasterMode={isMasterMode}
-                        user={user}
-                        isAdmin={isAdmin}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-                <Row gutter={16}>
-                  <Col xs={24} md={24}>
-                    <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
-                      <TextArea disabled={true} />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </div>
-            </Card>
-          )}
-
-          {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (parseInt(currentStage) >= 7 || isMasterMode) && (
-            <Card
-              style={salesHiddenStyle}
-              className={Styles.card}
-              bordered
-              title={
-                <CardHeader
-                  icon="mdi:bank-outline"
-                  title="BANK SLIP & ACCOUNT REMARKS"
-                  open={open.bankAccounts}
-                  onToggle={() => toggle("bankAccounts")}
-                />
-              }
-            >
-              <div style={{ display: open.bankAccounts ? "block" : "none" }}>
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <Form.Item className={Styles.formLabel} label="Carrier Name 2" name="carrier_name_2">
-                      <Input placeholder="Enter Carrier Name" disabled={isAccountsEditableFieldLocked} />
-                    </Form.Item>
-                  </Col>
-                  {/* <Col xs={24} md={12}>
+            {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (parseInt(currentStage) >= 7 || isMasterMode) && (
+              <Card
+                style={salesHiddenStyle}
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="mdi:bank-outline"
+                    title="BANK SLIP & ACCOUNT REMARKS"
+                    open={open.bankAccounts}
+                    onToggle={() => toggle("bankAccounts")}
+                  />
+                }
+              >
+                <div style={{ display: open.bankAccounts ? "block" : "none" }}>
+                  <Row gutter={16}>
+                    <Col xs={24} md={12}>
+                      <Form.Item className={Styles.formLabel} label="Carrier Name 2" name="carrier_name_2">
+                        <Input placeholder="Enter Carrier Name" disabled={isAccountsEditableFieldLocked} />
+                      </Form.Item>
+                    </Col>
+                    {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Invoice Date" name="invoice_date">
                       <DatePicker style={{ width: "100%" }} format="DD-MM-YYYY" disabled={isAccountsEditableFieldLocked} />
                     </Form.Item>
                   </Col> */}
-                  <Col xs={24} md={12}>
-                    <Form.Item className={Styles.formLabel} label="Accounts Remarks" name="account_remarks">
-                      <TextArea rows={1} disabled={isAccountsEditableFieldLocked} />
-                    </Form.Item>
-                  </Col>
-                  {/* <Col xs={24} md={12}>
+                    <Col xs={24} md={12}>
+                      <Form.Item className={Styles.formLabel} label="Accounts Remarks" name="account_remarks">
+                        <TextArea rows={1} disabled={isAccountsEditableFieldLocked} />
+                      </Form.Item>
+                    </Col>
+                    {/* <Col xs={24} md={12}>
                     <Form.Item className={Styles.formLabel} label="Bank Slip Attachment">
                       <DocUploadField label="Bank Slip" files={bankSlips} setFiles={setBankSlips} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="Bank Slip" disabled={isAccountsEditableFieldLocked || disableAllUploads} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                     </Form.Item>
                   </Col> */}
+                  </Row>
+                </div>
+              </Card>
+            )}
+
+            {(isCSHODStage && isCSHOD && (isLiner || isCrossTrade) || isMasterMode) && (
+              <Card style={salesHiddenStyle} className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item name="lpo_invoice_selection" rules={[{ required: true, message: 'Please select YES to proceed or NO to stop flow.' }]}>
+                      <Radio.Group buttonStyle="solid">
+                        <Radio.Button value="YES">PROCEED (Documents Uploaded)</Radio.Button>
+                        <Radio.Button value="NO">STOP (Documents Pending)</Radio.Button>
+                      </Radio.Group>
+                    </Form.Item>
+                  </Col>
                 </Row>
-              </div>
-            </Card>
-          )}
-
-          {(isCSHODStage && isCSHOD && (isLiner || isCrossTrade) || isMasterMode) && (
-            <Card style={salesHiddenStyle} className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item name="lpo_invoice_selection" rules={[{ required: true, message: 'Please select YES to proceed or NO to stop flow.' }]}>
-                    <Radio.Group buttonStyle="solid">
-                      <Radio.Button value="YES">PROCEED (Documents Uploaded)</Radio.Button>
-                      <Radio.Button value="NO">STOP (Documents Pending)</Radio.Button>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-          )}
+              </Card>
+            )}
 
 
-          {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-          {(!["2","3"].includes(currentStage) && isCS) && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+            {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
+            {(!["2", "3"].includes(currentStage) && isCS) && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+              <Card
+                className={Styles.card}
+                bordered
+                title={
+                  <CardHeader
+                    icon="mdi:file-document-outline"
+                    title="DOCUMENTS"
+                    open={open.documents}
+                    onToggle={() => toggle("documents")}
+                  />
+                }
+              >
+                <div style={{ display: open.documents ? "block" : "none" }}>
+                  <Row gutter={16}>
+                    {(isPaymentReq || isLiner) && (
+                      <>
+                        <Col xs={24} md={8}>
+                          <Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
+                            <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
+                            <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                          </Form.Item>
+                        </Col>
+                      </>
+                    )}
+                    {!isLiner && (isMasterMode || hblFlag) && (
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="HBL">
+                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        </Form.Item>
+                      </Col>
+                    )}
+                    {!isLiner && (
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
+                          <Select
+                            placeholder="Select CS HOD"
+                            allowClear
+                            showSearch
+                            optionFilterProp="label"
+                            options={csHodOptions}
+                            disabled={true}
+                          />
+                        </Form.Item>
+                      </Col>
+                    )}
+                    {facFlag && (
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="HCS">
+                          <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={true} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        </Form.Item>
+                      </Col>
+                    )}
+                    {(documentationFlag || isLiner || isForwarding || isCrossTrade) && (
+                      <Col xs={24} md={8}>
+                        <Form.Item className={Styles.formLabel} label="Pre-Alert">
+                          <DocUploadField
+                            label="Pre-Alert"
+                            files={preAlertFiles}
+                            setFiles={setPreAlertFiles}
+                            color="cyan"
+                            onPreview={openPreview}
+                            salesInputId={id}
+                            category="booking"
+                            docType="Pre-Alert"
+                            disabled={true}
+                            restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null}
+                            user={user}
+                            isAdmin={isAdmin}
+                            isMasterMode={isMasterMode}
+                          />
+                        </Form.Item>
+                      </Col>
+                    )}
+                  </Row>
+                </div>
+              </Card>
+            )}
+
+            {/* ════════ ATTACHMENTS AND COMMENTS ════════ */}
             <Card
               className={Styles.card}
               bordered
               title={
                 <CardHeader
-                  icon="mdi:file-document-outline"
-                  title="DOCUMENTS"
-                  open={open.documents}
-                  onToggle={() => toggle("documents")}
+                  icon="mdi:comment-text-multiple-outline"
+                  title="ATTACHMENTS AND COMMENTS"
+                  open={open.attachments}
+                  onToggle={() => toggle("attachments")}
                 />
               }
             >
-              <div style={{ display: open.documents ? "block" : "none" }}>
-                <Row gutter={16}>
-                  {(isPaymentReq || isLiner) && (
-                    <>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label={<span>LPO {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="financial" docType="LPO" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                        </Form.Item>
-                      </Col>
-                      <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label={<span>INVOICE {needsLpoInvoice && isCS && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}>
-                          <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} color="purple" onPreview={openPreview} salesInputId={id} category="financial" docType="Invoice" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                        </Form.Item>
-                      </Col>
-                    </>
-                  )}
-                  {!isLiner && (isMasterMode || hblFlag) && (
-                    <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="HBL">
-                        <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                      </Form.Item>
-                    </Col>
-                  )}
-                  {!isLiner && (
-                    <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice && isCS, message: "Required" }]}>
-                        <Select
-                          placeholder="Select CS HOD"
-                          allowClear
-                          showSearch
-                          optionFilterProp="label"
-                          options={csHodOptions}
-                          disabled={true}
-                        />
-                      </Form.Item>
-                    </Col>
-                  )}
-                  {facFlag && (
-                    <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="HCS">
-                        <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={true} restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
-                      </Form.Item>
-                    </Col>
-                  )}
-                  {(documentationFlag || isLiner || isForwarding || isCrossTrade) && (
-                    <Col xs={24} md={8}>
-                      <Form.Item className={Styles.formLabel} label="Pre-Alert">
-                        <DocUploadField
-                          label="Pre-Alert"
-                          files={preAlertFiles}
-                          setFiles={setPreAlertFiles}
-                          color="cyan"
-                          onPreview={openPreview}
-                          salesInputId={id}
-                          category="booking"
-                          docType="Pre-Alert"
-                          disabled={true}
-                          restrictionMessage={isLiner && !isCS ? "CS Department is allowed to upload it" : null}
-                          user={user}
-                          isAdmin={isAdmin}
-                          isMasterMode={isMasterMode}
-                        />
-                      </Form.Item>
-                    </Col>
-                  )}
-                </Row>
-              </div>
-            </Card>
-          )}
+              <div style={{ display: open.attachments ? "block" : "none" }}>
+                <Row gutter={32}>
+                  <Col xs={24} md={12}>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
+                    <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+                      {remarks.map((r, i) => {
+                        const isObject = typeof r === 'object' && r !== null;
+                        const text = isObject ? r.text : r;
+                        const authorName = isObject ? r.user_name : null;
+                        // Remarks are read-only here: saved remarks are never deletable.
 
-          {/* ════════ ATTACHMENTS AND COMMENTS ════════ */}
-          <Card
-            className={Styles.card}
-            bordered
-            title={
-              <CardHeader
-                icon="mdi:comment-text-multiple-outline"
-                title="ATTACHMENTS AND COMMENTS"
-                open={open.attachments}
-                onToggle={() => toggle("attachments")}
-              />
-            }
-          >
-            <div style={{ display: open.attachments ? "block" : "none" }}>
-              <Row gutter={32}>
-                <Col xs={24} md={12}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
-                  <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-                    {remarks.map((r, i) => {
-                      const isObject = typeof r === 'object' && r !== null;
-                      const text = isObject ? r.text : r;
-                      const authorName = isObject ? r.user_name : null;
-                      // Remarks are read-only here: saved remarks are never deletable.
+                        return (
+                          <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
 
-                      return (
-                        <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                         
-                          <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
-                          {authorName && (
-                            <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
-                              — {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}
-                            </Typography.Text>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
-                  </div>
+                            <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
+                            {authorName && (
+                              <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
+                                — {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}
+                              </Typography.Text>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
+                    </div>
 
-                  {/* <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text> */}
-                  {/* <TextArea
+                    {/* <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text> */}
+                    {/* <TextArea
                     value={newRemark}
                     onChange={(e) => setNewRemark(e.target.value)}
                     placeholder="Enter your remarks here…"
                     autoSize={{ minRows: 3 }}
                     style={{ marginBottom: 12 }}
                   /> */}
-                  {/* <Button
+                    {/* <Button
                     type="primary"
                     onClick={() => {
                       if (newRemark.trim()) {
@@ -1732,77 +1732,77 @@ const Approval = () => {
                   >
                     Add Remark
                   </Button> */}
-                </Col>
+                  </Col>
 
-                <Col xs={24} md={12}>
-                  <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={[...attachments.filter(d => d.doc_type === "Attachment"), ...(isOthers ? salesExecutiveFiles : [])]} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
-                </Col>
-              </Row>
-            </div>
-          </Card>
+                  <Col xs={24} md={12}>
+                    <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
+                    <DocUploadField label="Attachment" files={[...attachments.filter(d => d.doc_type === "Attachment"), ...(isOthers ? salesExecutiveFiles : [])]} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
+                  </Col>
+                </Row>
+              </div>
+            </Card>
 
-          {/* ════════ APPROVAL STATUS (HISTORY) ════════ */}
-          <Card
-            className={Styles.card}
-            bordered
-            title={
-              <CardHeader
-                icon="mdi:check-decagram-outline"
-                title="APPROVAL STATUS & HISTORY"
-                open={open.approvalStatus}
-                onToggle={() => toggle("approvalStatus")}
+            {/* ════════ APPROVAL STATUS (HISTORY) ════════ */}
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <CardHeader
+                  icon="mdi:check-decagram-outline"
+                  title="APPROVAL STATUS & HISTORY"
+                  open={open.approvalStatus}
+                  onToggle={() => toggle("approvalStatus")}
+                />
+              }
+            >
+              <div style={{ display: open.approvalStatus ? "block" : "none" }}>
+                <Table
+                  dataSource={approvalHistory}
+                  columns={approvalColumns}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 'max-content' }}
+                />
+
+                {/* Action Box - Disabled */}
+              </div>
+            </Card>
+
+            {isHalted && (
+              <Alert
+                message={jobData?.status === "STOPPED" ? "WORKFLOW STOPPED" : "System Check: Pending Documentation"}
+                description={jobData?.status === "STOPPED"
+                  ? (approvalHistory?.find(h => h.status === 'STOPPED')?.remarks || "This job has been stopped by CS HOD due to missing documents.")
+                  : (isLiner
+                    ? "This stage cannot be approved until the required documents are uploaded by the designated department."
+                    : `This ${jobData.job_type} job cannot proceed because a mandatory workflow component has been marked as 'No'. Please verify with your supervisor.`
+                  )}
+                type={jobData?.status === "STOPPED" ? "error" : "warning"}
+                showIcon
+                style={{ marginTop: 16, marginBottom: 16 }}
               />
-            }
-          >
-            <div style={{ display: open.approvalStatus ? "block" : "none" }}>
-              <Table
-                dataSource={approvalHistory}
-                columns={approvalColumns}
-                rowKey="id"
-                pagination={false}
-                size="small"
-                scroll={{ x: 'max-content' }}
-              />
+            )}
 
-              {/* Action Box - Disabled */}
-            </div>
-          </Card>
-
-          {isHalted && (
-            <Alert
-              message={jobData?.status === "STOPPED" ? "WORKFLOW STOPPED" : "System Check: Pending Documentation"}
-              description={jobData?.status === "STOPPED"
-                ? (approvalHistory?.find(h => h.status === 'STOPPED')?.remarks || "This job has been stopped by CS HOD due to missing documents.")
-                : (isLiner
-                  ? "This stage cannot be approved until the required documents are uploaded by the designated department."
-                  : `This ${jobData.job_type} job cannot proceed because a mandatory workflow component has been marked as 'No'. Please verify with your supervisor.`
-                )}
-              type={jobData?.status === "STOPPED" ? "error" : "warning"}
-              showIcon
-              style={{ marginTop: 16, marginBottom: 16 }}
-            />
-          )}
-
-          {/* Bottom buttons - Disabled */}
-          {/* ════════ PREVIEW MODAL ════════ */}
-          <Modal
-            open={previewVisible}
-            footer={null}
-            title={"Attachments"}
-            onCancel={() => setPreviewVisible(false)}
-            closable={true}
-            width="90%"
-            style={{ top: 20 }}
-            styles={{ body: { height: "87vh", padding: 0 } }}
-            destroyOnClose
-          >
-            {/* {previewVisible && previewUrls.length > 0 && (
+            {/* Bottom buttons - Disabled */}
+            {/* ════════ PREVIEW MODAL ════════ */}
+            <Modal
+              open={previewVisible}
+              footer={null}
+              title={"Attachments"}
+              onCancel={() => setPreviewVisible(false)}
+              closable={true}
+              width="90%"
+              style={{ top: 20 }}
+              styles={{ body: { height: "87vh", padding: 0 } }}
+              destroyOnClose
+            >
+              {/* {previewVisible && previewUrls.length > 0 && (
               <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />
             )} */}
-            {previewUrls.length === 0
-              ? <div style={{ height: "87vh", display: "flex", alignItems: "center", justifyContent: "center" }}><Spin size="large" /></div>
-              : <MultiFileViewer
+              {previewUrls.length === 0
+                ? <div style={{ height: "87vh", display: "flex", alignItems: "center", justifyContent: "center" }}><Spin size="large" /></div>
+                : <MultiFileViewer
                   files={previewUrls.map((item) => {
                     const url = typeof item === "string" ? item : item.url || item.file_url || "";
                     const name = typeof url === "string" ? decodeURIComponent(url.split("/").pop()) : "unknown";
@@ -1810,10 +1810,10 @@ const Approval = () => {
                   })}
                   defaultIndex={previewIndex || 0}
                 />
-            }
-          </Modal>
-        </Form>
-      </Spin >
+              }
+            </Modal>
+          </Form>
+        </Spin >
       </UploadActivityContext.Provider>
     </div >
   );
