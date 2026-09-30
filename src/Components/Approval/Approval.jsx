@@ -476,6 +476,8 @@ const Approval = () => {
 
   // Always show sections as per user request to ensure accessibility
   const showPlacement = true;
+  // Liner, Sales HOD view: without Transportation there are no placement rows, so the card would be an empty heading
+  const hideEmptyPlacementForSalesHOD = isLiner && isSalesHOD && !isAdmin && !normalizeBoolean(jobData?.transportation);
 
   // const openPreview = (filesArray, localIdx) => {
   //   console.log({filesArray})
@@ -1174,7 +1176,7 @@ const Approval = () => {
             {/* ════════ PLACEMENT DETAILS — hidden for Cross Trade, kept mounted so the saved rows are unchanged ════════ */}
             {(!isOthers || isMasterMode) && showPlacement && (
               <Card
-                style={isCrossTrade ? { display: "none" } : undefined}
+                style={isCrossTrade || hideEmptyPlacementForSalesHOD ? { display: "none" } : undefined}
                 className={Styles.card}
                 bordered
                 title={
