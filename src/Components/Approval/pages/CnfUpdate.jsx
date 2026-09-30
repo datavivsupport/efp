@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -98,11 +98,17 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
  
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
+// Liner job without Transportation: CNF has no role, so every upload slot on the page is closed
+const CnfNoRoleContext = createContext(false);
+
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
+  const cnfNoRole = useContext(CnfNoRoleContext);
+  const disabled = disabledProp || cnfNoRole;
 
   const handleBeforeUpload = async (file) => {
+    if (disabled) return false;
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
@@ -166,7 +172,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
 
   return (
     <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
         <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
       </Upload>
       {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
@@ -177,6 +183,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           onRemove={(i) => {
             const f = files[i];
             if (!f) return;
+            if (disabled && cnfNoRole) return;
             if (deleteLocked && f.id && !f.pending) return;
             if (f?.id && !f.pending) {
               const prev = files;
@@ -227,6 +234,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const { isCNF } = computeUserRoles(user);
  
+  // Liner: when Sales did not select Transportation, CNF has no role on the job — page is view-only
+  const cnfNoRole = isLiner && !isAdmin && !normalizeBoolean(initialJob?.transportation);
+
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
 
 
@@ -714,6 +724,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   return (
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
+        <CnfNoRoleContext.Provider value={cnfNoRole}>
         <Form form={form} layout="vertical">
           
           {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
@@ -920,7 +931,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <DocSlot
                       label="Load List"
                       rule={loadListToggle ? "optional" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked} hasFiles={loadListFiles.length > 0} /> }}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={loadListFiles.length > 0} /> }}
                       hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : null}
                     >
                       <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
@@ -938,7 +949,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Col>
                 <Col xs={24}>
                   <Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}>
-                    <TextArea placeholder="Enter CNF specific remarks here..." rows={3} />
+                    <TextArea placeholder="Enter CNF specific remarks here..." rows={3} disabled={cnfNoRole} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -960,7 +971,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       const isObject = typeof r === 'object' && r !== null;
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
-                      const canDelete = canDeleteRemark(r);
+                      const canDelete = !cnfNoRole && canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
@@ -972,8 +983,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} disabled={cnfNoRole} />
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
@@ -993,14 +1004,23 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               <Table dataSource={history} columns={historyColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
-                <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
+                <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} disabled={cnfNoRole} /></Form.Item>
               </div>
             </div>
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {showSubmitAction ? (
+            {cnfNoRole ? (
+              <Button
+                size="large"
+                onClick={() => navigate("/")}
+                icon={<Icon icon="mdi:close" />}
+                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+              >
+                Cancel
+              </Button>
+            ) : showSubmitAction ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
@@ -1084,6 +1104,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             )}
           </div>
         </Form>
+        </CnfNoRoleContext.Provider>
       </Spin>
 
       {/* ── Preview Modal ── */}
