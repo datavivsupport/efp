@@ -107,8 +107,7 @@ const Navigation = ({
       cancelAllRequests();
       await apiClient.get("/accounts/logout");
     } catch (error) {
-      // Server-side logout failed — still clear the session locally.
-      // Logged rather than swallowed, so a real fault stays visible.
+      
       console.error("Logout request failed:", error);
     } finally {
       localStorage.removeItem("open_tabs");

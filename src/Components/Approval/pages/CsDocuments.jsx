@@ -251,8 +251,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
   const hideCnfFromCS = isCS && !isCnfDataVisibleToCS(initialJob);
-  // Sales never asked for transportation, so CNF has nothing to hand over here
-  // (mirrors CsUpdate.jsx's showPlacement gate, which hides Placement Details the same way).
+  
   const transportationSelected = normalizeBoolean(initialJob?.transportation);
   const hideCnfDetailsCard = hideCnfFromCS || (!transportationSelected && !isAdmin);
  
@@ -343,22 +342,22 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
   const lpoToggle = normalizeBoolean(Form.useWatch("is_lpo_required", form), initialJob?.is_lpo_required ?? true);
   const invoiceToggle = normalizeBoolean(Form.useWatch("is_invoice_required", form), initialJob?.is_invoice_required ?? true);
-  // Yes/No (defaults to Yes); upload is off when No — shared by Cross Trade and Liner
+ 
   const preAlertToggle = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), initialJob?.is_pre_alert_required ?? true);
   const hasLpoOrInvoice = lpoFiles.length > 0 || invoiceFiles.length > 0;
-  // Cross Trade and Liner: CS HOD is required only when an LPO or Invoice is Yes or uploaded.
+ 
   const csHodForced = lpoToggle || invoiceToggle || hasLpoOrInvoice;
   const lpoRequired = (!isCrossTrade && !isLiner) || lpoToggle;
   const invoiceRequired = (!isCrossTrade && !isLiner) || invoiceToggle;
 
   const csHodRequired = (isCrossTrade || isLiner) ? csHodForced : true;
-  // Cross Trade: Release Order / BOC Yes/No (set on the CS Update stage) — uploads are off when No
+ 
   const isROReqCT = normalizeBoolean(initialJob?.is_release_order_required);
  
   const isBOCReqCT = normalizeBoolean(Form.useWatch("is_boc_required", form), initialJob?.is_boc_required ?? true);
-  // A Yes can't be switched back to No while that document still has files — delete them first.
+  
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
-  // Cross Trade / Liner: HBL / HCS(FAC) can only be uploaded when the Sales Executive ticked them
+
   const hblSelected = normalizeBoolean(initialJob?.hbl);
   const hcsSelected = normalizeBoolean(initialJob?.fac);
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
@@ -367,7 +366,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     if (isCrossTrade || isLiner) form.setFieldsValue({ is_cs_hod_required: csHodForced });
   }, [isCrossTrade, isLiner, csHodForced, form]);
 
-  // Liner: once CS HOD is no longer required, the name is cleared immediately, not just at submit time.
   useEffect(() => {
     if (isLiner && !csHodForced) form.setFieldsValue({ cs_hod: null });
   }, [isLiner, csHodForced, form]);
@@ -555,7 +553,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
       if (csHodRequired && !csHodValue) missing.push("CS HOD");
-      // Cross Trade: Pre-Alert answered Yes must be uploaded before submitting
+ 
       if (isCrossTrade && preAlertToggle && !preAlertFiles.length) missing.push("Pre-Alert");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
@@ -816,7 +814,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
+                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
                 {!isCrossTrade && !isLiner && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
@@ -856,7 +854,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField ownerOnlyDelete label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                    <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                   </Row>
                 </div>
               </Card>

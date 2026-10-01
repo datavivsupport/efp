@@ -41,13 +41,7 @@ const PRESETS = {
   },
 };
 
-/**
- * Ask the user to confirm an action. Resolves true on OK, false on Cancel.
- * @param kind      "submit" | "verify" | "resubmit" | "approve" | "reject" | "save" | "cancel"
- * @param setBusy   optional loading setter — turned off while the popup is open
- *                  so the page spinner doesn't show behind it, and back on after OK
- * @param overrides optional Modal.confirm props (title, content, okText…)
- */
+
 export const confirmAction = (kind, setBusy, overrides = {}) =>
   new Promise((resolve) => {
     setBusy?.(false);

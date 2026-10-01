@@ -63,8 +63,7 @@ const ForgotPasswordModal = ({ visible, onClose, change }) => {
       setVerifiedEmail("");
     }
 
-    // Change mode is reached from the header while signed in, so the user
-    // should not have to type their own address
+   
     if (change && user?.email) {
       formEmail.setFieldsValue({ email: user.email });
     }

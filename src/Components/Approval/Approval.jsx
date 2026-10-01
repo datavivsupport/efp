@@ -415,12 +415,7 @@ const Approval = () => {
   // Disable ALL uploads if user doesn't have allowed role
   const disableAllUploads = !hasAllowedRole;
 
-  // Cross Trade and Liner viewed by the Sales Executive: show only what Sales entered at
-  // creation. Booking (Release Order / BOC / Workflow Configuration), CNF and Accounts
-  // sections belong to other teams, so they are hidden — kept mounted, so Save / Submit
-  // send exactly the same values as before.
-  // The job's own Sales Executive (creator / named executive) and its named Sales HOD see
-  // only the Sales details; the CS HOD assigned to this job always keeps the full page.
+
   const isJobSalesOwner = isSalesOwnerOfJob(jobData, user);
   const hideOtherTeamSectionsForSales =
     (isCrossTrade || isLiner) && (isJobSalesOwner || isSalesHodOfJob(jobData, user)) &&
@@ -428,10 +423,7 @@ const Approval = () => {
   const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
 
 
-  // CS/CNF rejection just needs to land its Sales Executive on the page that has the
-  // Resubmit/Reject buttons — CS-REJECTED is covered by hideOtherTeamSectionsForSales
-  // above for both types now; CNF-REJECTED only ever applies to Liner (Cross Trade has
-  // no CNF stage).
+
   const redirectToSalesView =
     (hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED") ||
     (isLiner && isJobSalesOwner && jobData?.status === "CNF-REJECTED");
@@ -1127,7 +1119,7 @@ const Approval = () => {
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions">
-                        <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} />
+                        <TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 2 }} disabled={isSalesSectionLocked} />
                       </Form.Item>
                     </Col>
                     {/* <Col xs={24} md={12}>
@@ -1140,7 +1132,7 @@ const Approval = () => {
                     {isCrossTrade && (
                       <Col xs={24} md={6}>
                         <Form.Item className={Styles.formLabel} label="Remarks">
-                          <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                          <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 2 }} />
                         </Form.Item>
                       </Col>
                     )}
@@ -1274,7 +1266,7 @@ const Approval = () => {
                       <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={`${Styles.formLabel} ${Styles.remarksResize}`} label="Booking Remarks" name="booking_remarks"><TextArea rows={1} disabled={isBookingSectionLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
                     </Col>
 
                     {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
@@ -1521,7 +1513,7 @@ const Approval = () => {
                   <Row gutter={16}>
                     <Col xs={24} md={24}>
                       <Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks">
-                        <TextArea disabled={true} />
+                        <TextArea disabled={true} autoSize={{ minRows: 2 }} />
                       </Form.Item>
                     </Col>
                   </Row>

@@ -23,20 +23,13 @@ export const isSalesOwnerOfJob = (jobData, user) => {
     .some((n) => String(n || "").trim().toLowerCase() === fullName);
 };
 
-/**
- * True when the viewer is this job's named Sales HOD (matched by full name, the same way
- * resolveApprovalRoute identifies the Sales HOD).
- */
+
 export const isSalesHodOfJob = (jobData, user) => {
   const fullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim().toLowerCase();
   return !!fullName && String(jobData?.sales_hod || "").trim().toLowerCase() === fullName;
 };
 
-/**
- * The Remarks the Sales Executive typed in Shipment Details. The backend doesn't return a
- * `remarks` field on the job; it keeps that text as the note of the "Sales Created" (or
- * resubmission) history entry, with "Job created and submitted" when nothing was typed.
- */
+
 export const getShipmentRemarks = (jobData) => {
   if (jobData?.remarks) return jobData.remarks;
   const entry = [...(jobData?.approval_history || [])].reverse()

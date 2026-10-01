@@ -332,7 +332,6 @@ const DocUploadField = ({
 
 const SalesInput = () => {
   const [form] = Form.useForm();
-  const jobTypeWatch = Form.useWatch("job_type", form);
 
   const [commodities, setCommodities] = useState([]);
   const [commodityInput, setCommodityInput] = useState("");
@@ -375,11 +374,13 @@ const SalesInput = () => {
   const [pendingFiles, setPendingFiles] = useState([]);
 
   // Specialized Job Type Logic
-  const jobType = Form.useWatch("job_type", form);
-  const isOthers = jobType?.toUpperCase() === "OTHERS";
-  const isLiner = jobType?.toUpperCase() === "LINER";
-  const isForwarding = jobType?.toUpperCase() === "FORWARDING";
-  const isCrossTrade = jobType?.toUpperCase() === "CROSS TRADE";
+  // The dropdown yields the master name as stored (any case / stray spaces), while a saved
+  // job comes back uppercase — normalise so the sections switch live on every change
+  const jobType = (Form.useWatch("job_type", form) || "").trim().toUpperCase();
+  const isOthers = jobType === "OTHERS";
+  const isLiner = jobType === "LINER";
+  const isForwarding = jobType === "FORWARDING";
+  const isCrossTrade = jobType === "CROSS TRADE";
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
 
@@ -951,8 +952,6 @@ const SalesInput = () => {
 
   const navigate = useNavigate();
 
-  // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
-  // Resubmit a CS-rejected job: check the form first, then ask for confirmation
   const handleResubmit = () => {
     form.validateFields().then(async (values) => {
       if (await confirmAction("resubmit")) onFinish(values, "submitted");
@@ -1101,8 +1100,8 @@ const SalesInput = () => {
 
           {/* OTHERS SPECIFIC FIELDS */}
           <Form.Item noStyle shouldUpdate={(prevVal, curVal) => prevVal.job_type !== curVal.job_type}>
-            {({ getFieldValue }) =>
-              getFieldValue("job_type") === "OTHERS" ? (
+            {() =>
+              isOthers ? (
                 <Card
                   className={Styles.card}
                   bordered
@@ -1452,7 +1451,7 @@ const SalesInput = () => {
                               name={[name, "quote"]}
                               label="Quote"
                             >
-                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Quote" disabled={isReadOnly} />
+                              <TextArea placeholder="Quote" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1463,7 +1462,7 @@ const SalesInput = () => {
                               name={[name, "cost"]}
                               label="Cost"
                             >
-                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Cost" disabled={isReadOnly} />
+                              <TextArea placeholder="Cost" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1504,7 +1503,7 @@ const SalesInput = () => {
                       name="other_charges_remarks"
                     // rules={[{ required: true, message: "Required" }]}
                     >
-                      <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" disabled={isReadOnly} autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1621,10 +1620,10 @@ const SalesInput = () => {
                       label="Remarks"
                       name="remarks"
                     >
-                      <TextArea placeholder="Enter Remarks" />
+                      <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
-                  {jobTypeWatch !== 'LINER' && jobTypeWatch !== 'liner' && (
+                  {!isLiner && (
                     <Col xs={24} md={3}>
                       <Checkbox
                         className={Styles.checkboxSpaced}
@@ -1704,7 +1703,7 @@ const SalesInput = () => {
                       label="SPECIAL INSTRUCTION IF ANY"
                       name="special_instructions"
                     >
-                      <TextArea className={Styles.textAreaField} placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
                 </Row>

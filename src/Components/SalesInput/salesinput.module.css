@@ -192,13 +192,6 @@
   padding-inline-end: 0;
 }
 
-.rowTextArea.rowTextArea {
-  height: 32px !important;
-  min-height: 32px !important;
-  resize: none !important;
-  overflow-y: auto;
-}
-
 .textAreaField {
   color: #1f2937 !important;
   -webkit-text-fill-color: #1f2937 !important;

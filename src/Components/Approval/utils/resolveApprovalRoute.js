@@ -1,15 +1,7 @@
 import { computeUserRoles } from "./roleUtils";
 import { isCrossTradeJob } from "./jobContextUtils";
 
-/**
- * Given a job record + logged-in user, returns the correct
- * approval sub-route path to navigate to.
- *
- * Usage in table:
- *   const path = resolveApprovalRoute(jobRow, user);
- *   if (path) navigate(path);
- *   else navigate(`/approval?id=${jobRow.id}`); // fallback to old page
- */
+
 export const resolveApprovalRoute = (jobData, user) => {
   const id           = jobData?.id;
   const currentStage = String(jobData?.current_stage || "1");

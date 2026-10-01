@@ -32,6 +32,7 @@ export const showError = (title, description) => {
     style: {
       borderRadius: 8,
       boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      whiteSpace: "pre-line", // one line per message when several are joined with "\n"
     },
     onClose: () => {
       activeNotificationKey = null;
@@ -39,6 +40,32 @@ export const showError = (title, description) => {
   });
 
   activeNotificationKey = key;
+};
+
+const fieldLabel = (key) =>
+  key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Every message in a DRF error body, labelled with its field path:
+// "Customer Name: ...", "Container Details → Equipment Type: ..." (rows numbered when there are several)
+const collectFieldErrors = (value, path = []) => {
+  if (typeof value === "string") {
+    if (!value.trim() || value.trim().startsWith("<")) return []; // skip blanks and HTML error pages
+    return [path.length ? `${path.join(" → ")}: ${value}` : value];
+  }
+  if (Array.isArray(value)) {
+    if (value.every((v) => typeof v === "string")) {
+      return value.length ? collectFieldErrors(value[0], path) : [];
+    }
+    return value.flatMap((v, i) =>
+      collectFieldErrors(v, value.length > 1 ? [...path, `Row ${i + 1}`] : path)
+    );
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, v]) =>
+      collectFieldErrors(v, key === "non_field_errors" ? path : [...path, fieldLabel(key)])
+    );
+  }
+  return [];
 };
 
 export const errorHandle = (data, returnMsg = false) => {
@@ -80,19 +107,16 @@ export const errorHandle = (data, returnMsg = false) => {
   }
 
   if (typeof data === "object" && data !== null) {
-    const [firstKey, firstValue] = Object.entries(data)[0] || [];
+    // A plain message from the API wins; otherwise it is a DRF validation body,
+    // e.g. { customer_name: ["..."], container_details: [{ equipment_type: ["..."] }] }
+    const directMessage = [data.message, data.detail, data.error].find(
+      (m) => typeof m === "string" && m.trim() && !m.trim().startsWith("<")
+    );
+    const messages = directMessage ? [directMessage] : collectFieldErrors(data);
 
-    if (firstKey && firstValue) {
-      const errMsg = Array.isArray(firstValue)
-        ? firstValue[0]
-        : firstValue;
-
-      finalMessage =
-        typeof errMsg === "string" && !errMsg.trim().startsWith("<")
-          ? errMsg
-          : "An unexpected error occurred. Please try again later.";
-
-      if (!returnMsg) showError("Error", finalMessage);
+    if (messages.length > 0) {
+      finalMessage = messages.slice(0, 3).join("\n");
+      if (!returnMsg) showError(directMessage ? "Error" : "Validation Error", finalMessage);
       return finalMessage;
     }
   }

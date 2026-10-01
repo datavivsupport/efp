@@ -13,8 +13,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const apiMessage = (error, fallback) => error?.response?.data?.message || fallback;
 
-// The file comes from a presigned S3 URL that answers with Content-Disposition:
-// attachment, so navigating to it downloads the file and leaves this page in place.
+
 const downloadFile = (url, filename) => {
   const a = document.createElement("a");
   a.href = url;
@@ -24,13 +23,7 @@ const downloadFile = (url, filename) => {
   document.body.removeChild(a);
 };
 
-/**
- * Starts the Excel export of the reports list in the background and downloads the file
- * once the server has built it.
- *
- * `startExport(params)` takes the same filter params the list API takes (no page /
- * page_size); an empty object exports every record.
- */
+
 const useReportExport = () => {
   const [exporting, setExporting] = useState(false);
   const activeRef = useRef(false);

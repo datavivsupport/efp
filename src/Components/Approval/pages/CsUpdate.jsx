@@ -140,10 +140,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     uploadActivity?.inc?.();
     setUploading(true);
     try {
-      // Only the request itself belongs in this try. Anything after it runs with the
-      // file already stored, so folding both into one catch reports a broken list
-      // render as "no response from the server" - which is what sent CS back to
-      // re-upload documents the server had accepted.
+   
       let response;
       try {
         response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -160,8 +157,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           message.success(response.data.message || `${label} uploaded successfully`);
         } else { message.error(`Upload failed: ${response.data.message || `${label} was rejected by the server.`}`); }
       } catch (uiErr) {
-        // The document is saved. Say so, and leave the real cause in the console
-        // rather than blaming the network for a bug in this component.
+       
         console.error("Upload succeeded but the page could not be updated:", uiErr);
         message.warning(uploadSucceededUiFailedMessage(label));
       }
@@ -306,10 +302,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2, stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD,
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
-  // Liner only: once CS has verified & confirmed (or the job moved past the CS stage) the page is view-only:
-  // same layout as when filling it in, but no uploads, edits or Verify / Reject / Save buttons.
-  // Cross Trade keeps its own rule (CS may still add the BOC right after confirming), and a job
-  // rejected back to CS at stage 2 stays editable so CS can fix and resubmit.
+
   const csViewOnly = isLiner && !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
 
   const {
@@ -348,9 +341,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const isROReq = normalizeBoolean(isROReqForm, jobData?.is_release_order_required);
   const releaseOrderRequirementMet = isROReq || (!isLiner && !isExtended) || isMasterMode;
   
-  // Cross Trade: the Release Order / BOC uploads follow their Yes/No toggles for every user
-  // Cross Trade: the backend doesn't return is_boc_required yet, so a missing value means Yes
-  // (otherwise the upload would be switched off on every reload). Other job types unchanged.
+
   const isBOCReq = normalizeBoolean(isBOCReqForm, (isCrossTrade || isLiner) ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
   const bocRequirementMet = isBOCReq || (!isLiner && !isExtended) || isMasterMode;
   const crossTradeRODisabled = isCrossTrade && !isROReq;
@@ -359,15 +350,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const linerRODisabled = isLiner && !isROReq;
   const linerBOCDisabled = isLiner && !isBOCReq;
 
-  // Cross Trade: LPO / Invoice can be handled on this stage alongside Release Order / BOC.
-  // They stay optional here — Stage 4 enforces them.
+
   const isLpoReqCT = normalizeBoolean(Form.useWatch("is_lpo_required", form), jobData?.is_lpo_required ?? true);
   const isInvoiceReqCT = normalizeBoolean(Form.useWatch("is_invoice_required", form), jobData?.is_invoice_required ?? true);
-  // Pre-Alert Yes/No (defaults to Yes). Sent as is_pre_alert_required — only kept across reloads
-  // once the backend stores and returns that field.
+ 
   const isPreAlertReqCT = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), jobData?.is_pre_alert_required ?? true);
-  // CS HOD, same rule as the CS Documents stage: required exactly when LPO or Invoice is
-  // Yes (or has a file); with both No there is no CS HOD step.
+ 
   const csHodForcedCT = isLpoReqCT || isInvoiceReqCT || lpoFiles.length > 0 || invoiceFiles.length > 0;
   const csHodRequiredCT = csHodForcedCT;
   // A Yes can't be switched back to No while that document still has files — delete them first.
@@ -382,8 +370,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     return null;
   })();
   const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled || linerBOCDisabled;
-  // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
-  // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
+
   const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled || (csViewOnly && currentStage !== "2");
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
@@ -400,21 +387,17 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = transportationFlag || isMasterMode;
-  // Placement Details stays open to CS until CS submits this stage — see sectionLocks.js
-  // After CS has verified & confirmed (view-only page) Placement Details is the one section that stays open
+  
   const canEditPlacement = csViewOnly
     ? !isTerminal && ["2", "3"].includes(currentStage)
     : canCSEditPlacement({
         isAdmin: isAdminForCsUpdate, isCS: true,
         currentStage, isMasterMode, isTerminal, jobData,
       });
-  // CS may change only Date/Time, Pickup/Delivery and Remarks; they ride along
-  // on the page's existing Save / Submit calls. Equipment, volume, category keep
-  // the sales-section lock.
+
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
-  // Cross Trade: after CS Verify & Confirm, files already on the job can't be deleted here
-  // (new uploads in this visit stay deletable). Same rule as the CS Documents page.
+
   const lockedDocIds = new Set(
     isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)
       ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
@@ -855,9 +838,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   )}
                 </Row>
 
-                {/* Release Order / BOC — Liner uses the same Gate/DocSlot UI as Cross Trade
-                    (see the CROSS TRADE DOCUMENTS block below); Forwarding/Others keep the
-                    plain upload row. */}
+       
                 {!isCrossTrade && !isLiner && (showDocumentUploads || showROBOCForCS) && (
                   <Row gutter={16}>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
@@ -902,7 +883,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List"><DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="booking" docType="Load List" disabled={!isLLReq || !jobData?.is_hod_approved || isCNFUploadLocked} restrictionMessage={isCNFUploadLocked ? null : !isLLReq ? "Load List upload is disabled until the requirement is turned on." : isLiner && jobData?.is_hod_approved ? "CNF is allowed to upload it" : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} /></Form.Item></Col>
+                      <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                     </Row>
                   </>
                 )}

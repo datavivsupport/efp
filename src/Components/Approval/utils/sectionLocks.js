@@ -3,11 +3,7 @@ import { TERMINAL_STATUSES } from "./jobContextUtils";
 /** doc_type spellings that count as the Load List (mirrors DOC_TYPE_CONFIG). */
 const LOAD_LIST_DOC_TYPES = ["LOAD LIST", "LOAD LIST UPLOADING"];
 
-/**
- * CS sees CNF's section only once CNF has handed over: the second stage has started and
- * the Load List is in. Keyed on delivery, not on the stage alone - the job leaves stage 2
- * the moment CS confirms the booking, which is before CNF has done anything.
- */
+
 export const isCnfDataVisibleToCS = (jobData) => {
   const stage = String(jobData?.current_stage || "1");
   if (stage === "1" || stage === "2") return false;
@@ -18,15 +14,7 @@ export const isCnfDataVisibleToCS = (jobData) => {
   );
 };
 
-/**
- * Placement Details is the one section CS and CNF keep editing after Sales has
- * handed the job over: the truck slots move around right up to the moment the
- * desk signs off. Each desk may edit while the job is sitting with it, and the
- * edits go out on the existing PATCH /liner/sales-input/:id/ call — so a plain
- * Save persists them, and Submit/Approve carries the final rows.
- *
- * Once the desk submits/approves, the section goes read-only for that desk again.
- */
+
 export const canCSEditPlacement = ({
   isAdmin, isCS, currentStage, isMasterMode, isTerminal, jobData,
 }) => {
@@ -49,14 +37,7 @@ export const canCSEditPlacement = ({
   }
 };
 
-/**
- * Computes all section-level read/write lock flags for Approval.jsx.
- *
- * Every "disabled" prop on a form field traces back to one of these flags.
- * To change who can edit a section, edit only this file.
- *
- * @param {object} ctx  — job context + role flags
- */
+
 export const computeSectionLocks = (ctx) => {
   const {
     // role flags
