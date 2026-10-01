@@ -257,6 +257,17 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   // don't read any of it, so their payloads are unchanged.
   const isCrossTrade = isCrossTradeJob(initialJob);
   const isLiner = initialJob?.job_type === "LINER";
+  // No transportation → CNF has no part in the job, so its card would only be empty boxes.
+  // Still shown if CNF content was filed anyway, so nothing real is hidden.
+  const hasCnfContent =
+    ["haulageCostFiles", "haulierNoteFiles", "loadListFiles", "edFiles"].some((k) => (docs?.[k] || []).length > 0) ||
+    !!String(initialJob?.approval_details?.cnf_remarks || "").trim();
+  const showCnfDetails = !isCrossTrade && (normalizeBoolean(initialJob?.transportation) || hasCnfContent);
+  // Placement Details lists the transportation rows — same rule, kept if a row holds any data
+  const hasPlacementContent = (initialJob?.transportation_rows || []).some((row) =>
+    ["equipment_type", "no_of_containers", "category", "placement_time", "pickup_location", "special_remarks"]
+      .some((field) => row?.[field] != null && String(row[field]).trim() !== "" && String(row[field]) !== "0"));
+  const showPlacementDetails = !isCrossTrade && (normalizeBoolean(initialJob?.transportation) || hasPlacementContent);
   const ctFiles = (k) => docs?.[k] || [];
   // A flag the backend doesn't return yet falls back to "Yes if a file was uploaded"
   const ctFlag = (value, files, fallback) => (value == null ? (files.length > 0 || fallback) : normalizeBoolean(value));
@@ -576,8 +587,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               </div>
             </Card>
 
-            {/* PLACEMENT DETAILS — none for Cross Trade */}
-            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            {/* PLACEMENT DETAILS — none for Cross Trade, nor without transportation */}
+            {showPlacementDetails && <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields) => fields.map(({ key, name, ...restField }) => (
@@ -618,8 +629,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               </div>
             </Card>
 
-            {/* CNF DETAILS — no CNF stage in Cross Trade */}
-            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            {/* CNF DETAILS — no CNF stage in Cross Trade, nor without transportation */}
+            {showCnfDetails && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
               <div style={{ display: open.cnfDetails ? "block" : "none" }}>
                 <Row gutter={[16, 16]}>
                   <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
