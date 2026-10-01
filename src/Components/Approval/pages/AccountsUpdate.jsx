@@ -245,35 +245,26 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   };
 
   const handleAction = async (actionType) => {
+    // Rejection works as on every other stage: remarks modal first, then a confirmation
+    if (actionType === "Rejected") {
+      setRejectionRemarks("");
+      setRejectionModalVisible(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const values = await form.validateFields();
-      const confirmed = actionType === "Approved"
-        ? await confirmAction("approve", setLoading)
-        : await confirmAction("reject", setLoading, { content: "The job will be sent back." });
-      if (!confirmed) return;
+      if (!(await confirmAction("approve", setLoading))) return;
 
-      let payload;
-      if (actionType === "Approved") {
-        // For approval
-        payload = {
-          carrier_name_2: values.carrier_name_2,
-          account_remarks: values.account_remarks,
-          action: actionType,
-          remarks: values.approvalRemarks || "",
-        };
-      } else {
-        // For rejection - send only remarks
-        payload = {
-          remarks: values.approvalRemarks || "Rejected by Accounts"
-        };
-      }
+      const payload = {
+        carrier_name_2: values.carrier_name_2,
+        account_remarks: values.account_remarks,
+        action: actionType,
+        remarks: values.approvalRemarks || "",
+      };
 
-      const endpoint = actionType === "Approved" 
-        ? `/liner/sales-input/${id}/approve/` 
-        : `/liner/sales-input/${id}/reject/`;
-
-      const res = await apiClient.post(endpoint, payload);
+      const res = await apiClient.post(`/liner/sales-input/${id}/approve/`, payload);
       if (res.data.status === "success") {
         message.success(res.data.message || `${actionType} successfully`);
         setTimeout(() => navigate("/"), 1500);
@@ -284,6 +275,33 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       message.error("Action failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const rejectingRef = useRef(false);
+  const handleConfirmRejection = async () => {
+    if (!rejectionRemarks.trim()) {
+      message.warning("Please enter rejection remarks");
+      return;
+    }
+    if (rejectingRef.current) return;
+    rejectingRef.current = true;
+    setRejectionLoading(true);
+    try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, { remarks: rejectionRemarks.trim() });
+      if (res.data.status === "success") {
+        message.success(res.data.message || "Job rejected successfully");
+        setRejectionModalVisible(false);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        message.error(res.data.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      rejectingRef.current = false;
+      setRejectionLoading(false);
     }
   };
 
@@ -477,28 +495,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           <Button key="cancel" onClick={() => setRejectionModalVisible(false)}>
             Cancel
           </Button>,
-          <Button key="reject" danger type="primary" loading={rejectionLoading} onClick={async () => {
-            if (!rejectionRemarks.trim()) {
-              message.warning("Please enter rejection remarks");
-              return;
-            }
-            try {
-              setRejectionLoading(true);
-              const payload = { remarks: rejectionRemarks.trim() };
-              const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
-              if (res.data.status === "success") {
-                message.success(res.data.message || "Job rejected successfully");
-                setRejectionModalVisible(false);
-                setTimeout(() => window.location.href = "/", 1500);
-              } else {
-                message.error(res.data.message || "Rejection failed");
-              }
-            } catch (err) {
-              message.error(err.response?.data?.message || "Something went wrong");
-            } finally {
-              setRejectionLoading(false);
-            }
-          }}>
+          <Button key="reject" danger type="primary" loading={rejectionLoading} disabled={rejectionLoading} onClick={handleConfirmRejection}>
             Confirm Rejection
           </Button>,
         ]}

@@ -18,13 +18,14 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
-import { isCnfSubmitted } from "../utils/jobContextUtils";
+import { isCnfSubmitted, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import { normalizeBoolean } from "../utils/formUtils";
 import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -230,7 +231,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
   const isLiner       = initialJob?.job_type === "LINER";
-  const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
+  // A completed Liner job (stage 9) has nothing left to reject — CNF keeps only Save / Cancel
+  const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
+  const isAdmin     = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const { isCNF } = computeUserRoles(user);
  
@@ -734,6 +737,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}
           >
             <div style={{ display: open.export ? "block" : "none" }}>
+              {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginBottom: 12 }} />}
               <Row gutter={[16, 8]}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
@@ -1078,7 +1082,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Button>
                   {/* Liner: CNF can reject before Sales HOD approves too — the reject endpoint
                       and its modal are stage-agnostic already, this button was just missing here. */}
-                  {isLiner && (
+                  {isLiner && !isLinerCompleted && (
                     <Button
                       danger
                       size="large"

@@ -19,7 +19,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
-import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
@@ -28,6 +28,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs, isMandatoryDocDeleteLocked } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -257,11 +258,18 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
  
   const lpoInvoiceDeleteLocked = isCsDocumentsSubmitted(initialJob);
  
-  const [savedDocIds, setSavedDocIds] = useState(() => new Set(
-    isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)
-      ? (initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
-      : []
-  ));
+  const [savedDocIds, setSavedDocIds] = useState(() => {
+    const docs = initialJob?.documents || [];
+    const idsOf = (list) => list.map((d) => d?.id).filter((docId) => docId != null);
+    if (isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)) return new Set(idsOf(docs));
+    // LPO / Invoice are mandatory: once CS has submitted, every one already on the job stays,
+    // additional uploads included — not only the first set isMandatoryDocDeleteLocked covers
+    if (lpoInvoiceDeleteLocked) {
+      const { lpoFiles: lpo, invoiceFiles: invoice } = partitionDocuments(docs, initialJob?.name_of_executive);
+      return new Set(idsOf([...lpo, ...invoice]));
+    }
+    return new Set();
+  });
   // Placement Details stays open to CS until they submit the documents — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin, isCS, currentStage, jobData: initialJob,
@@ -339,6 +347,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
  
   const isCrossTrade = isCrossTradeJob(initialJob);
   const isLiner = initialJob?.job_type === "LINER";
+  // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
+  const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
   const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
   const lpoToggle = normalizeBoolean(Form.useWatch("is_lpo_required", form), initialJob?.is_lpo_required ?? true);
   const invoiceToggle = normalizeBoolean(Form.useWatch("is_invoice_required", form), initialJob?.is_invoice_required ?? true);
@@ -708,7 +718,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
             {/* EXPORT DETAILS */}
             <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}>
               <div style={{ display: open.export ? "block" : "none" }}>
-                <div style={{ marginBottom: 12 }}><Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag></div>
+                <div style={{ marginBottom: 12 }}>
+                  <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                  {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginTop: 8 }} />}
+                </div>
                 <Row gutter={[16, 8]}>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
@@ -1047,28 +1060,32 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               >
                 Save
               </Button>
-              <Button
-                type="primary"
-                size="large"
-                onClick={() => handleAction("Approved")}
-                icon={<Icon icon="mdi:check-circle" />}
-                loading={loading}
-                disabled={isDocumentUploading || loading}
-                style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
-              >
-                Submit Documents & Approve
-              </Button>
-              <Button
-                danger
-                size="large"
-                onClick={() => handleAction("Rejected")}
-                icon={<Icon icon="mdi:close-circle" />}
-                loading={rejectionLoading}
-                disabled={isDocumentUploading || rejectionLoading}
-                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-              >
-                Reject
-              </Button>
+              {!isLinerCompleted && (
+                <>
+                  <Button
+                    type="primary"
+                    size="large"
+                    onClick={() => handleAction("Approved")}
+                    icon={<Icon icon="mdi:check-circle" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Submit Documents & Approve
+                  </Button>
+                  <Button
+                    danger
+                    size="large"
+                    onClick={() => handleAction("Rejected")}
+                    icon={<Icon icon="mdi:close-circle" />}
+                    loading={rejectionLoading}
+                    disabled={isDocumentUploading || rejectionLoading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
               <Button
                 size="large"
                 onClick={() => confirmLeave(navigate)}

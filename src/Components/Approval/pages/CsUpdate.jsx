@@ -37,7 +37,7 @@ import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
-import { computeJobContext, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { computeJobContext, isCrossTradeJob, getShipmentRemarks, isJobRejected } from "../utils/jobContextUtils";
 import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -49,6 +49,7 @@ import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -646,6 +647,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             }
           >
             <div style={{ display: open.export ? "block" : "none" }}>
+              {isLiner && isJobRejected(jobData) && <RejectionReasonBox jobData={jobData} style={{ marginBottom: 12 }} />}
               <Row gutter={16}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>

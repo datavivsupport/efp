@@ -38,6 +38,22 @@ export const getShipmentRemarks = (jobData) => {
   return text && text.toLowerCase() !== "job created and submitted" ? text : "";
 };
 
+/** True when the job's status is any rejection (CS-REJECTED, ACCOUNTS-REJECTED, rejected, ...). */
+export const isJobRejected = (jobData) => /REJECTED/i.test(String(jobData?.status || ""));
+
+/**
+ * Why the job was rejected: the job's own rejection_remarks when the API sends them,
+ * else the remarks on the latest REJECTED history row (every reject writes one).
+ */
+export const getRejectionReason = (jobData) => {
+  if (String(jobData?.rejection_remarks || "").trim()) return jobData.rejection_remarks;
+  const latest = [...(jobData?.approval_history || [])]
+    .filter((h) => String(h?.status || "").toUpperCase() === "REJECTED")
+    .sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0))[0];
+  const text = String(latest?.remarks || "").trim();
+  return text && text.toUpperCase() !== "N/A" ? text : "";
+};
+
 /** True for a Cross Trade job — for pages that don't build the full job context. */
 export const isCrossTradeJob = (jobData) =>
   matchJobType((jobData?.job_type || "").toUpperCase(), JOB_TYPE_CONFIG.CROSS_TRADE);

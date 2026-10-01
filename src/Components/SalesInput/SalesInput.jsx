@@ -47,7 +47,8 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText, RemarksCell } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
-import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
+import { isSalesOwnerOfJob, getShipmentRemarks, isJobRejected } from "../Approval/utils/jobContextUtils";
+import RejectionReasonBox from "../Approval/components/Common/RejectionReasonBox";
 import { confirmAction } from "../Approval/utils/confirmAction";
 import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
@@ -395,6 +396,7 @@ const SalesInput = () => {
   const [instanceStatus, setInstanceStatus] = useState("draft");
   // View mode on a CS-rejected job: its Sales Executive edits the form and resubmits, or rejects it
   const [createdByUser, setCreatedByUser] = useState(null);
+  const [savedRejectionRemarks, setSavedRejectionRemarks] = useState("");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRemarks, setRejectRemarks] = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
@@ -604,6 +606,7 @@ const SalesInput = () => {
           setApprovalHistory(data.approval_history || []);
           setInstanceStatus(data.status);
           setCreatedByUser(data.created_by_user ?? null);
+          setSavedRejectionRemarks(data.rejection_remarks || "");
 
           // Load documents into state
           const docs = data.documents || [];
@@ -1082,6 +1085,12 @@ const SalesInput = () => {
                   </Form.Item>
                 </Col>
               </Row>
+              {isLiner && isJobRejected({ status: instanceStatus }) && (
+                <RejectionReasonBox
+                  jobData={{ rejection_remarks: savedRejectionRemarks, approval_history: approvalHistory }}
+                  style={{ marginTop: 16 }}
+                />
+              )}
               {isHalted && (
                 <Row gutter={16} style={{ marginTop: 16 }}>
                   <Col span={24}>
