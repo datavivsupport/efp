@@ -742,7 +742,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Table dataSource={history} columns={[
                   { title: "Stage", dataIndex: "stage" },
                   { title: "Pending With", dataIndex: "pending_with" },
-                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
+                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={r.updated_by_user_email || null}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
                   { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
                   { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
                   { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" }

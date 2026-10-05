@@ -692,7 +692,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       key: "updated_by_user_name",
       render: (name, record) => (
         <Space direction="vertical" size={0}>
-          <span>{name || record.updated_by_name || "N/A"}</span>
+          <ScrollSafeTooltip title={record.updated_by_user_email || null}>
+            <span>{name || record.updated_by_name || "N/A"}</span>
+          </ScrollSafeTooltip>
           <span style={{ fontSize: 11, color: "#6b7280" }}>
             {record.updated_by_department || record.updated_by_role || ""}
           </span>

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
 import { resolveApprovalRoute } from "./utils/resolveApprovalRoute";
-import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks } from "./utils/jobContextUtils";
+import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks, isJobRejected } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
@@ -422,6 +422,9 @@ const Approval = () => {
     String(jobData?.cs_hod ?? "") !== String(user?.id ?? "");
   const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
 
+  // Rejected Liner job: booking, workflow configuration, RO/BOC and LPO/Invoice/Pre-Alert don't apply at this stage
+  const isLinerRejectedView = isLiner && !isAdmin && isJobRejected(jobData);
+
 
 
   const redirectToSalesView =
@@ -765,7 +768,9 @@ const Approval = () => {
       key: "updated_by_user_name",
       render: (name, record) => (
         <Space direction="vertical" size={0}>
-          <span>{name || record.updated_by_name || "N/A"}</span>
+          <ScrollSafeTooltip title={record.updated_by_user_email || null}>
+            <span>{name || record.updated_by_name || "N/A"}</span>
+          </ScrollSafeTooltip>
           <span style={{ fontSize: 11, color: "#6b7280" }}>
             {record.updated_by_department || record.updated_by_role || ""}
           </span>
@@ -1206,7 +1211,7 @@ const Approval = () => {
             )}
 
             {/* ════════ BOOKING DETAILS ════════ */}
-            {!isOthers && (
+            {!isOthers && !isLinerRejectedView && (
               <Card
                 style={salesHiddenStyle}
                 className={Styles.card}
@@ -1579,7 +1584,7 @@ const Approval = () => {
 
 
             {/* ════════ DOCUMENTS (LPO / INVOICE) ════════ */}
-            {(!["2", "3"].includes(currentStage) && isCS) && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
+            {(!["2", "3"].includes(currentStage) && isCS) && !isLinerRejectedView && (!isCNF || (isForwarding && currentStage === "5")) && showDocumentUploads && (jobData?.job_type !== "OTHERS" || isMasterMode) && (
               <Card
                 className={Styles.card}
                 bordered

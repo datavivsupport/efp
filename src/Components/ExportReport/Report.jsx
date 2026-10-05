@@ -46,28 +46,67 @@ const STATUS_OPTIONS = [
 ];
 
 
+// Text searches match part of the value (backend icontains) once at least this many
+// characters are typed; shorter input is not sent, the same as an empty box.
+const MIN_SEARCH_LENGTH = 3;
+
+const searchValue = (v) => {
+  const trimmed = String(v || "").trim();
+  return trimmed.length >= MIN_SEARCH_LENGTH ? trimmed : "";
+};
+
+// [filter state key, query param] for every free-text search box
+const TEXT_SEARCH_PARAMS = [
+  ["exportNumber", "export_number"],
+  ["createdBy", "created_by"],
+  ["carrier", "carrier"],
+  ["customerName", "customer_name"],
+  ["afsysJobNo", "afsys_job_no"],
+  ["bookingRef", "booking_ref"],
+  ["salesHod", "sales_hod"],
+  ["pol", "pol"],
+  ["fpod", "fpod"],
+  ["bookingVessel", "booking_vessel"],
+  ["bookingVoyage", "booking_voyage"],
+];
+
 const buildFilterParams = (f = {}) => {
   const params = {};
   if (f.pendingWith && f.pendingWith !== "all") params.pending_with = f.pendingWith;
   if (f.jobType) params.job_type = f.jobType;
-  if (f.exportNumber) params.export_number = f.exportNumber;
-  
+
   if (f.createdAtFrom) params.export_created_date_gte = dayjs(f.createdAtFrom).format("YYYY-MM-DD");
   if (f.createdAtTo) params.export_created_date_lte = dayjs(f.createdAtTo).format("YYYY-MM-DD");
-  if (f.createdBy) params.created_by = f.createdBy;
-  if (f.carrier) params.carrier = f.carrier;
-  if (f.customerName) params.customer_name = f.customerName;
-  if (f.afsysJobNo) params.afsys_job_no = f.afsysJobNo;
-  if (f.bookingRef) params.booking_ref = f.bookingRef;
-  if (f.salesHod) params.sales_hod = f.salesHod;
-  if (f.pol) params.pol = f.pol;
-  if (f.fpod) params.fpod = f.fpod;
+  TEXT_SEARCH_PARAMS.forEach(([key, param]) => {
+    const value = searchValue(f[key]);
+    if (value) params[param] = value;
+  });
   if (f.status) params.status = f.status;
-  if (f.bookingVessel) params.booking_vessel = f.bookingVessel;
-  if (f.bookingVoyage) params.booking_voyage = f.bookingVoyage;
   if (f.loadList) params.load_list = f.loadList;
   if (f.equipmentType) params.equipment_type = f.equipmentType;
   return params;
+};
+
+const SearchInput = ({ value, onChange }) => {
+  const length = String(value || "").trim().length;
+  const tooShort = length > 0 && length < MIN_SEARCH_LENGTH;
+  return (
+    <>
+      <Input
+        prefix={<Icon icon="cil:search" width={16} color="#4b5563" />}
+        placeholder={`Search (min ${MIN_SEARCH_LENGTH} characters)...`}
+        allowClear
+        value={value}
+        status={tooShort ? "warning" : undefined}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {tooShort && (
+        <span style={{ fontSize: 11, color: "#d97706", marginTop: 2 }}>
+          Enter at least {MIN_SEARCH_LENGTH} characters
+        </span>
+      )}
+    </>
+  );
 };
 
 const ExportReport = () => {
@@ -139,7 +178,9 @@ const ExportReport = () => {
     }
   }, [buildUrl]);
 
-  // Auto-fetch with debounce whenever any filter changes
+  // Auto-fetch with debounce whenever the filters actually sent change - typing the
+  // 1st / 2nd character of a search sends nothing new, so it does not refetch.
+  const filterKey = JSON.stringify(buildFilterParams(currentFilters));
   useEffect(() => {
     const filters = currentFilters;
 
@@ -150,12 +191,7 @@ const ExportReport = () => {
     }, 500);
 
     return () => clearTimeout(debounceRef.current);
-  }, [
-    jobType, exportNumber, createdAtFrom, createdAtTo,
-    createdBy, carrier, customerName, afsysJobNo,
-    bookingRef, salesHod, pol, fpod, pendingWith,
-    status, bookingVessel, bookingVoyage, loadList, equipmentType,
-  ]);
+  }, [filterKey]);
 
   // Pagination change — fetch immediately with current filters
   const handleTableChange = (pagination) => {
@@ -214,36 +250,36 @@ const ExportReport = () => {
             {/* Default filter 2 — Customer Name */}
             <div className={colCls}>
               <label className={labelCls}>Customer Name</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              <SearchInput value={customerName} onChange={setCustomerName} />
             </div>
 
             <div className={colCls}>
               <label className={labelCls}>Carrier</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
+              <SearchInput value={carrier} onChange={setCarrier} />
             </div>
 
 
             <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
+              <SearchInput value={exportNumber} onChange={setExportNumber} />
             </div>
 
 
             <div className={colCls}>
               <label className={labelCls}>Sales HOD</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesHod} onChange={(e) => setSalesHod(e.target.value)} />
+              <SearchInput value={salesHod} onChange={setSalesHod} />
             </div>
 
 
             <div className={colCls}>
               <label className={labelCls}>POL</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
+              <SearchInput value={pol} onChange={setPol} />
             </div>
 
 
             <div className={colCls}>
               <label className={labelCls}>FPOD</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
+              <SearchInput value={fpod} onChange={setFpod} />
             </div>
 
             {/* More filters toggle */}
@@ -314,17 +350,17 @@ const ExportReport = () => {
 
                 <div className={colCls}>
                   <label className={labelCls}>Created By</label>
-                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
+                  <SearchInput value={createdBy} onChange={setCreatedBy} />
                 </div>
 
                 <div className={colCls}>
                   <label className={labelCls}>AFSYS Job No.</label>
-                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={afsysJobNo} onChange={(e) => setAfsysJobNo(e.target.value)} />
+                  <SearchInput value={afsysJobNo} onChange={setAfsysJobNo} />
                 </div>
 
                 <div className={colCls}>
                   <label className={labelCls}>Booking Ref</label>
-                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingRef} onChange={(e) => setBookingRef(e.target.value)} />
+                  <SearchInput value={bookingRef} onChange={setBookingRef} />
                 </div>
 
                 <div className={colCls}>
@@ -348,12 +384,12 @@ const ExportReport = () => {
 
                 <div className={colCls}>
                   <label className={labelCls}>Booking Vessel</label>
-                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVessel} onChange={(e) => setBookingVessel(e.target.value)} />
+                  <SearchInput value={bookingVessel} onChange={setBookingVessel} />
                 </div>
 
                 <div className={colCls}>
                   <label className={labelCls}>Booking Voyage</label>
-                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVoyage} onChange={(e) => setBookingVoyage(e.target.value)} />
+                  <SearchInput value={bookingVoyage} onChange={setBookingVoyage} />
                 </div>
 
                 <div className={colCls}>

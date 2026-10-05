@@ -611,7 +611,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const approvalColumns = [
     { title: "Stage", dataIndex: "stage", key: "stage" },
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
-    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
+    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={record.updated_by_user_email || null}><span>{name || record.updated_by_name || "N/A"}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
     { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("YYYY-MM-DD HH:mm") : "N/A" },
