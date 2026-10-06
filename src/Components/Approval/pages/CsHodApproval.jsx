@@ -66,22 +66,28 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner);
+      const isAdditional = additionalFiles.includes(file);
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-              <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0 }} />
-              <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
-              {file.uploaded_by_user_name && (
-                <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>({file.uploaded_by_user_name})</Typography.Text>
-              )}
-              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} showStatus={showStatus} />
+          {/* Name + actions on one line; uploader and status tags wrap underneath so a narrow column never squeezes the name */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", flex: 1, minWidth: 0 }}>
+              <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0, marginTop: 4 }} />
+              <Typography.Text style={{ minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
             </div>
-            <Space>
+            <Space size={0} style={{ flexShrink: 0 }}>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
               {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
+          {(file.uploaded_by_user_name || isAdditional || showStatus) && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 24 }}>
+              {file.uploaded_by_user_name && (
+                <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', wordBreak: 'break-word' }}>({file.uploaded_by_user_name})</Typography.Text>
+              )}
+              <DocStatusTags file={file} isAdditional={isAdditional} showStatus={showStatus} />
+            </div>
+          )}
           {canEditFile ? (
             <Input size="large" className={Styles.remarkInput} placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
           ) : (
@@ -674,19 +680,22 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) — Cross Trade uses the section above */}
             {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
               <div style={{ display: open.documents ? "block" : "none" }}>
+                {/* CS HOD on its own row; LPO and Invoice side by side (stacked on small screens) */}
                 <Row gutter={[24, 16]}>
-                  <Col xs={24} md={8}>
-                    <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
+                  <Col xs={24} md={12} lg={8}>
+                    <Typography.Text strong style={{ display: 'block', fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
                     <Form.Item name="cs_hod" noStyle>
                       <Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
                     </Form.Item>
                   </Col>
+                </Row>
+                <Row gutter={[24, 16]} style={{ marginTop: 16 }}>
                   {[
                     { label: 'LPO', files: docs?.lpoFiles || [] },
                     { label: 'INVOICE', files: docs?.invoiceFiles || [] },
                   ].map(({ label, files }) => (
-                    <Col key={label} xs={24} md={8}>
-                      <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
+                    <Col key={label} xs={24} md={12}>
+                      <Typography.Text strong style={{ display: 'block', fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
                       {files?.length > 0
                         ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} showStatus />
                         : <div style={{ marginTop: 8 }}>
