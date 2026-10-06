@@ -28,6 +28,7 @@ const EMPTY_FILTERS = {
   status: "",
   bookingVessel: "",
   bookingVoyage: "",
+  vslVoy: "",
   loadList: "",
   equipmentType: "",
 };
@@ -68,6 +69,7 @@ const TEXT_SEARCH_PARAMS = [
   ["fpod", "fpod"],
   ["bookingVessel", "booking_vessel"],
   ["bookingVoyage", "booking_voyage"],
+  ["vslVoy", "vsl_voy"],
 ];
 
 const buildFilterParams = (f = {}) => {
@@ -134,6 +136,7 @@ const ExportReport = () => {
   const [status, setStatus] = useState("");
   const [bookingVessel, setBookingVessel] = useState("");
   const [bookingVoyage, setBookingVoyage] = useState("");
+  const [vslVoy, setVslVoy] = useState("");
   const [loadList, setLoadList] = useState("");
   const [equipmentType, setEquipmentType] = useState("");
 
@@ -141,7 +144,7 @@ const ExportReport = () => {
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
     bookingRef, salesHod, pol, fpod, pendingWith,
-    status, bookingVessel, bookingVoyage, loadList, equipmentType,
+    status, bookingVessel, bookingVoyage, vslVoy, loadList, equipmentType,
   };
 
   const debounceRef = useRef(null);
@@ -218,6 +221,7 @@ const ExportReport = () => {
     setStatus("");
     setBookingVessel("");
     setBookingVoyage("");
+    setVslVoy("");
     setLoadList("");
     setEquipmentType("");
   };
@@ -295,7 +299,7 @@ const ExportReport = () => {
 
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
-                      salesHod, pol, fpod, status, bookingVessel, bookingVoyage,
+                      salesHod, pol, fpod, status, bookingVessel, bookingVoyage, vslVoy,
                       loadList, equipmentType,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
@@ -319,7 +323,7 @@ const ExportReport = () => {
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
                   customerName || afsysJobNo || bookingRef || salesHod || pol || fpod || pendingWith !== "all" ||
-                  status || bookingVessel || bookingVoyage || loadList || equipmentType) && (
+                  status || bookingVessel || bookingVoyage || vslVoy || loadList || equipmentType) && (
                     <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
                       Clear
                     </Button>
@@ -393,6 +397,11 @@ const ExportReport = () => {
                 </div>
 
                 <div className={colCls}>
+                  <label className={labelCls}>VSL/VOY</label>
+                  <SearchInput value={vslVoy} onChange={setVslVoy} />
+                </div>
+
+                <div className={colCls}>
                   <label className={labelCls}>Load List (Y/N)</label>
                   <Select value={loadList || undefined} onChange={(v) => setLoadList(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="true">Yes</Option>
@@ -427,7 +436,7 @@ const ExportReport = () => {
                 { title: "Customer", dataIndex: "customer_name", key: "customer_name", render: (v) => v || "-" },
                 { title: "POL", dataIndex: "port_of_loading", key: "port_of_loading", render: (v) => v || "-" },
                 { title: "FPOD", dataIndex: "final_pod", key: "final_pod", render: (v) => v || "-" },
-                { title: "Vessel / Voyage", dataIndex: "vessel_voyage", key: "vessel_voyage", render: (v) => v || "-" },
+                { title: "Vessel / Voyage", dataIndex: "vessel_voyage", key: "vessel_voyage", render: (v, r) => v || r.vessel_voyage_remarks || "-" },
                 { title: "Booking Vessel", dataIndex: "booking_vessel", key: "booking_vessel", render: (v) => v || "-" },
                 { title: "Booking Voyage", dataIndex: "booking_voyage", key: "booking_voyage", render: (v) => v || "-" },
                 { title: "Job No (AFSYS)", dataIndex: "afsys_job_no", key: "afsys_job_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
