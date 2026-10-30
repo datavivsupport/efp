@@ -246,7 +246,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
-  const { isAdmin, isCS } = computeUserRoles(user);
+  const { isAdmin, isCS, isCSHOD } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
   const canEditBookingTechnical = isAdmin && isCS;
   const canEditBocAttachment = isCS;
@@ -346,6 +346,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   ].some((files) => (files || []).some((f) => f?.pending));
  
   const isCrossTrade = isCrossTradeJob(initialJob);
+  // Cross Trade: LPO/Invoice Yes but no CS HOD selected -> the job skipped CS HOD after the
+  // booking submit, so a CS HOD user has no action on it (no Save / Submit / Reject).
+  const csHodSkipped = isCrossTrade && !initialJob?.cs_hod
+    && (initialJob?.is_lpo_required || initialJob?.is_invoice_required)
+    && !["1", "2", "3", "4"].includes(currentStage);
+  const hideCsHodActions = csHodSkipped && isCSHOD && !isAdmin;
   const isLiner = initialJob?.job_type === "LINER";
   // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
@@ -1055,7 +1061,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
             {/* ACTION BUTTONS (BOTTOM CENTER) */}
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
-              <Button
+              {!hideCsHodActions && <Button
                 size="large"
                 onClick={handleSave}
                 icon={<Icon icon="mdi:content-save-outline" />}
@@ -1064,8 +1070,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >
                 Save
-              </Button>
-              {!isLinerCompleted && (
+              </Button>}
+              {!isLinerCompleted && !hideCsHodActions && (
                 <>
                   <Button
                     type="primary"
