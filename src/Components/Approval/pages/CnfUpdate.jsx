@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -18,12 +18,15 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
-import { isCnfSubmitted } from "../utils/jobContextUtils";
+import { isCnfSubmitted, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { canCNFEditPlacement } from "../utils/sectionLocks";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
+import { normalizeBoolean } from "../utils/formUtils";
+import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -41,12 +44,7 @@ const STATUS_COLOR = {
   REJECTED: "error"
 };
 
-/**
- * CNF's second pass — the stages it may still file documents on after the CS HOD has
- * signed off. Approving at stage 5 sends the job to stage 6 when a payment is due
- * (Accounts holds it for the slip) and straight to stage 7 when none is, and CNF is
- * expected to hand in its optional Haulage Cost Sheet / ED on either.
- */
+ 
 const CNF_POST_CS_HOD_STAGES = ["6", "7"];
 
 /* ── Collapsible Card Header ── */
@@ -101,16 +99,18 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
   </div>
 );
 
-/* ── Upload field wrapper ── */
-/**
- * deleteLocked — saved files can no longer be deleted (uploads still allowed).
- * Used for the mandatory CNF documents once CNF has submitted.
- */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
+ 
+// Liner job without Transportation: CNF has no role, so every upload slot on the page is closed
+const CnfNoRoleContext = createContext(false);
+
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
+  const cnfNoRole = useContext(CnfNoRoleContext);
+  const disabled = disabledProp || cnfNoRole;
 
   const handleBeforeUpload = async (file) => {
+    if (disabled) return false;
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
@@ -174,7 +174,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
 
   return (
     <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
         <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
       </Upload>
       {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
@@ -185,6 +185,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           onRemove={(i) => {
             const f = files[i];
             if (!f) return;
+            if (disabled && cnfNoRole) return;
             if (deleteLocked && f.id && !f.pending) return;
             if (f?.id && !f.pending) {
               const prev = files;
@@ -230,10 +231,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isStage3     = currentStage === "3";
   const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
-  const isAdmin      = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
+  const isLiner       = initialJob?.job_type === "LINER";
+  // A completed Liner job (stage 9) has nothing left to reject — CNF keeps only Save / Cancel
+  const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
+  const isAdmin     = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const { isCNF } = computeUserRoles(user);
  
+  // Liner: when Sales did not select Transportation, CNF has no role on the job — page is view-only
+  const cnfNoRole = isLiner && !isAdmin && !normalizeBoolean(initialJob?.transportation);
+
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
 
 
@@ -254,9 +261,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — including at stage 2 before Sales HOD approves — right up to
   // the submit/approve that hands it on. See sectionLocks.js.
+  // Liner: CNF also works the job in save-only mode at stage 2 before Sales HOD approval,
+  // so placement stays editable there too until CNF submits.
   const canEditPlacement = canCNFEditPlacement({
     isAdmin, isCNF, currentStage, isTerminal: false, jobData: initialJob,
   });
+
+  // Liner: Load List is CNF's own Yes/No (defaults to Yes). Optional either way — it never gates Submit.
+  const loadListToggle = normalizeBoolean(Form.useWatch("is_load_list_required", form), initialJob?.is_load_list_required ?? true);
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
@@ -334,7 +346,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   useEffect(() => {
     if (!initialJob) return;
     form.setFieldsValue(mapJobToFormValues(initialJob));
-    
+    // The switch needs a real boolean; a Liner job that never answered it starts on Yes.
+    if (isLiner) form.setFieldsValue({ is_load_list_required: normalizeBoolean(initialJob.is_load_list_required, true) });
+
     if (initialJob.documents) {
       const docs = partitionDocuments(initialJob.documents, initialJob.name_of_executive);
       setReleaseOrderFiles(docs.releaseOrderFiles);
@@ -379,7 +393,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
       })(),
     });
-  }, [initialJob, form, ad]);
+  }, [initialJob, form, ad, isLiner]);
 
   const openPreview = (filesArray, idx) => {
     const filesWithMime = filesArray.map((file) => {
@@ -409,8 +423,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   };
   const isDocumentUploading = hasPendingFiles();
 
-  // The two documents handleAction enforces, so the button matches the rule it fires.
-  const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
+  // LINER: the Haulier Cost Sheet is the one document handleAction enforces —
+  // mandatory and locked until Sales HOD approval. Load List is Yes/No (optional)
+  // and no longer gates Submit.
+  // Forwarding (and any other type still on this page): unchanged — Haulier Note
+  // + Load List remain the two documents handleAction enforces.
+  const hasRequiredDocs = isLiner
+    ? haulageCostFiles.length > 0
+    : haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
   // Save stays live while the job still sits with CNF — a document upload is not
   // required, editing Placement Details or the remarks is enough. Only the approve
@@ -487,11 +507,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     if (throttle.current) return;
     const approvalRemarks = form.getFieldValue("approvalRemarks");
 
-    // Submitting stages require mandatory docs
+    // Submitting stages require mandatory docs — same rule hasRequiredDocs enforces on the
+    // Submit button: Liner needs the Haulier Cost Sheet, everyone else needs Haulier Note + Load List.
     if (action === "Approved" && showSubmitAction) {
       const missing = [];
-      if (!haulierNoteFiles.length) missing.push("Haulier Note");
-      if (!loadListFiles.length)    missing.push("Load List");
+      if (isLiner) {
+        if (!haulageCostFiles.length) missing.push("Haulier Cost Sheet");
+      } else {
+        if (!haulierNoteFiles.length) missing.push("Haulier Note");
+        if (!loadListFiles.length)    missing.push("Load List");
+      }
       if (missing.length) {
         message.error(`Please upload required CNF documents: ${missing.join(", ")}`);
         return;
@@ -631,29 +656,22 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       let saveMessage = "Saved successfully";
 
       if (isCNF) {
-        // Only what CNF can edit on this page. Documents are left out - each file is saved on
-        // upload and its remarks on edit, and a documents list would rename types or drop files
-        // this page did not load. Booking fields are CS's and read-only here, so not sent back.
+
         const values = form.getFieldsValue();
         const cnfPayload = {
           general_remarks: remarks,
           approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
           ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
+          ...(isLiner && !mandatoryDocsLocked && { is_load_list_required: loadListToggle }),
         };
 
         if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
-          // save-documents stores the payload and is also CNF's commit at stage 7: it locks CNF's
-          // attachments, mails the pending list and moves the job to stage 9 once all docs are in.
-          // At stage 6 it only saves — the job stays on the Accounts desk — and it is the one route
-          // that lifts the API's HOD/GM read-only rule, which a plain PATCH trips for the CNF users
-          // who carry an HOD role. It also reports what is still outstanding.
+       
           const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
           if (typeof res.data?.message === "string") saveMessage = res.data.message;
         } else if (!canUpdateTransportation) {
-          // Same as CS's Save. Admins already sent the full PATCH above. Stage 2 goes
-          // through here too, so remarks typed there are kept rather than dropped —
-          // this PATCH must never advance the stage, only the approve POST does that.
+          
           await apiClient.patch(`/liner/sales-input/${id}/`, cnfPayload);
         }
       }
@@ -679,7 +697,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       key: "updated_by_user_name",
       render: (name, record) => (
         <Space direction="vertical" size={0}>
-          <span>{name || record.updated_by_name || "N/A"}</span>
+          <ScrollSafeTooltip title={record.updated_by_user_email || null}>
+            <span>{name || record.updated_by_name || "N/A"}</span>
+          </ScrollSafeTooltip>
           <span style={{ fontSize: 11, color: "#6b7280" }}>
             {record.updated_by_department || record.updated_by_role || ""}
           </span>
@@ -714,6 +734,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   return (
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
+        <CnfNoRoleContext.Provider value={cnfNoRole}>
         <Form form={form} layout="vertical">
           
           {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
@@ -723,6 +744,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}
           >
             <div style={{ display: open.export ? "block" : "none" }}>
+              {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginBottom: 12 }} />}
               <Row gutter={[16, 8]}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
@@ -804,7 +826,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
-                <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                {/* Liner: shown only when HBL was ticked at creation */}
+                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                 <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
@@ -882,7 +905,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
@@ -905,8 +928,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               )}
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
-                  <Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}>
-                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} />
+                  <Form.Item label={<span>Haulage Cost Sheet {isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isLiner && mandatoryDocsLocked} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -915,9 +938,20 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
-                  </Form.Item>
+                  {isLiner ? (
+                    <DocSlot
+                      label="Load List"
+                      rule={loadListToggle ? "optional" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={loadListFiles.length > 0} /> }}
+                      hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : null}
+                    >
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
+                    </DocSlot>
+                  ) : (
+                    <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                    </Form.Item>
+                  )}
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item label="ED" className={Styles.formLabel}>
@@ -926,7 +960,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Col>
                 <Col xs={24}>
                   <Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}>
-                    <TextArea placeholder="Enter CNF specific remarks here..." rows={3} />
+                    <TextArea placeholder="Enter CNF specific remarks here..." autoSize={{ minRows: 3 }} disabled={cnfNoRole} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -948,7 +982,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       const isObject = typeof r === 'object' && r !== null;
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
-                      const canDelete = canDeleteRemark(r);
+                      const canDelete = !cnfNoRole && canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
@@ -960,8 +994,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} disabled={cnfNoRole} />
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
@@ -981,14 +1015,23 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               <Table dataSource={history} columns={historyColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
               <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
-                <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
+                <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} disabled={cnfNoRole} /></Form.Item>
               </div>
             </div>
           </Card>
 
           {/* ACTION BUTTONS (BOTTOM CENTER) */}
           <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'center', gap: 24, width: '100%', paddingBottom: '40px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {showSubmitAction ? (
+            {cnfNoRole ? (
+              <Button
+                size="large"
+                onClick={() => navigate("/")}
+                icon={<Icon icon="mdi:close" />}
+                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+              >
+                Cancel
+              </Button>
+            ) : showSubmitAction ? (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 16, width: '100%', flexWrap: 'wrap', alignItems: 'center' }}>
                 <Button
                   type="primary"
@@ -1044,6 +1087,21 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   >
                     Save
                   </Button>
+                  {/* Liner: CNF can reject before Sales HOD approves too — the reject endpoint
+                      and its modal are stage-agnostic already, this button was just missing here. */}
+                  {isLiner && !isLinerCompleted && (
+                    <Button
+                      danger
+                      size="large"
+                      onClick={() => handleAction("Rejected")}
+                      icon={<Icon icon="mdi:close-circle" />}
+                      loading={loading}
+                      disabled={isDocumentUploading || loading}
+                      style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                    >
+                      Reject
+                    </Button>
+                  )}
                   <Button
                     size="large"
                     onClick={() => confirmLeave(navigate)}
@@ -1057,6 +1115,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             )}
           </div>
         </Form>
+        </CnfNoRoleContext.Provider>
       </Spin>
 
       {/* ── Preview Modal ── */}

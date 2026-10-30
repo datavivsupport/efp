@@ -66,22 +66,28 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner);
+      const isAdditional = additionalFiles.includes(file);
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-              <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0 }} />
-              <Typography.Text style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
-              {file.uploaded_by_user_name && (
-                <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', marginLeft: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>({file.uploaded_by_user_name})</Typography.Text>
-              )}
-              <DocStatusTags file={file} isAdditional={additionalFiles.includes(file)} showStatus={showStatus} />
+          {/* Name + actions on one line; uploader and status tags wrap underneath so a narrow column never squeezes the name */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", flex: 1, minWidth: 0 }}>
+              <Icon icon="famicons:document-attach" style={{ color: '#747474', flexShrink: 0, marginTop: 4 }} />
+              <Typography.Text style={{ minWidth: 0, whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{file.name || file.file_name}</Typography.Text>
             </div>
-            <Space>
+            <Space size={0} style={{ flexShrink: 0 }}>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
               {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
+          {(file.uploaded_by_user_name || isAdditional || showStatus) && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingLeft: 24 }}>
+              {file.uploaded_by_user_name && (
+                <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', wordBreak: 'break-word' }}>({file.uploaded_by_user_name})</Typography.Text>
+              )}
+              <DocStatusTags file={file} isAdditional={isAdditional} showStatus={showStatus} />
+            </div>
+          )}
           {canEditFile ? (
             <Input size="large" className={Styles.remarkInput} placeholder="Remarks..." value={file.remarks || ""} onChange={(e) => onRemarkChange(i, e.target.value)} style={{ fontSize: '12px', marginTop: '2px', padding: "7px" }} />
           ) : (
@@ -256,6 +262,18 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   // (same Cross Trade Documents section, read-only). Display only — Approve / Save
   // don't read any of it, so their payloads are unchanged.
   const isCrossTrade = isCrossTradeJob(initialJob);
+  const isLiner = initialJob?.job_type === "LINER";
+  // No transportation → CNF has no part in the job, so its card would only be empty boxes.
+  // Still shown if CNF content was filed anyway, so nothing real is hidden.
+  const hasCnfContent =
+    ["haulageCostFiles", "haulierNoteFiles", "loadListFiles", "edFiles"].some((k) => (docs?.[k] || []).length > 0) ||
+    !!String(initialJob?.approval_details?.cnf_remarks || "").trim();
+  const showCnfDetails = !isCrossTrade && (normalizeBoolean(initialJob?.transportation) || hasCnfContent);
+  // Placement Details lists the transportation rows — same rule, kept if a row holds any data
+  const hasPlacementContent = (initialJob?.transportation_rows || []).some((row) =>
+    ["equipment_type", "no_of_containers", "category", "placement_time", "pickup_location", "special_remarks"]
+      .some((field) => row?.[field] != null && String(row[field]).trim() !== "" && String(row[field]) !== "0"));
+  const showPlacementDetails = !isCrossTrade && (normalizeBoolean(initialJob?.transportation) || hasPlacementContent);
   const ctFiles = (k) => docs?.[k] || [];
   // A flag the backend doesn't return yet falls back to "Yes if a file was uploaded"
   const ctFlag = (value, files, fallback) => (value == null ? (files.length > 0 || fallback) : normalizeBoolean(value));
@@ -558,15 +576,16 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Haulier Code" disabled variant="filled" /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                   {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details (read-only, not a form field) */}
-                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(initialJob)} disabled variant="filled" autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
+                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(initialJob)} disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>}
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
-                  <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                  {/* Liner: shown only when HBL was ticked at creation */}
+                  {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {!isCrossTrade && <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>}
@@ -574,8 +593,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               </div>
             </Card>
 
-            {/* PLACEMENT DETAILS — none for Cross Trade */}
-            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            {/* PLACEMENT DETAILS — none for Cross Trade, nor without transportation */}
+            {showPlacementDetails && <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields) => fields.map(({ key, name, ...restField }) => (
@@ -607,7 +626,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
                 {!isCrossTrade && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={docs?.releaseOrderFiles || []} onPreview={(i) => openPreview(docs?.releaseOrderFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
@@ -616,8 +635,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
               </div>
             </Card>
 
-            {/* CNF DETAILS — no CNF stage in Cross Trade */}
-            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
+            {/* CNF DETAILS — no CNF stage in Cross Trade, nor without transportation */}
+            {showCnfDetails && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
               <div style={{ display: open.cnfDetails ? "block" : "none" }}>
                 <Row gutter={[16, 16]}>
                   <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
@@ -632,7 +651,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                       )}
                     </Form.Item>
                   </Col>
-                  <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                  <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
               </div>
             </Card>}
@@ -661,19 +680,22 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
             {/* ALL UPLOADED DOCUMENTS (CS DOCUMENTS STAGE) — Cross Trade uses the section above */}
             {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="FINANCIAL DOCUMENTS OVERVIEW" open={open.documents} onToggle={() => toggle("documents")} />}>
               <div style={{ display: open.documents ? "block" : "none" }}>
+                {/* CS HOD on its own row; LPO and Invoice side by side (stacked on small screens) */}
                 <Row gutter={[24, 16]}>
-                  <Col xs={24} md={8}>
-                    <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
+                  <Col xs={24} md={12} lg={8}>
+                    <Typography.Text strong style={{ display: 'block', fontSize: 13, color: '#4b5563' }}>CS HOD</Typography.Text>
                     <Form.Item name="cs_hod" noStyle>
                       <Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: '100%', marginTop: 8 }} />
                     </Form.Item>
                   </Col>
+                </Row>
+                <Row gutter={[24, 16]} style={{ marginTop: 16 }}>
                   {[
                     { label: 'LPO', files: docs?.lpoFiles || [] },
                     { label: 'INVOICE', files: docs?.invoiceFiles || [] },
                   ].map(({ label, files }) => (
-                    <Col key={label} xs={24} md={8}>
-                      <Typography.Text strong style={{ fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
+                    <Col key={label} xs={24} md={12}>
+                      <Typography.Text strong style={{ display: 'block', fontSize: 13, color: '#4b5563' }}>{label}</Typography.Text>
                       {files?.length > 0
                         ? <FileChipList files={files} onPreview={(i) => openPreview(files, i)} user={user} isAdmin={isAdmin} disabled additionalFiles={getAdditionalDocs(files)} showStatus />
                         : <div style={{ marginTop: 8 }}>
@@ -729,7 +751,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Table dataSource={history} columns={[
                   { title: "Stage", dataIndex: "stage" },
                   { title: "Pending With", dataIndex: "pending_with" },
-                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
+                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={r.updated_by_user_email || null}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{n || r.updated_by_name || "N/A"}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{r.updated_by_department || r.updated_by_role || ""}</span></Space>) },
                   { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
                   { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
                   { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" }

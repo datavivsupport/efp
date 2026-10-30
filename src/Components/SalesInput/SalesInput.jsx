@@ -47,7 +47,8 @@ import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
 import ScrollSafeTooltip, { ClampedText, RemarksCell } from "../ScrollSafeTooltip";
 import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
-import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
+import { isSalesOwnerOfJob, getShipmentRemarks, isJobRejected } from "../Approval/utils/jobContextUtils";
+import RejectionReasonBox from "../Approval/components/Common/RejectionReasonBox";
 import { confirmAction } from "../Approval/utils/confirmAction";
 import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
@@ -332,7 +333,6 @@ const DocUploadField = ({
 
 const SalesInput = () => {
   const [form] = Form.useForm();
-  const jobTypeWatch = Form.useWatch("job_type", form);
 
   const [commodities, setCommodities] = useState([]);
   const [commodityInput, setCommodityInput] = useState("");
@@ -375,11 +375,13 @@ const SalesInput = () => {
   const [pendingFiles, setPendingFiles] = useState([]);
 
   // Specialized Job Type Logic
-  const jobType = Form.useWatch("job_type", form);
-  const isOthers = jobType?.toUpperCase() === "OTHERS";
-  const isLiner = jobType?.toUpperCase() === "LINER";
-  const isForwarding = jobType?.toUpperCase() === "FORWARDING";
-  const isCrossTrade = jobType?.toUpperCase() === "CROSS TRADE";
+  // The dropdown yields the master name as stored (any case / stray spaces), while a saved
+  // job comes back uppercase — normalise so the sections switch live on every change
+  const jobType = (Form.useWatch("job_type", form) || "").trim().toUpperCase();
+  const isOthers = jobType === "OTHERS";
+  const isLiner = jobType === "LINER";
+  const isForwarding = jobType === "FORWARDING";
+  const isCrossTrade = jobType === "CROSS TRADE";
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
 
@@ -394,6 +396,7 @@ const SalesInput = () => {
   const [instanceStatus, setInstanceStatus] = useState("draft");
   // View mode on a CS-rejected job: its Sales Executive edits the form and resubmits, or rejects it
   const [createdByUser, setCreatedByUser] = useState(null);
+  const [savedRejectionRemarks, setSavedRejectionRemarks] = useState("");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRemarks, setRejectRemarks] = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
@@ -449,18 +452,17 @@ const SalesInput = () => {
 
   // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
-  // PRD Section 3: no role/terminal restrictions while creating or editing.
-  // `?view=1` opens an existing job read-only, laid out exactly as it was filled in
-  // (used by the dashboard "View" for Cross Trade jobs).
+   
   const isViewMode = searchParams.get("view") === "1";
-  // CS rejected the job back to Sales: its Sales Executive may resubmit (edit + submit) or reject it
-  // Cross Trade only
-  const isCsRejected = isCrossTrade && instanceStatus === "CS-REJECTED";
+ 
+  const isCsRejected =
+    (isCrossTrade && instanceStatus === "CS-REJECTED") ||
+    (isLiner && (instanceStatus === "CS-REJECTED" || instanceStatus === "CNF-REJECTED"));
   const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
     { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
     user,
   );
-  // A CS-rejected job opens editable for its Sales Executive; every other view stays read-only
+  // A CS/CNF-rejected job opens editable for its Sales Executive; every other view stays read-only
   const isReadOnly = isViewMode && !canActOnRejection;
 
   // Cross Trade: history shown as the same "Approval Status & History" table as the Approval pages
@@ -473,7 +475,9 @@ const SalesInput = () => {
       key: "updated_by_user_name",
       render: (name, record) => (
         <Space direction="vertical" size={0}>
-          <span>{name || record.updated_by_name || "N/A"}</span>
+          <ScrollSafeTooltip title={record.updated_by_user_email || null}>
+            <span>{name || record.updated_by_name || "N/A"}</span>
+          </ScrollSafeTooltip>
           <span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span>
         </Space>
       ),
@@ -604,6 +608,7 @@ const SalesInput = () => {
           setApprovalHistory(data.approval_history || []);
           setInstanceStatus(data.status);
           setCreatedByUser(data.created_by_user ?? null);
+          setSavedRejectionRemarks(data.rejection_remarks || "");
 
           // Load documents into state
           const docs = data.documents || [];
@@ -952,8 +957,6 @@ const SalesInput = () => {
 
   const navigate = useNavigate();
 
-  // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
-  // Resubmit a CS-rejected job: check the form first, then ask for confirmation
   const handleResubmit = () => {
     form.validateFields().then(async (values) => {
       if (await confirmAction("resubmit")) onFinish(values, "submitted");
@@ -1084,6 +1087,12 @@ const SalesInput = () => {
                   </Form.Item>
                 </Col>
               </Row>
+              {isLiner && isJobRejected({ status: instanceStatus }) && (
+                <RejectionReasonBox
+                  jobData={{ rejection_remarks: savedRejectionRemarks, approval_history: approvalHistory }}
+                  style={{ marginTop: 16 }}
+                />
+              )}
               {isHalted && (
                 <Row gutter={16} style={{ marginTop: 16 }}>
                   <Col span={24}>
@@ -1102,8 +1111,8 @@ const SalesInput = () => {
 
           {/* OTHERS SPECIFIC FIELDS */}
           <Form.Item noStyle shouldUpdate={(prevVal, curVal) => prevVal.job_type !== curVal.job_type}>
-            {({ getFieldValue }) =>
-              getFieldValue("job_type") === "OTHERS" ? (
+            {() =>
+              isOthers ? (
                 <Card
                   className={Styles.card}
                   bordered
@@ -1453,7 +1462,7 @@ const SalesInput = () => {
                               name={[name, "quote"]}
                               label="Quote"
                             >
-                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Quote" disabled={isReadOnly} />
+                              <TextArea placeholder="Quote" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1464,7 +1473,7 @@ const SalesInput = () => {
                               name={[name, "cost"]}
                               label="Cost"
                             >
-                              <TextArea className={Styles.rowTextArea} rows={1} placeholder="Cost" disabled={isReadOnly} />
+                              <TextArea placeholder="Cost" disabled={isReadOnly} autoSize={{ minRows: 1 }} />
                             </Form.Item>
                           </Col>
 
@@ -1505,7 +1514,7 @@ const SalesInput = () => {
                       name="other_charges_remarks"
                     // rules={[{ required: true, message: "Required" }]}
                     >
-                      <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" disabled={isReadOnly} autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1622,10 +1631,10 @@ const SalesInput = () => {
                       label="Remarks"
                       name="remarks"
                     >
-                      <TextArea placeholder="Enter Remarks" />
+                      <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
-                  {jobTypeWatch !== 'LINER' && jobTypeWatch !== 'liner' && (
+                  {!isLiner && (
                     <Col xs={24} md={3}>
                       <Checkbox
                         className={Styles.checkboxSpaced}
@@ -1705,7 +1714,7 @@ const SalesInput = () => {
                       label="SPECIAL INSTRUCTION IF ANY"
                       name="special_instructions"
                     >
-                      <TextArea className={Styles.textAreaField} placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} />
+                      <TextArea className={Styles.textAreaField} placeholder="Enter any special instructions or requirements..." disabled={isReadOnly} autoSize={{ minRows: 2 }} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1874,8 +1883,9 @@ const SalesInput = () => {
             </Card>
           )}
 
-          {/* AUDIT TRAIL / APPROVAL HISTORY (other job types) */}
-          {!isCrossTrade && approvalHistory.length > 0 && (
+          {/* AUDIT TRAIL / APPROVAL HISTORY (Forwarding / Others) — Liner uses the
+              APPROVAL STATUS & HISTORY table below, same as Cross Trade. */}
+          {!isCrossTrade && !isLiner && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered
@@ -2010,8 +2020,8 @@ const SalesInput = () => {
             </div>
           </Card>
 
-          {/* Cross Trade: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
-          {isCrossTrade && approvalHistory.length > 0 && (
+          {/* Cross Trade and Liner: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
+          {(isCrossTrade || isLiner) && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered

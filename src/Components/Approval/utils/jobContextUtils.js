@@ -23,26 +23,35 @@ export const isSalesOwnerOfJob = (jobData, user) => {
     .some((n) => String(n || "").trim().toLowerCase() === fullName);
 };
 
-/**
- * True when the viewer is this job's named Sales HOD (matched by full name, the same way
- * resolveApprovalRoute identifies the Sales HOD).
- */
+
 export const isSalesHodOfJob = (jobData, user) => {
   const fullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim().toLowerCase();
   return !!fullName && String(jobData?.sales_hod || "").trim().toLowerCase() === fullName;
 };
 
-/**
- * The Remarks the Sales Executive typed in Shipment Details. The backend doesn't return a
- * `remarks` field on the job; it keeps that text as the note of the "Sales Created" (or
- * resubmission) history entry, with "Job created and submitted" when nothing was typed.
- */
+
 export const getShipmentRemarks = (jobData) => {
   if (jobData?.remarks) return jobData.remarks;
   const entry = [...(jobData?.approval_history || [])].reverse()
     .find((h) => /^sales (created|re-?submit)/i.test(h?.stage || ""));
   const text = String(entry?.remarks || "").trim();
   return text && text.toLowerCase() !== "job created and submitted" ? text : "";
+};
+
+/** True when the job's status is any rejection (CS-REJECTED, ACCOUNTS-REJECTED, rejected, ...). */
+export const isJobRejected = (jobData) => /REJECTED/i.test(String(jobData?.status || ""));
+
+/**
+ * Why the job was rejected: the job's own rejection_remarks when the API sends them,
+ * else the remarks on the latest REJECTED history row (every reject writes one).
+ */
+export const getRejectionReason = (jobData) => {
+  if (String(jobData?.rejection_remarks || "").trim()) return jobData.rejection_remarks;
+  const latest = [...(jobData?.approval_history || [])]
+    .filter((h) => String(h?.status || "").toUpperCase() === "REJECTED")
+    .sort((a, b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0))[0];
+  const text = String(latest?.remarks || "").trim();
+  return text && text.toUpperCase() !== "N/A" ? text : "";
 };
 
 /** True for a Cross Trade job — for pages that don't build the full job context. */

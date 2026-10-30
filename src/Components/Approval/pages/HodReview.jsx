@@ -303,6 +303,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   // Cross Trade has no transportation: Placement Details and the Transportation tick are hidden
   // (kept mounted, so Approve / Save send the same values). Everything else is laid out as for Forwarding.
   const crossTradeSalesStyle = isCrossTrade ? { display: "none" } : undefined;
+  // Placement rows only exist when Sales ticked Transportation; otherwise the card would be an empty heading.
+  const transportationFlag = normalizeBoolean(Form.useWatch("transportation", form), jobData?.transportation);
+  const placementStyle = isCrossTrade || !transportationFlag ? { display: "none" } : undefined;
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin, currentStage: "2",
@@ -474,7 +477,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     setLoading(true);
     try {
       if (!(await confirmAction("save", setLoading))) return;
-      const payload = { ...getCommonPayload(values), status: "submitted" };
+      const payload = { ...getCommonPayload(values), status: "submitted Level 2" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
@@ -487,7 +490,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const approvalColumns = [
     { title: "Stage", dataIndex: "stage", key: "stage" },
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
-    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
+    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={record.updated_by_user_email || null}><span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937", whiteSpace: "nowrap" }}>{name || record.updated_by_name || "N/A"}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280", whiteSpace: "nowrap" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
     { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" },
@@ -618,11 +621,11 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   )}
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}><Option value="prepaid">Prepaid</Option><Option value="collect">Collect</Option></Select></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 2 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
                       (not a form field, so Approve / Save send the same values as before) */}
-                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
+                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 2 }} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>
@@ -638,7 +641,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
           {(!isOthers || isMasterMode) && showPlacement && (
-            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            <Card style={placementStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (

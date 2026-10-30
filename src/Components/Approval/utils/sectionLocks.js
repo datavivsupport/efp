@@ -3,11 +3,7 @@ import { TERMINAL_STATUSES } from "./jobContextUtils";
 /** doc_type spellings that count as the Load List (mirrors DOC_TYPE_CONFIG). */
 const LOAD_LIST_DOC_TYPES = ["LOAD LIST", "LOAD LIST UPLOADING"];
 
-/**
- * CS sees CNF's section only once CNF has handed over: the second stage has started and
- * the Load List is in. Keyed on delivery, not on the stage alone - the job leaves stage 2
- * the moment CS confirms the booking, which is before CNF has done anything.
- */
+
 export const isCnfDataVisibleToCS = (jobData) => {
   const stage = String(jobData?.current_stage || "1");
   if (stage === "1" || stage === "2") return false;

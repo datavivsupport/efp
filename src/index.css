@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-/* ── DESIGN TOKENS ────────────────────────────────────────────────────────────
-   Taken from extra_file/DMS_Liner_CrossTrade_Prototype_updated.html so every
-   page shares the same teal palette, section bands and read-only greys. */
+ 
 :root {
   --dms-teal: #17a2b8;
   --dms-teal-dark: #0e7c8a;
@@ -174,11 +172,7 @@ html, body, #root {
   -webkit-text-security: disc; /* Chrome */
   text-security: disc;         /* Other browsers */
 }
-
-/* ── FILLED VALUES: dark ──────────────────────────────────────────────────────
-   A real value is dark #1f2937, whether the user typed it or the workflow filled
-   it in on a disabled/read-only field. Browsers paint input text with
-   -webkit-text-fill-color, which beats `color`, so both have to be set. */
+ 
 .ant-form-item-control-input,
 .ant-form-item-control-input-content,
 .ant-select-outlined,
@@ -201,14 +195,7 @@ textarea.ant-input {
   resize: vertical !important;
 }
 
-/* ── PLACEHOLDERS: light ──────────────────────────────────────────────────────
-   A placeholder is a hint, not a value, so it sits at #9ca3af against the #1f2937
-   above. ::placeholder INHERITS -webkit-text-fill-color from its input, so the
-   rules above (and the per-module ones that keep disabled text dark) were
-   painting placeholders dark too. Re-declaring the property directly on the
-   pseudo-element beats the inherited value regardless of parent specificity —
-   an inherited value only applies when nothing matches the element itself.
-   opacity:1 stops Firefox fading it further. */
+ 
 input::placeholder,
 textarea::placeholder,
 .ant-input::placeholder,

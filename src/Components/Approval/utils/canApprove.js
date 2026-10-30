@@ -1,14 +1,4 @@
-/**
- * ─── WORKFLOW APPROVAL MATRIX ────────────────────────────────────────────────
- * Defines who can click "Approve" at each stage for each job type.
- *
- * To grant or restrict approval at any stage, edit the entries below.
- * Each entry: { stage, jobTypes, roles }
- *   - stage:    string stage number to match
- *   - jobTypes: array of booleans (pass the flag, e.g. isLiner) — ANY true = match
- *   - roles:    array of booleans — ANY true = can approve
- * ─────────────────────────────────────────────────────────────────────────────
- */
+
 const buildApprovalRules = (ctx) => {
   const {
     isLiner, isCrossTrade, isForwarding, isExtended,

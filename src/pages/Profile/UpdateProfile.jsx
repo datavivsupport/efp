@@ -28,21 +28,13 @@ import {
 
 const { Text, Title } = Typography;
 
-/*
-  The upload endpoint tops out at 30MB, but a profile photo has no business
-  being that big — hold it to 5MB so a mistaken pick fails fast in the browser
-  instead of after a long round-trip.
-*/
+
 const MAX_AVATAR_MB = 5;
 
 /* Digits, optionally led by "+", with spaces / hyphens / brackets as separators */
 const PHONE_SHAPE = /^\+?[\d\s\-()]+$/;
 
-/*
-  The column is nullable and blank-allowed, so an empty phone is valid — a user
-  with no number on record must still be able to change their Status. A value
-  that is present has to look like a real number: 7-15 digits, the E.164 range.
-*/
+
 const validatePhone = (_, value) => {
   const trimmed = (value || "").trim();
   if (!trimmed) return Promise.resolve();
@@ -218,10 +210,7 @@ const UpdateProfile = () => {
     showPreview(URL.createObjectURL(file.originFileObj));
   };
 
-  // Phone, Status and the photo are the only user-editable fields. PATCH, not
-  // POST: the POST handler assigns every field unconditionally from
-  // request.data, so omitting the read-only ones would null out the name.
-  // PATCH only touches keys that are actually present.
+
   const onFinish = async (values) => {
     try {
       setLoading(true);
@@ -256,8 +245,7 @@ const UpdateProfile = () => {
 
       const res = await apiClient.patch("/accounts/me", payload);
 
-      // PATCH echoes the saved profile back, so the page and the store both
-      // refresh without a second round-trip.
+     
       const data = res.data?.data;
       if (data) {
         applyProfile(data);
@@ -266,8 +254,7 @@ const UpdateProfile = () => {
         await getProfile(true);
       }
 
-      // Dropped only once the saved URL is in place, so the avatar swaps from
-      // the local preview to the stored photo without blanking in between.
+
       clearPreview();
 
       message.success("Profile updated successfully!");
@@ -314,8 +301,7 @@ const UpdateProfile = () => {
 
   const disabledFieldStyle = { backgroundColor: "#f8fafc" };
 
-  // An unsaved pick wins over the stored photo, so the avatar shows what Save
-  // is about to upload.
+ 
   const avatarSrc = previewUrl || profilePic;
 
   return (

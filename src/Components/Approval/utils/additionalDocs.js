@@ -1,16 +1,4 @@
-/**
- * Additional LPO/Invoice uploads (CS Team — 2nd phase).
- *
- * CS may upload further LPO/Invoice files *after* CS HOD has already approved the
- * job once. The backend does not mark these with a distinct doc_type — a 2nd-phase
- * upload is just another document with doc_type "LPO"/"Invoice", gated by its own
- * per-document `is_cs_hod_approved` flag (see liner/views.py `upload_document`,
- * which sets it False whenever the doc needs a fresh CS HOD sign-off).
- *
- * So "additional" is positional, not a stored flag: within a set of same-type
- * files (e.g. all LPO files for a job), the earliest-uploaded one is the original;
- * anything uploaded afterward is a 2nd-phase/additional file.
- */
+
 
 const createdAtMs = (file) => {
   const t = new Date(file?.created_at || 0).getTime();
@@ -24,21 +12,10 @@ export const getAdditionalDocs = (files) => {
   return sorted.slice(1);
 };
 
-/**
- * CS HOD approval state of a single document.
- *
- * `is_cs_hod_approved` is only ever explicitly false while approval is
- * outstanding; documents predating the flag come back undefined/true and count
- * as approved.
- */
+
 export const isDocPendingApproval = (file) => file?.is_cs_hod_approved === false;
 
-/**
- * Whether a saved LPO / Invoice - the only documents mandatory for CS - can no longer be
- * deleted: a CS HOD has approved it, or CS has submitted (`submitted`) with it attached at
- * `submittedAtStage`. One uploaded after submitting stays deletable until it is approved.
- * Files without stage_uploaded predate that field and count as submitted.
- */
+
 export const isMandatoryDocDeleteLocked = (file, submitted, submittedAtStage) =>
   !!file?.is_cs_hod_approved ||
   (submitted && (parseInt(file?.stage_uploaded, 10) || 0) <= submittedAtStage);

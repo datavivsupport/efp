@@ -6,20 +6,7 @@ import apiClient from "../../api/apiclient";
 import { computeUserRoles } from "./utils/roleUtils";
 import { APPROVAL_ROUTE_CONFIG } from "./approvalRouteConfig";
 
-/**
- * ProtectedApprovalRoute
- *
- * Wraps every approval sub-page. On mount it:
- *  1. Fetches the job by :id
- *  2. Resolves the route config by :routeKey
- *  3. Checks allowedStages + check() against the logged-in user
- *  4. Renders the child page or redirects to "/"
- *
- * Usage in main.jsx:
- *   <ProtectedApprovalRoute routeKey="cs-update">
- *     <CsUpdate />
- *   </ProtectedApprovalRoute>
- */
+
 const ProtectedApprovalRoute = ({ routeKey, children }) => {
   const { id } = useParams();
   const navigate = useNavigate();

@@ -37,7 +37,7 @@ import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
-import { computeJobContext, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { computeJobContext, isCrossTradeJob, getShipmentRemarks, isJobRejected } from "../utils/jobContextUtils";
 import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -49,6 +49,7 @@ import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -84,11 +85,13 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockedDocIds }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockedDocIds, allowAnyDelete = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner);
+      // Liner RO / BOC: any CS user may delete until CS verifies & confirms
+      const canDeleteFile = canEditFile || (!disabled && allowAnyDelete);
       return (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px', padding: '8px', border: '1px solid #f0f0f0', borderRadius: '4px', backgroundColor: '#fafafa' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -102,7 +105,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && !lockedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canDeleteFile && !lockedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -117,13 +120,14 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, additionalFiles = [], showStatus = false, allowAnyDelete = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
   const uploadActivity = useContext(UploadActivityContext);
   const lockedDocIds = useContext(LockedDocsContext);
   const handleBeforeUpload = async (file) => {
+    if (disabled) return false;
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
@@ -137,10 +141,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     uploadActivity?.inc?.();
     setUploading(true);
     try {
-      // Only the request itself belongs in this try. Anything after it runs with the
-      // file already stored, so folding both into one catch reports a broken list
-      // render as "no response from the server" - which is what sent CS back to
-      // re-upload documents the server had accepted.
+   
       let response;
       try {
         response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -157,8 +158,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           message.success(response.data.message || `${label} uploaded successfully`);
         } else { message.error(`Upload failed: ${response.data.message || `${label} was rejected by the server.`}`); }
       } catch (uiErr) {
-        // The document is saved. Say so, and leave the real cause in the console
-        // rather than blaming the network for a bug in this component.
+       
         console.error("Upload succeeded but the page could not be updated:", uiErr);
         message.warning(uploadSucceededUiFailedMessage(label));
       }
@@ -184,7 +184,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
   return (
     <Spin spinning={uploading} size="small">
       <div>
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled || uploading}>
           <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
         </Upload>
         {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
@@ -227,6 +227,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             isAdmin={isAdmin}
             additionalFiles={additionalFiles}
             showStatus={showStatus}
+            allowAnyDelete={allowAnyDelete}
           />
         )}
       </div>
@@ -302,21 +303,27 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     isStage2, stage2, isStage2ButtonsHidden, isCSDoneWaitingHOD,
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
+
+  const csViewOnly = isLiner && !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
+
   const {
     baseLocked,
     isSalesSectionLocked, isBookingSectionLocked,
     isAccountsEditableFieldLocked,
     isCSUploadLocked, isEDUploadLocked, isCNFUploadLocked,
-    isRequirementSelectorLocked,
+    isRequirementSelectorLocked: requirementSelectorLockedBase,
     showDocumentUploads, showROBOCForCS, needsLpoInvoice, hideCnfFromCS,
   } = computeSectionLocks({
     isAdmin: isAdminForCsUpdate, isCS: true, isCNF: false, isSalesExecutive: false, isCreator: false,
     isCSHOD: false, isAccountsTeam: false, isHOD: false, isSalesHOD: false,
-    currentStage: "2", isMasterMode, isTerminal, isForwarding,
+    currentStage: "2", isMasterMode, isTerminal: isTerminal || csViewOnly, isForwarding,
     isLiner, isExtended, isOthers,
     isStage2: true, isCNFStage: false, isCSHODStage: false, isAccountsStage: false,
     stage2: { ...stage2, creatorLocked: false }, isCSDoneWaitingHOD, jobData,
   });
+
+  // Yes/No requirement switches (and CS HOD) are frozen along with everything else once CS has confirmed
+  const isRequirementSelectorLocked = requirementSelectorLockedBase || csViewOnly;
 
   /* ── Form watches ── */
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
@@ -335,42 +342,41 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const isROReq = normalizeBoolean(isROReqForm, jobData?.is_release_order_required);
   const releaseOrderRequirementMet = isROReq || (!isLiner && !isExtended) || isMasterMode;
   
-  // Cross Trade: the Release Order / BOC uploads follow their Yes/No toggles for every user
-  // Cross Trade: the backend doesn't return is_boc_required yet, so a missing value means Yes
-  // (otherwise the upload would be switched off on every reload). Other job types unchanged.
-  const isBOCReq = normalizeBoolean(isBOCReqForm, isCrossTrade ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
+
+  const isBOCReq = normalizeBoolean(isBOCReqForm, (isCrossTrade || isLiner) ? (jobData?.is_boc_required ?? true) : jobData?.is_boc_required);
+  const bocRequirementMet = isBOCReq || (!isLiner && !isExtended) || isMasterMode;
   const crossTradeRODisabled = isCrossTrade && !isROReq;
   const crossTradeBOCDisabled = isCrossTrade && !isBOCReq;
+  // Liner uses the same Yes/No slots: No closes the upload for CS too
+  const linerRODisabled = isLiner && !isROReq;
+  const linerBOCDisabled = isLiner && !isBOCReq;
 
-  // Cross Trade: LPO / Invoice can be handled on this stage alongside Release Order / BOC.
-  // They stay optional here — Stage 4 enforces them.
+
   const isLpoReqCT = normalizeBoolean(Form.useWatch("is_lpo_required", form), jobData?.is_lpo_required ?? true);
   const isInvoiceReqCT = normalizeBoolean(Form.useWatch("is_invoice_required", form), jobData?.is_invoice_required ?? true);
-  // Pre-Alert Yes/No (defaults to Yes). Sent as is_pre_alert_required — only kept across reloads
-  // once the backend stores and returns that field.
+ 
   const isPreAlertReqCT = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), jobData?.is_pre_alert_required ?? true);
-  // CS HOD, same rule as the CS Documents stage: required exactly when LPO or Invoice is
-  // Yes (or has a file); with both No there is no CS HOD step.
+ 
   const csHodForcedCT = isLpoReqCT || isInvoiceReqCT || lpoFiles.length > 0 || invoiceFiles.length > 0;
   const csHodRequiredCT = csHodForcedCT;
   // A Yes can't be switched back to No while that document still has files — delete them first.
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
-  const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled;
+  const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) return isLiner ? "CNF is allowed to upload it" : null;
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";
-    if (crossTradeRODisabled) return "Release Order upload is disabled until the requirement is turned on.";
+    if (crossTradeRODisabled || linerRODisabled) return "Release Order upload is disabled until the requirement is turned on.";
     return null;
   })();
-  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || crossTradeBOCDisabled;
-  // Cross Trade: CS can still upload the BOC after Verify & Confirm (while waiting for the
-  // Sales HOD), so it isn't blocked by baseLocked — only by view mode, a closed job, or No.
-  const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled;
+  const bocDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!bocRequirementMet && !isCS) || crossTradeBOCDisabled || linerBOCDisabled;
+
+  const crossTradeBocUploadDisabled = isMasterMode || isTerminal || crossTradeBOCDisabled || (csViewOnly && currentStage !== "2");
   const bocRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS && isLiner) return "CNF is allowed to upload it";
-    if (crossTradeBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
+    if (!bocRequirementMet && !isCS) return "BOC upload is disabled until the requirement is turned on.";
+    if (crossTradeBOCDisabled || linerBOCDisabled) return "BOC upload is disabled until the requirement is turned on.";
     return null;
   })();
   const haulierNoteEnabled = isHNReq || (!isLiner && !isExtended) || isMasterMode;
@@ -383,17 +389,18 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = transportationFlag || isMasterMode;
   // Placement Details stays open to CS until Sales HOD approves — see sectionLocks.js
-  const canEditPlacement = canCSEditPlacement({
-    isAdmin: isAdminForCsUpdate, isCS: true,
-    currentStage, isMasterMode, isTerminal, jobData,
-  });
+  const canEditPlacement = csViewOnly
+    ? !isTerminal && ["2", "3"].includes(currentStage)
+    : canCSEditPlacement({
+        isAdmin: isAdminForCsUpdate, isCS: true,
+        currentStage, isMasterMode, isTerminal, jobData,
+      });
   // CS may change only Date/Time, Pickup/Delivery and Remarks; they ride along
   // on the page's existing Save / Submit calls. Equipment, volume, category keep
   // the sales-section lock.
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
-  // Cross Trade: after CS Verify & Confirm, files already on the job can't be deleted here
-  // (new uploads in this visit stay deletable). Same rule as the CS Documents page.
+
   const lockedDocIds = new Set(
     isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)
       ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
@@ -587,7 +594,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     setLoading(true);
     try {
       if (!(await confirmAction("save", setLoading))) return;
-      const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: "submitted" };
+      const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: csViewOnly ? (jobData?.status || "draft") : "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
@@ -606,7 +613,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const approvalColumns = [
     { title: "Stage", dataIndex: "stage", key: "stage" },
     { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
-    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><span>{name || record.updated_by_name || "N/A"}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
+    { title: "Updated By", dataIndex: "updated_by_user_name", key: "updated_by_user_name", render: (name, record) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={record.updated_by_user_email || null}><span>{name || record.updated_by_name || "N/A"}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span></Space>) },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"}>{s?.toUpperCase()}</Tag>) },
     { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
     { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("YYYY-MM-DD HH:mm") : "N/A" },
@@ -642,6 +649,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             }
           >
             <div style={{ display: open.export ? "block" : "none" }}>
+              {isLiner && isJobRejected(jobData) && <RejectionReasonBox jobData={jobData} style={{ marginBottom: 12 }} />}
               <Row gutter={16}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>
@@ -711,16 +719,23 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   <Col xs={24}>
                     <Form.Item className={Styles.formLabel} label="Other Charges">
-                      <div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#fff' }}>
-                        <Space wrap style={{ marginBottom: otherCharges.length ? 6 : 0 }}>
-                          {otherCharges.map((c, i) => (<Tag key={i} closable color="cyan" onClose={() => setOtherCharges((p) => p.filter((_, j) => j !== i))}>{c}</Tag>))}
-                        </Space>
-                        {isSalesSectionLocked && otherCharges.length === 0 && chargeInput ? (
-                          <Typography.Text style={{ color: '#374151', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{chargeInput}</Typography.Text>
-                        ) : (
-                          <Input bordered={false} placeholder={isSalesSectionLocked ? "" : "Type a charge and press Enter…"} value={chargeInput} disabled={isSalesSectionLocked} onChange={(e) => setChargeInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); const v = chargeInput.trim(); if (v && !otherCharges.includes(v)) { setOtherCharges(p => [...p, v]); setChargeInput(""); } } }} style={{ padding: 0 }} />
-                        )}
-                      </div>
+                      {isSalesSectionLocked ? (
+                        <TextArea
+                          className={Styles.textAreaField}
+                          value={otherCharges.length ? otherCharges.join(", ") : chargeInput}
+                          placeholder="No other charges"
+                          disabled
+                          variant="filled"
+                          autoSize={{ minRows: 2 }}
+                        />
+                      ) : (
+                        <div className={Styles.chipBox} style={{ border: '1px solid #d9d9d9', borderRadius: '4px', padding: '4px 11px', backgroundColor: '#fff' }}>
+                          <Space wrap style={{ marginBottom: otherCharges.length ? 6 : 0 }}>
+                            {otherCharges.map((c, i) => (<Tag key={i} closable color="cyan" onClose={() => setOtherCharges((p) => p.filter((_, j) => j !== i))}>{c}</Tag>))}
+                          </Space>
+                          <Input variant="borderless" placeholder="Type a charge and press Enter…" value={chargeInput} onChange={(e) => setChargeInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); const v = chargeInput.trim(); if (v && !otherCharges.includes(v)) { setOtherCharges(p => [...p, v]); setChargeInput(""); } } }} style={{ padding: 0 }} />
+                        </div>
+                      )}
                     </Form.Item>
                   </Col>
                 </Row>
@@ -804,8 +819,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: true, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea className={Styles.noResize} autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item></Col>
 
-                  {/* Workflow Configuration — Cross Trade uses the Cross Trade Documents section below */}
-                  {!isCrossTrade && (isLiner || isMasterMode) && (
+                  {/* Workflow Configuration — Cross Trade and Liner both use the Gate/DocSlot UI
+                      below for RO/BOC instead; this plain box is now only for the switches that
+                      still apply to other job types (or to Liner in admin master mode). */}
+                  {!isCrossTrade && isMasterMode && (
                     <Col span={24}>
                       <div className={Styles.workflowConfigBox}>
                         <div className={Styles.workflowConfigHeader}>
@@ -818,7 +835,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         </div>
                         <Row gutter={16}>
                           {!isLiner && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Payment Req?" name="is_payment_processing_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>}
-                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="RO Req?" name="is_release_order_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                           <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Req?" name="is_load_list_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                           <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Note Req?" name="is_haulier_note_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                         </Row>
@@ -827,14 +843,41 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   )}
                 </Row>
 
-                {!isCrossTrade && (showDocumentUploads || showROBOCForCS) && (
+       
+                {!isCrossTrade && !isLiner && (showDocumentUploads || showROBOCForCS) && (
                   <Row gutter={16}>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={<span>Release Order(s){isStage2 && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="BOC Attachment"><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   </Row>
                 )}
 
-                {showDocumentUploads && !hideCnfFromCS && (
+                {isLiner && (
+                  <Gate title="Release Order & BOC" description="Answer Yes or No for each document. Uploads open when the answer is Yes.">
+                    <DocSlot
+                      label={<span>Release Order(s){isStage2 && isROReq && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      rule={isROReq ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_release_order_required" disabled={isRequirementSelectorLocked} hasFiles={releaseOrderFiles.length > 0} /> }}
+                      hint={isROReq && releaseOrderFiles.length > 0 ? YES_LOCKED_HINT : !isROReq ? "Not needed. Choose Yes to upload." : null}
+                    >
+                      {(showDocumentUploads || showROBOCForCS)
+                        ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} category="booking" docType="Release Order" disabled={releaseOrderDisabled} allowAnyDelete restrictionMessage={releaseOrderRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        : <FileChipList files={releaseOrderFiles} disabled onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} />}
+                    </DocSlot>
+                    <DocSlot
+                      label="BOC Attachment"
+                      rule={isBOCReq ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" disabled={isRequirementSelectorLocked} hasFiles={bocFiles.length > 0} /> }}
+                      hint={isBOCReq && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReq ? "Not needed. Choose Yes to upload." : null}
+                    >
+                      {(showDocumentUploads || showROBOCForCS)
+                        ? <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} color="volcano" onPreview={openPreview} salesInputId={id} category="booking" docType="BOC" disabled={bocDisabled} allowAnyDelete restrictionMessage={bocRestrictionMessage} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                        : <FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} />}
+                    </DocSlot>
+                  </Gate>
+                )}
+
+                {/* Liner: CNF documents stay off this page for CS (as when CS fills it in); only master/view-all mode shows them */}
+                {(!isLiner || isMasterMode) && showDocumentUploads && !hideCnfFromCS && (
                   <>
                     <Row gutter={16}>
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulage Cost Sheet"><DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} category="booking" docType="Haulage Cost" disabled={isCNFUploadLocked} restrictionMessage={isLiner ? "CNF is allowed to upload it" : null} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
@@ -845,7 +888,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List"><DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="booking" docType="Load List" disabled={!isLLReq || !jobData?.is_hod_approved || isCNFUploadLocked} restrictionMessage={isCNFUploadLocked ? null : !isLLReq ? "Load List upload is disabled until the requirement is turned on." : isLiner && jobData?.is_hod_approved ? "CNF is allowed to upload it" : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} /></Form.Item></Col>
+                      <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                     </Row>
                   </>
                 )}
@@ -922,12 +965,15 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     ? <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} color="cyan" onPreview={openPreview} salesInputId={id} category="booking" docType="Pre-Alert" disabled={baseLocked || !isPreAlertReqCT} restrictionMessage={!isPreAlertReqCT ? "Pre-Alert upload is disabled until the requirement is turned on." : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={preAlertFiles} disabled onPreview={(i) => openPreview(preAlertFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
-                {/* HBL / HCS can only be uploaded when the Sales Executive ticked them */}
-                <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
-                  {(showDocumentUploads || showROBOCForCS)
-                    ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
-                    : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
-                </DocSlot>
+                {/* HBL / HCS can only be uploaded when the Sales Executive ticked them; HBL is hidden
+                    when not ticked unless files were already uploaded */}
+                {(hblFlag || hblFiles.length > 0) && (
+                  <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
+                    {(showDocumentUploads || showROBOCForCS)
+                      ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                      : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
+                  </DocSlot>
+                )}
                 <DocSlot label="HCS" rule={facFlag ? undefined : "notRequired"}>
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={baseLocked || !facFlag} restrictionMessage={facFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
@@ -1005,7 +1051,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           <Card className={Styles.card} bordered title={<CardHeader icon="mdi:check-decagram-outline" title="APPROVAL STATUS & HISTORY" open={open.approvalStatus} onToggle={() => toggle("approvalStatus")} />}>
             <div style={{ display: open.approvalStatus ? "block" : "none" }}>
               <Table dataSource={approvalHistory} columns={approvalColumns} rowKey="id" pagination={false} size="small" scroll={{ x: 'max-content' }} />
-              {!isTerminal && canApprove && (
+              {!isTerminal && !csViewOnly && canApprove && (
                 <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 12, border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                   <Typography.Text strong style={{ display: "block", marginBottom: 12, color: "#1f2937" }}>Approval Remarks</Typography.Text>
                   <Form.Item name="approvalRemarks"><TextArea placeholder="Enter remarks for approval/rejection..." rows={3} style={{ borderRadius: 8 }} /></Form.Item>
@@ -1023,7 +1069,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           )}
 
           {/* ════════ APPROVER BUTTONS ════════ */}
-          {!isTerminal && canApprove && (
+          {!isTerminal && !csViewOnly && canApprove && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: jobData?.is_cs_updated ? 0 : "40px" }}>
               {!isStage2ButtonsHidden && !isCSDoneWaitingHOD && (
                 <>
@@ -1044,11 +1090,25 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           )}
 
           {/* ════════ BOTTOM BUTTONS ════════ */}
-          {!isMasterMode && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
+          {!isMasterMode && !csViewOnly && ((!canApprove && !isSalesSectionLocked) || jobData?.is_cs_updated) && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
               <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Save
               </Button>
+              <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+
+          {/* ════════ AFTER VERIFY & CONFIRM: only Save (Placement Details) and Cancel ════════ */}
+          {!isMasterMode && csViewOnly && !isTerminal && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
+              {canEditPlacement && showPlacement && (
+                <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
+                  Save
+                </Button>
+              )}
               <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>

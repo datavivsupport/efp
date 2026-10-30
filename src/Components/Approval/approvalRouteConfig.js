@@ -1,16 +1,6 @@
 import { isCrossTradeJob } from "./utils/jobContextUtils";
 
-/**
- * ─── APPROVAL ROUTE CONFIG ───────────────────────────────────────────────────
- *
- * Each key = the URL segment after /approval/:id/
- *
- * allowedStages : job must be at one of these stages
- * check         : fn({ user, jobData, roles }) → boolean
- *                 if false → user is redirected away
- * label         : human-readable name (used in page titles / breadcrumbs)
- * ─────────────────────────────────────────────────────────────────────────────
- */
+
 export const APPROVAL_ROUTE_CONFIG = {
   "cs-update": {
     label: "CS Update",

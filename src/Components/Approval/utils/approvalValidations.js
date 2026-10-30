@@ -30,7 +30,8 @@ export const validateApprovalAction = (values, ctx) => {
     if (!values.booking_ref_no)     missing.push("Booking Reference No.");
     if (!values.ll_cut_off_datetime) missing.push("Load List Cut-Off Date & Time");
     if (!values.si_cut_off_date)    missing.push("SI Cut-Off Date & Time");
-    if (!releaseOrderFiles.length && !(isCrossTrade && !isReleaseOrderRequired)) missing.push("Release Order");
+    // Cross Trade and Liner answer Release Order Yes/No on this stage; No means no upload is needed.
+    if (!releaseOrderFiles.length && !((isCrossTrade || isLiner) && !isReleaseOrderRequired)) missing.push("Release Order");
     if (missing.length) {
       return `Please fill/upload required fields: ${missing.join(", ")}`;
     }

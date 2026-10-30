@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -19,7 +19,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks";
-import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
+import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { normalizeBoolean } from "../utils/formUtils";
@@ -28,6 +28,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs, isMandatoryDocDeleteLocked } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -63,12 +64,16 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => (
+// Liner: until CS submits the documents, any CS user may delete files in the open slots
+const CsPreSubmitDeleteContext = createContext(false);
+
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds, preSubmitDelete = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
       const canEditFile = !disabled && (isAdmin || isOwner || isPending);
+      const canDeleteFile = canEditFile || (!disabled && preSubmitDelete);
       // Only mandatory documents (the fields given submittedAtStage) are ever locked.
       const isDeleteLocked = submittedAtStage != null && !isPending && isMandatoryDocDeleteLocked(file, deleteLocked, submittedAtStage);
       return (
@@ -87,7 +92,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canEditFile && !isDeleteLocked && !savedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canDeleteFile && !isDeleteLocked && (preSubmitDelete || !savedDocIds?.has(file.id)) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -102,9 +107,11 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 
-const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds }) => {
+const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, additionalFiles = [], showStatus = false, deleteLocked = false, submittedAtStage, savedDocIds, ownerOnlyDelete = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
+  // ED (CNF-owned) and general attachments keep the uploader-only rule
+  const preSubmitDelete = useContext(CsPreSubmitDeleteContext) && !ownerOnlyDelete;
 
   const handleBeforeUpload = async (file) => {
     if (!file) {
@@ -192,7 +199,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
             const f = files[i];
             if (!f) return;
             if (submittedAtStage != null && f.id && !f.pending && isMandatoryDocDeleteLocked(f, deleteLocked, submittedAtStage)) return;
-            if (f.id && savedDocIds?.has(f.id)) return;
+            if (f.id && !preSubmitDelete && savedDocIds?.has(f.id)) return;
             if (f?.id && !f.pending) {
               Modal.confirm({
                 title: "Delete attachment?",
@@ -226,6 +233,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
           deleteLocked={deleteLocked}
           submittedAtStage={submittedAtStage}
           savedDocIds={savedDocIds}
+          preSubmitDelete={preSubmitDelete}
         />
       )}
     </div>
@@ -244,24 +252,29 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const canEditBocAttachment = isCS;
   const canEditEtaFields = isCS;
   const hideCnfFromCS = isCS && !isCnfDataVisibleToCS(initialJob);
-  // LPO / Invoice are the only documents mandatory for CS: once submitted at stage 4 (or
-  // approved by a CS HOD) they can't be deleted. Every other document stays deletable.
+  
+  const transportationSelected = normalizeBoolean(initialJob?.transportation);
+  const hideCnfDetailsCard = hideCnfFromCS || (!transportationSelected && !isAdmin);
+ 
   const lpoInvoiceDeleteLocked = isCsDocumentsSubmitted(initialJob);
-  // Files attached when CS presses Save can no longer be deleted on this screen; anything
-  // uploaded afterwards stays deletable until the next Save.
-  // Cross Trade: once CS has done Verify & Confirm, every file already on the job when this
-  // page opens is locked the same way — only new uploads here stay deletable until Save.
-  const [savedDocIds, setSavedDocIds] = useState(() => new Set(
-    isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)
-      ? (initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
-      : []
-  ));
+ 
+  const [savedDocIds, setSavedDocIds] = useState(() => {
+    const docs = initialJob?.documents || [];
+    const idsOf = (list) => list.map((d) => d?.id).filter((docId) => docId != null);
+    if (isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)) return new Set(idsOf(docs));
+    // LPO / Invoice are mandatory: once CS has submitted, every one already on the job stays,
+    // additional uploads included — not only the first set isMandatoryDocDeleteLocked covers
+    if (lpoInvoiceDeleteLocked) {
+      const { lpoFiles: lpo, invoiceFiles: invoice } = partitionDocuments(docs, initialJob?.name_of_executive);
+      return new Set(idsOf([...lpo, ...invoice]));
+    }
+    return new Set();
+  });
   // Placement Details stays open to CS until they submit the documents — see sectionLocks.js
   const canEditPlacement = canCSEditPlacement({
     isAdmin, isCS, currentStage, jobData: initialJob,
   });
-  // CS may change only Date/Time, Pickup/Delivery and Remarks; the rows ride
-  // along on the page's existing Save / Submit calls.
+   
   const placementLocked = !canEditPlacement;
 
   const [loading, setLoading] = useState(false);
@@ -331,36 +344,41 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     preAlertFiles,
     attachments,
   ].some((files) => (files || []).some((f) => f?.pending));
-
-  // Cross Trade only: CS decides whether LPO/Invoice and a CS HOD are needed.
-  // LPO = Yes, Invoice = Yes, or any LPO/Invoice uploaded, always needs a CS HOD.
-  // Every other job type keeps LPO, Invoice and CS HOD mandatory as before.
+ 
   const isCrossTrade = isCrossTradeJob(initialJob);
+  const isLiner = initialJob?.job_type === "LINER";
+  // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
+  const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
+  const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
   const lpoToggle = normalizeBoolean(Form.useWatch("is_lpo_required", form), initialJob?.is_lpo_required ?? true);
   const invoiceToggle = normalizeBoolean(Form.useWatch("is_invoice_required", form), initialJob?.is_invoice_required ?? true);
-  // Cross Trade Pre-Alert Yes/No (defaults to Yes); upload is off when No
+ 
   const preAlertToggle = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), initialJob?.is_pre_alert_required ?? true);
   const hasLpoOrInvoice = lpoFiles.length > 0 || invoiceFiles.length > 0;
+ 
   const csHodForced = lpoToggle || invoiceToggle || hasLpoOrInvoice;
-  const lpoRequired = !isCrossTrade || lpoToggle;
-  const invoiceRequired = !isCrossTrade || invoiceToggle;
-  // Cross Trade: CS HOD is required exactly when LPO / Invoice is Yes or uploaded; other job types always
-  const csHodRequired = !isCrossTrade || csHodForced;
-  // Cross Trade: Release Order / BOC Yes/No (set on the CS Update stage) — uploads are off when No
+  const lpoRequired = (!isCrossTrade && !isLiner) || lpoToggle;
+  const invoiceRequired = (!isCrossTrade && !isLiner) || invoiceToggle;
+
+  const csHodRequired = (isCrossTrade || isLiner) ? csHodForced : true;
+ 
   const isROReqCT = normalizeBoolean(initialJob?.is_release_order_required);
-  // Cross Trade BOC Yes/No — the same answer as on CS Update, editable here too so CS can
-  // switch it to Yes and upload the BOC any time after submitting. Missing value = Yes.
+ 
   const isBOCReqCT = normalizeBoolean(Form.useWatch("is_boc_required", form), initialJob?.is_boc_required ?? true);
-  // A Yes can't be switched back to No while that document still has files — delete them first.
+  
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
-  // Cross Trade: HBL / HCS can only be uploaded when the Sales Executive ticked them
+
   const hblSelected = normalizeBoolean(initialJob?.hbl);
   const hcsSelected = normalizeBoolean(initialJob?.fac);
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
   useEffect(() => {
-    if (isCrossTrade) form.setFieldsValue({ is_cs_hod_required: csHodForced });
-  }, [isCrossTrade, csHodForced, form]);
+    if (isCrossTrade || isLiner) form.setFieldsValue({ is_cs_hod_required: csHodForced });
+  }, [isCrossTrade, isLiner, csHodForced, form]);
+
+  useEffect(() => {
+    if (isLiner && !csHodForced) form.setFieldsValue({ cs_hod: null });
+  }, [isLiner, csHodForced, form]);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   // Keep backend order as-is
@@ -508,13 +526,18 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     }),
   });
 
-  // Sent only for Cross Trade, so other job types' payloads stay unchanged
+  // Sent for Cross Trade and Liner; Forwarding/Others' payloads stay unchanged
   const crossTradeRequirementFlags = () => (isCrossTrade ? {
     is_lpo_required: lpoToggle,
     is_invoice_required: invoiceToggle,
     is_cs_hod_required: csHodForced,
     is_pre_alert_required: preAlertToggle,
     is_boc_required: isBOCReqCT,
+  } : isLiner ? {
+    is_lpo_required: lpoToggle,
+    is_invoice_required: invoiceToggle,
+    is_cs_hod_required: csHodForced,
+    is_pre_alert_required: preAlertToggle,
   } : {});
 
   const handleAction = async (action) => {
@@ -540,7 +563,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
       if (csHodRequired && !csHodValue) missing.push("CS HOD");
-      // Cross Trade: Pre-Alert answered Yes must be uploaded before submitting
+ 
       if (isCrossTrade && preAlertToggle && !preAlertFiles.length) missing.push("Pre-Alert");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
@@ -689,12 +712,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   return (
       <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
         <Spin spinning={loading}>
+          <CsPreSubmitDeleteContext.Provider value={csPreSubmitDelete}>
           <Form form={form} layout="vertical">
 
             {/* EXPORT DETAILS */}
             <Card className={Styles.card} bordered title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}>
               <div style={{ display: open.export ? "block" : "none" }}>
-                <div style={{ marginBottom: 12 }}><Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag></div>
+                <div style={{ marginBottom: 12 }}>
+                  <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
+                  {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginTop: 8 }} />}
+                </div>
                 <Row gutter={[16, 8]}>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
@@ -757,7 +784,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
-                  <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                  {/* Liner: shown only when HBL was ticked at creation */}
+                  {(!isLiner || hblSelected) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {/* Cross Trade has no transportation: hidden, but kept mounted so the saved value is unchanged */}
@@ -766,8 +794,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </div>
             </Card>
 
-            {/* PLACEMENT DETAILS — hidden for Cross Trade, kept mounted so the saved rows are unchanged */}
-            <Card style={isCrossTrade ? { display: "none" } : undefined} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            {/* PLACEMENT DETAILS — hidden for Cross Trade or when Sales didn't tick Transportation, kept mounted so the saved rows are unchanged */}
+            <Card style={isCrossTrade || !transportationSelected ? { display: "none" } : undefined} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields) => fields.map(({ key, name, ...restField }) => (
@@ -800,37 +828,60 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
-                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} rows={2} /></Form.Item></Col>
+                  <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
-                {!isCrossTrade && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+                {!isCrossTrade && !isLiner && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                   <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
                 </Row>}
+
+
+                {isLiner && (
+                  <Gate title="Release Order & BOC" description="Release Order and BOC Yes/No are set on the CS Update stage. Uploads open when the answer is Yes.">
+                    <DocSlot
+                      label="Release Order(s)"
+                      rule={isROReqCT ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }}
+                      hint={!isROReqCT ? "Not needed." : null}
+                    >
+                      <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
+                    </DocSlot>
+                    <DocSlot
+                      label="BOC Attachment"
+                      rule={isBOCReqCT ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={isBOCReqCT} /> }}
+                      hint={!isBOCReqCT ? "Not needed." : null}
+                    >
+                      <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
+                    </DocSlot>
+                  </Gate>
+                )}
               </div>
             </Card>
 
             {/* CNF DETAILS — hidden from CS until CNF hands over */}
-            {!hideCnfFromCS && (
+            {!hideCnfDetailsCard && (
               <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-multiple-outline" title="CNF DETAILS" open={open.cnfDetails} onToggle={() => toggle("cnfDetails")} />}>
                 <div style={{ display: open.cnfDetails ? "block" : "none" }}>
                   <Row gutter={[16, 16]}>
                     <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" rows={2} /></Form.Item></Col>
+                    <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField ownerOnlyDelete label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                   </Row>
                 </div>
               </Card>
             )}
 
             {/* DOCUMENTS (ACTIONABLE) — Cross Trade uses the Cross Trade Documents section below */}
-            {!isCrossTrade && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
+            {!isCrossTrade && !isLiner && <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
               <div style={{ display: open.documents ? "block" : "none" }}>
                 <Row gutter={[16, 16]}>
                   <Col xs={24} md={12}><Form.Item label={<span>LPO {lpoRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus disabled={!lpoRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label={<span>INVOICE {invoiceRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus disabled={!invoiceRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                  {/* Files uploaded before HBL was gated on the Sales selection stay visible (read-only) */}
+                  {(hblSelected || hblFiles.length > 0) && <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel} extra={!hblSelected ? NOT_SELECTED_BY_SALES : null}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} /></Form.Item></Col>}
                   {csHodRequired && <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
@@ -889,14 +940,64 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
-                  <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
-                    <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
-                  </DocSlot>
+                  {(hblSelected || hblFiles.length > 0) && (
+                    <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
+                      <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
+                    </DocSlot>
+                  )}
                   <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>
                     <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hcsSelected} />
                   </DocSlot>
                 </Gate>
               </CrossTradeDocuments>
+            )}
+
+            {/* LINER DOCUMENTS — LPO, Invoice, Pre-Alert, FAC(HCS) and CS HOD, each its own Yes/No */}
+            {isLiner && (
+              <Card className={Styles.card} bordered title={<CardHeader icon="mdi:file-document-outline" title="DOCUMENTS" open={open.documents} onToggle={() => toggle("documents")} />}>
+                <div style={{ display: open.documents ? "block" : "none" }}>
+                  <Gate title="LPO, Invoice, Pre-Alert & CS HOD" description="Answer Yes or No for each document. CS HOD approval is required only when LPO or Invoice is Yes.">
+                    <DocSlot
+                      label={<span>LPO{lpoRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      rule={lpoRequired ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_lpo_required" hasFiles={lpoFiles.length > 0} /> }}
+                      hint={!lpoRequired ? "Not needed. Choose Yes to upload." : lpoFiles.length ? YES_LOCKED_HINT : null}
+                    >
+                      <DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus disabled={!lpoRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} />
+                    </DocSlot>
+                    <DocSlot
+                      label={<span>Invoice{invoiceRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                      rule={invoiceRequired ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_invoice_required" hasFiles={invoiceFiles.length > 0} /> }}
+                      hint={!invoiceRequired ? "Not needed. Choose Yes to upload." : invoiceFiles.length ? YES_LOCKED_HINT : null}
+                    >
+                      <DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus disabled={!invoiceRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} />
+                    </DocSlot>
+                    <DocSlot
+                      label="Pre-Alert"
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_pre_alert_required" hasFiles={preAlertFiles.length > 0} /> }}
+                      hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Optional — not required before submit."}
+                    >
+                      <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
+                    </DocSlot>
+                    <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>
+                      <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hcsSelected} />
+                    </DocSlot>
+                    <DocSlot
+                      label="CS HOD Approval"
+                      rule={csHodRequired ? "required" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequired} /> }}
+                      hint={csHodRequired
+                        ? (lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
+                        : "Not required — LPO and Invoice are both No."}
+                    >
+                      {csHodRequired
+                        ? <Form.Item name="cs_hod" rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
+                        : <Typography.Text type="secondary" style={{ fontSize: 13 }}>CS HOD approval skipped.</Typography.Text>}
+                    </DocSlot>
+                  </Gate>
+                </div>
+              </Card>
             )}
 
             {/* ATTACHMENTS AND COMMENTS */}
@@ -925,7 +1026,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" rows={3} style={{ marginBottom: 12 }} />
                     <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                   </Col>
-                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
+                  <Col xs={24} md={12}><Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text><DocUploadField ownerOnlyDelete label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Col>
                 </Row>
               </div>
             </Card>
@@ -936,7 +1037,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 <Table dataSource={history} columns={[
                   { title: "Stage", dataIndex: "stage" },
                   { title: "Pending With", dataIndex: "pending_with" },
-                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><span>{n || r.updated_by_name}</span><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
+                  { title: "Updated By", dataIndex: "updated_by_user_name", render: (n, r) => (<Space direction="vertical" size={0}><ScrollSafeTooltip title={r.updated_by_user_email || null}><span>{n || r.updated_by_name}</span></ScrollSafeTooltip><span style={{ fontSize: 11, color: "#6b7280" }}>{r.updated_by_department || r.updated_by_role}</span></Space>) },
                   { title: "Status", dataIndex: "status", render: (s) => (<Tag color={STATUS_COLOR[s] || STATUS_COLOR[s?.toLowerCase()] || "default"} style={{ fontWeight: 'bold', fontSize: '13px', padding: '0 10px' }}>{s?.toUpperCase()}</Tag>) },
                   { title: "Remarks", dataIndex: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
                   { title: "Updated Date", dataIndex: "created_at", render: (d) => d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A" }
@@ -960,28 +1061,32 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               >
                 Save
               </Button>
-              <Button
-                type="primary"
-                size="large"
-                onClick={() => handleAction("Approved")}
-                icon={<Icon icon="mdi:check-circle" />}
-                loading={loading}
-                disabled={isDocumentUploading || loading}
-                style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
-              >
-                Submit Documents & Approve
-              </Button>
-              <Button
-                danger
-                size="large"
-                onClick={() => handleAction("Rejected")}
-                icon={<Icon icon="mdi:close-circle" />}
-                loading={rejectionLoading}
-                disabled={isDocumentUploading || rejectionLoading}
-                style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-              >
-                Reject
-              </Button>
+              {!isLinerCompleted && (
+                <>
+                  <Button
+                    type="primary"
+                    size="large"
+                    onClick={() => handleAction("Approved")}
+                    icon={<Icon icon="mdi:check-circle" />}
+                    loading={loading}
+                    disabled={isDocumentUploading || loading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", backgroundColor: "#10b981", borderColor: "#10b981", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Submit Documents & Approve
+                  </Button>
+                  <Button
+                    danger
+                    size="large"
+                    onClick={() => handleAction("Rejected")}
+                    icon={<Icon icon="mdi:close-circle" />}
+                    loading={rejectionLoading}
+                    disabled={isDocumentUploading || rejectionLoading}
+                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
               <Button
                 size="large"
                 onClick={() => confirmLeave(navigate)}
@@ -992,6 +1097,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               </Button>
             </div>
           </Form>
+          </CsPreSubmitDeleteContext.Provider>
         </Spin>
         <Modal open={previewVisible} footer={null} title="Document Preview" onCancel={() => setPreviewVisible(false)} width="90%" style={{ top: 20 }} styles={{ body: { height: "87vh", padding: 0 } }} destroyOnHide>
           {previewVisible && previewUrls.length > 0 && <MultiFileViewer urls={previewUrls} defaultIndex={previewIndex} />}
