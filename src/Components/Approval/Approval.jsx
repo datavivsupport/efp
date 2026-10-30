@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
-import { computeJobContext } from "./utils/jobContextUtils";
+import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
 import { normalizeBoolean } from "./utils/formUtils";
 import { buildCommonPayload } from "./utils/payloadBuilders";
 import { validateApprovalAction } from "./utils/approvalValidations";
+import { isWithinUploadLimit } from "./utils/fileSizeLimit";
+import { deleteDocument } from "../../utils/documentApi";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -179,6 +181,7 @@ const DocUploadField = ({
       message.warning("Save the draft first before uploading documents");
       return false;
     }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;
@@ -273,7 +276,8 @@ const DocUploadField = ({
           files={files}
           color={color}
           onRemove={(i) => {
-            const docId = files[i]?.id;
+            const doc = files[i];
+            const docId = doc?.id;
             if (!docId) return;
             Modal.confirm({
               title: "Delete attachment?",
@@ -281,8 +285,20 @@ const DocUploadField = ({
               okText: "Delete",
               okType: "danger",
               cancelText: "Cancel",
-              onOk: () => {
+              onOk: async () => {
+                if (!salesInputId) {
+                  setFiles((p) => p.filter((f) => f.id !== docId));
+                  return;
+                }
+
                 setFiles((p) => p.filter((f) => f.id !== docId));
+                try {
+                  await deleteDocument(salesInputId, docId);
+                  message.success("Attachment deleted");
+                } catch (err) {
+                  setFiles((p) => (p.some((f) => f.id === docId) ? p : [...p, doc]));
+                  message.error(err.response?.data?.message || "Failed to delete attachment");
+                }
               },
             });
           }}
@@ -406,6 +422,23 @@ const Approval = () => {
   // Disable ALL uploads if user doesn't have allowed role
   const disableAllUploads = !hasAllowedRole;
 
+  // Cross Trade viewed by the Sales Executive: show only what Sales entered at creation.
+  // Booking (Release Order / BOC), CNF and Accounts sections belong to other teams, so they
+  // are hidden — kept mounted, so Save / Submit send exactly the same values as before.
+  // The job's own Sales Executive (creator / named executive) and its named Sales HOD see
+  // only the Sales details; the CS HOD assigned to this job always keeps the full page.
+  const isJobSalesOwner = isSalesOwnerOfJob(jobData, user);
+  const hideOtherTeamSectionsForSales =
+    isCrossTrade && (isJobSalesOwner || isSalesHodOfJob(jobData, user)) &&
+    String(jobData?.cs_hod ?? "") !== String(user?.id ?? "");
+  const salesHiddenStyle = hideOtherTeamSectionsForSales ? { display: "none" } : undefined;
+
+
+  const redirectToSalesView = hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED";
+  useEffect(() => {
+    if (redirectToSalesView && id) navigate(`/sales-input?id=${id}&view=1`, { replace: true });
+  }, [redirectToSalesView, id, navigate]);
+
   // Reactive visibility using Form.useWatch (handles both initial values and live changes)
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
@@ -477,8 +510,8 @@ const Approval = () => {
 
 
 
-  // STOP Alert Visibility for Liner/Cross-Trade
-  const showLinerStopAlert = (isLiner || isCrossTrade) && currentStage === "5" && !isPaymentReq;
+
+  const showLinerStopAlert = isLiner && currentStage === "5" && !isPaymentReq;
 
   const isStoppedCrossTrade = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
   const executiveDocs = useMemo(
@@ -897,7 +930,7 @@ const Approval = () => {
                 )}
                 <Col xs={24} md={6}>
                   <Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name">
-                    <Input readOnly variant="filled" />
+                    <Input readOnly variant="filled" disabled />
                   </Form.Item>
                 </Col>
               </Row>
@@ -1082,17 +1115,17 @@ const Approval = () => {
                   {!isOthers && (
                     <>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="POL" name="port_of_loading" rules={[{ required: true }]}>
+                        <Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}>
                           <Input placeholder="Port of Loading" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge" rules={[{ required: true }]}>
+                        <Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}>
                           <Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
-                        <Form.Item className={Styles.formLabel} label="FPOD" name="final_pod">
+                        <Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod">
                           <Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} />
                         </Form.Item>
                       </Col>
@@ -1121,11 +1154,18 @@ const Approval = () => {
                       <TextArea placeholder="Enter Remarks" autoSize={{ minRows: 3 }} disabled={isSalesSectionLocked} />
                     </Form.Item>
                   </Col> */}
+                  {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
+                      (not a form field, so Save / Submit send the same values as before) */}
+                  {isCrossTrade && (
+                    <Col xs={24} md={6}>
+                      <Form.Item className={Styles.formLabel} label="Remarks">
+                        <TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} />
+                      </Form.Item>
+                    </Col>
+                  )}
                   {executiveDocs.length > 0 ? (
                     <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   ) : null}
-                </Row>
-                <Row gutter={16}>
                   <Col xs={24} md={12}>
                     <Form.Item
                       className={Styles.formLabel}
@@ -1143,16 +1183,18 @@ const Approval = () => {
                   )}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  {/* Cross Trade has no transportation (not asked in Sales Input): hidden, kept mounted so the saved value is unchanged */}
+                  <Col xs={12} md={6} style={isCrossTrade ? { display: "none" } : undefined}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
                 </Row>
               </div>
             </Card>
           )}
 
 
-          {/* ════════ PLACEMENT DETAILS ════════ */}
+          {/* ════════ PLACEMENT DETAILS — hidden for Cross Trade, kept mounted so the saved rows are unchanged ════════ */}
           {(!isOthers || isMasterMode) && showPlacement && (
             <Card
+              style={isCrossTrade ? { display: "none" } : undefined}
               className={Styles.card}
               bordered
               title={
@@ -1192,6 +1234,7 @@ const Approval = () => {
           {/* ════════ BOOKING DETAILS ════════ */}
           {!isOthers && (
             <Card
+              style={salesHiddenStyle}
               className={Styles.card}
               bordered
               title={
@@ -1225,7 +1268,7 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
+                    <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
@@ -1235,7 +1278,7 @@ const Approval = () => {
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={6}>
-                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS, message: "Required" }]}>
+                    <Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
                       <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                     </Form.Item>
                   </Col>
@@ -1259,8 +1302,9 @@ const Approval = () => {
                         message="Workflow Configuration (Action Required)"
                         description={
                           <Row gutter={16} style={{ marginTop: 8 }}>
+                            {/* Payment / Load List / Haulier Note don't apply to Cross Trade: hidden, kept mounted so saved values are unchanged */}
                             {!isLiner && (
-                              <Col xs={24} md={6}>
+                              <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
                                 <Form.Item label="Payment Req?" name="is_payment_processing_required">
                                   <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                     <Radio.Button value={true}>Yes</Radio.Button>
@@ -1270,14 +1314,14 @@ const Approval = () => {
                               </Col>
                             )}
                             <Col xs={24} md={6}>
-                              <Form.Item label="RO Req?" name="is_release_order_required">
+                              <Form.Item label={isCrossTrade ? "Release Order Required?" : "RO Req?"} name="is_release_order_required">
                                 <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                   <Radio.Button value={true}>Yes</Radio.Button>
                                   <Radio.Button value={false}>No</Radio.Button>
                                 </Radio.Group>
                               </Form.Item>
                             </Col>
-                            <Col xs={24} md={6}>
+                            <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
                               <Form.Item label="Load List Req?" name="is_load_list_required">
                                 <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                   <Radio.Button value={true}>Yes</Radio.Button>
@@ -1285,7 +1329,7 @@ const Approval = () => {
                                 </Radio.Group>
                               </Form.Item>
                             </Col>
-                            <Col xs={24} md={6}>
+                            <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
                               <Form.Item label="Haulier Note Req?" name="is_haulier_note_required">
                                 <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                   <Radio.Button value={true}>Yes</Radio.Button>
@@ -1377,6 +1421,7 @@ const Approval = () => {
 
           {showDocumentUploads && !hideCnfFromCS && !isOthers && !isSalesHOD && (
             <Card
+              style={salesHiddenStyle}
               className={Styles.card}
               bordered
               title={
@@ -1461,7 +1506,7 @@ const Approval = () => {
                     <Form.Item
                       className={Styles.formLabel} 
                       label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
-                      rules={currentStage === "4" ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
+                      rules={currentStage === "4" && !hideOtherTeamSectionsForSales ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
                     >
                       <DocUploadField
                         label="Load List"
@@ -1504,6 +1549,7 @@ const Approval = () => {
 
           {(jobData?.job_type !== "OTHERS" || isMasterMode) && (isPaymentReq || isLiner || !isExtended || isMasterMode) && (parseInt(currentStage) >= 7 || isMasterMode) && (
             <Card
+              style={salesHiddenStyle}
               className={Styles.card}
               bordered
               title={
@@ -1543,7 +1589,7 @@ const Approval = () => {
           )}
 
           {(isCSHODStage && isCSHOD && (isLiner || isCrossTrade) || isMasterMode) && (
-            <Card className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
+            <Card style={salesHiddenStyle} className={Styles.card} bordered title="CS HOD DECISION (LINER/CR)">
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item name="lpo_invoice_selection" rules={[{ required: true, message: 'Please select YES to proceed or NO to stop flow.' }]}>
@@ -1664,8 +1710,7 @@ const Approval = () => {
                       const isObject = typeof r === 'object' && r !== null;
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
-                      const authorId = isObject ? r.user_id : null;
-                      const canDelete = isAdmin || authorId === user?.id || !authorId; // !authorId allows deleting legacy string remarks for now
+                      // Remarks are read-only here: saved remarks are never deletable.
 
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
@@ -1711,7 +1756,7 @@ const Approval = () => {
 
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
+                  <DocUploadField label="Attachment" files={[...attachments.filter(d => d.doc_type === "Attachment"), ...(isOthers ? salesExecutiveFiles : [])]} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={true} />
                 </Col>
               </Row>
             </div>

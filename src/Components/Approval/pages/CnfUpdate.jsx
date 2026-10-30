@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useContext, createContext } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Card, Row, Col, Typography, Tag, Table, Button,
@@ -20,7 +20,10 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
 import { isCnfSubmitted } from "../utils/jobContextUtils";
 import { canCNFEditPlacement } from "../utils/sectionLocks";
-import { buildCommonPayload } from "../utils/payloadBuilders";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
+import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
+import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -38,7 +41,13 @@ const STATUS_COLOR = {
   REJECTED: "error"
 };
 
-const UploadSuccessContext = createContext(null);
+/**
+ * CNF's second pass — the stages it may still file documents on after the CS HOD has
+ * signed off. Approving at stage 5 sends the job to stage 6 when a payment is due
+ * (Accounts holds it for the slip) and straight to stage 7 when none is, and CNF is
+ * expected to hand in its optional Haulage Cost Sheet / ED on either.
+ */
+const CNF_POST_CS_HOD_STAGES = ["6", "7"];
 
 /* ── Collapsible Card Header ── */
 const CardHeader = ({ icon, title, open, onToggle }) => (
@@ -100,10 +109,10 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled = false, restrictionMessage = null, deleteLocked = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
-  const uploadSuccess = useContext(UploadSuccessContext);
 
   const handleBeforeUpload = async (file) => {
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;
@@ -136,7 +145,6 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user: user?.id,
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
-        uploadSuccess?.markUploaded?.();
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -237,8 +245,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   const canUpdateTransportation = isAdmin;
 
+  // One call, two uses: CNF's mandatory documents lock at the same moment Save does.
+  const cnfHasSubmitted = isCnfSubmitted(initialJob);
+
   // Once CNF has submitted, its mandatory documents (Haulier Note, Load List) stay.
-  const mandatoryDocsLocked = isCnfSubmitted(initialJob);
+  const mandatoryDocsLocked = cnfHasSubmitted;
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — including at stage 2 before Sales HOD approves — right up to
@@ -247,11 +258,13 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     isAdmin, isCNF, currentStage, isTerminal: false, jobData: initialJob,
   });
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
-  // Remarks, which go out with the existing Submit/Approve payload.
+  // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
 
   const [loading, setLoading]                   = useState(false);
-  const [hasUploadedDoc, setHasUploadedDoc]     = useState(false);
+  // Set the moment the approve POST succeeds, so Save goes dead during the 1.5s
+  // the page waits before navigating away.
+  const [hasApproved, setHasApproved]           = useState(false);
   const [open, setOpen] = useState({
     export: true,
     container: true,
@@ -399,6 +412,22 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // The two documents handleAction enforces, so the button matches the rule it fires.
   const hasRequiredDocs = haulierNoteFiles.length > 0 && loadListFiles.length > 0;
 
+  // Save stays live while the job still sits with CNF — a document upload is not
+  // required, editing Placement Details or the remarks is enough. Only the approve
+  // POST hands the job on, and from then Save is dead. Admins keep the full PATCH
+  // at every stage.
+  //
+  // The exception is CNF's second pass. Once the CS HOD approves, the job either parks
+  // at stage 6 (Accounts holds it for the payment slip) or skips to stage 7 when no
+  // payment is due; on both, CNF is still expected to file its optional documents —
+  // Haulage Cost Sheet, ED — so Save has to stay live. Both commit through
+  // save-documents, which leaves the stage alone anywhere but 7.
+  const canSave =
+    !hasApproved &&
+    (canUpdateTransportation ||
+      CNF_POST_CS_HOD_STAGES.includes(currentStage) ||
+      !cnfHasSubmitted);
+
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
       const formData = new FormData();
@@ -473,6 +502,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     setLoading(true);
     try {
       const values = action === "Rejected" ? form.getFieldsValue() : await form.validateFields();
+      const confirmed = await confirmAction("verify", setLoading, {
+        title: "Submit & verify this job?",
+        okText: "Yes, submit",
+      });
+      if (!confirmed) return;
 
       const resolvedDocs = {
             releaseOrderFiles,
@@ -507,6 +541,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") {
+        // The job has left CNF's desk: no more saving from this page.
+        setHasApproved(true);
         message.success(res.data.message || `${action} successfully`);
         setTimeout(() => navigate("/"), 1500);
       } else {
@@ -534,6 +570,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setRejectionLoading(true);
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const payload = { remarks: rejectionRemarks.trim() };
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (res.data.status === "success") {
@@ -560,6 +597,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     throttle.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       // Also PATCH for CNF (not just admin) so placement edits they made
       // (Date/Time, Pickup/Delivery, Remarks) actually persist on plain Save.
       if (canUpdateTransportation || isCNF) {
@@ -590,13 +628,37 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       }
 
 
-      const skipSaveDocuments = isCNF && !isAdmin && currentStage === "2";
+      let saveMessage = "Saved successfully";
 
-      if (isCNF && !skipSaveDocuments) {
-        await apiClient.post(`/liner/sales-input/${id}/save-documents/`);
+      if (isCNF) {
+        // Only what CNF can edit on this page. Documents are left out - each file is saved on
+        // upload and its remarks on edit, and a documents list would rename types or drop files
+        // this page did not load. Booking fields are CS's and read-only here, so not sent back.
+        const values = form.getFieldsValue();
+        const cnfPayload = {
+          general_remarks: remarks,
+          approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
+          ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
+          ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
+        };
+
+        if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
+          // save-documents stores the payload and is also CNF's commit at stage 7: it locks CNF's
+          // attachments, mails the pending list and moves the job to stage 9 once all docs are in.
+          // At stage 6 it only saves — the job stays on the Accounts desk — and it is the one route
+          // that lifts the API's HOD/GM read-only rule, which a plain PATCH trips for the CNF users
+          // who carry an HOD role. It also reports what is still outstanding.
+          const res = await apiClient.post(`/liner/sales-input/${id}/save-documents/`, cnfPayload);
+          if (typeof res.data?.message === "string") saveMessage = res.data.message;
+        } else if (!canUpdateTransportation) {
+          // Same as CS's Save. Admins already sent the full PATCH above. Stage 2 goes
+          // through here too, so remarks typed there are kept rather than dropped —
+          // this PATCH must never advance the stage, only the approve POST does that.
+          await apiClient.patch(`/liner/sales-input/${id}/`, cnfPayload);
+        }
       }
 
-      message.success("Saved successfully");
+      message.success(saveMessage);
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {
       console.error("Save error:", err);
@@ -650,7 +712,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   ];
 
   return (
-    <UploadSuccessContext.Provider value={{ markUploaded: () => setHasUploadedDoc(true) }}>
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <Form form={form} layout="vertical">
@@ -726,9 +787,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           >
             <div style={{ display: open.otherDetails ? "block" : "none" }}>
               <Row gutter={16}>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading"><Input placeholder="Port of Loading" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge"><Input placeholder="Port of Discharge" disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}>
                   <Form.Item label="Haulier Code" name="haulier_code" className={Styles.formLabel}>
@@ -767,7 +828,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "no_of_containers"]} label="Volume"><InputNumber placeholder="Qty" precision={0} min={0} style={{ width: "100%" }} disabled={!canUpdateTransportation} variant={canUpdateTransportation ? "outlined" : "filled"} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
-                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" disabled={placementLocked} /></Form.Item></Col>
+                        <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
                         <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} rows={1} /></Form.Item></Col>
                         {canUpdateTransportation && (
@@ -887,8 +948,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       const isObject = typeof r === 'object' && r !== null;
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
-                      const authorId = isObject ? r.user_id : null;
-                      const canDelete = isAdmin || authorId === user?.id || !authorId;
+                      const canDelete = canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
@@ -901,7 +961,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
@@ -957,14 +1017,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   onClick={handleSave}
                   icon={<Icon icon="mdi:content-save-outline" />}
                   loading={loading}
-                  disabled={isDocumentUploading || loading || (!isCNF && !hasUploadedDoc)}
+                  disabled={isDocumentUploading || loading || !(canSave || canEditPlacement)}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                 >
                   Save
                 </Button>
                 <Button
                   size="large"
-                  onClick={() => navigate("/")}
+                  onClick={() => confirmLeave(navigate)}
                   icon={<Icon icon="mdi:close" />}
                   style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
                 >
@@ -979,14 +1039,14 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     onClick={handleSave}
                     icon={<Icon icon="mdi:content-save-outline" />}
                     loading={loading}
-                    disabled={isDocumentUploading || loading || (!isCNF && !hasUploadedDoc)}
+                    disabled={isDocumentUploading || loading || !(canSave || canEditPlacement)}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600', color: '#1677ff', borderColor: '#1677ff' }}
                   >
                     Save
                   </Button>
                   <Button
                     size="large"
-                    onClick={() => navigate("/")}
+                    onClick={() => confirmLeave(navigate)}
                     icon={<Icon icon="mdi:close" />}
                     style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
                   >
@@ -1045,7 +1105,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         </div>
       </Modal>
     </div>
-    </UploadSuccessContext.Provider>
   );
 };
 

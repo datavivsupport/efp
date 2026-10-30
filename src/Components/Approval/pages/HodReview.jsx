@@ -36,12 +36,15 @@ import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
 import { userOptionLabel } from "../../StatusDot";
 import { computeUserRoles } from "../utils/roleUtils";
-import { computeJobContext } from "../utils/jobContextUtils";
+import { computeJobContext, getShipmentRemarks } from "../utils/jobContextUtils";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
+import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
@@ -115,6 +118,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
     if (restrictionMessage) { message.error(restrictionMessage); return false; }
     if (isMasterMode) { message.warning("Uploads are disabled in View-Only Mode"); return false; }
     if (!salesInputId && !isMasterMode) { message.warning("Save the draft first before uploading documents"); return false; }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     pendingCountRef.current += 1;
     const formData = new FormData();
@@ -296,6 +300,9 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const showPlacement = true;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
+  // Cross Trade has no transportation: Placement Details and the Transportation tick are hidden
+  // (kept mounted, so Approve / Save send the same values). Everything else is laid out as for Forwarding.
+  const crossTradeSalesStyle = isCrossTrade ? { display: "none" } : undefined;
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin, currentStage: "2",
@@ -402,7 +409,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
         });
         if (validationError) { message.error(validationError); setLoading(false); actionThrottleRef.current = false; return; }
       }
-      
+      if (!(await confirmAction(actionType === "Submit" ? "submit" : "approve", setLoading))) return;
+
       let payload;
       if (actionType === "Rejected") {
         // For rejection - send only remarks
@@ -438,6 +446,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setRejectionLoading(true);
     try {
+      if (!(await confirmAction("reject", setRejectionLoading))) return;
       const payload = { remarks: rejectionRemarks.trim() };
       const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (response.data.status === "success") {
@@ -464,6 +473,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     actionThrottleRef.current = true;
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...getCommonPayload(values), status: "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
@@ -525,7 +535,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Phone No" name="phone_no"><Input placeholder="Phone No" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Email" name="email"><Input placeholder="Email" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Commodity" name="commodity"><Input placeholder="Commodity" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created By" name="created_by_name"><Input readOnly variant="filled" disabled /></Form.Item></Col>
               </Row>
             </div>
           </Card>
@@ -601,25 +611,26 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 <Row gutter={16}>
                   {!isOthers && (
                     <>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POL" name="port_of_loading" rules={[{ required: true }]}><Input placeholder="Port of Loading" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD" name="port_of_discharge" rules={[{ required: true }]}><Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="FPOD" name="final_pod"><Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Loading" name="port_of_loading" rules={[{ required: true }]}><Input placeholder="Port of Loading" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Port Of Discharge" name="port_of_discharge" rules={[{ required: true }]}><Input placeholder="Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Final Port Of Discharge" name="final_pod"><Input placeholder="Final Port of Discharge" disabled={isSalesSectionLocked} /></Form.Item></Col>
                     </>
                   )}
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Select placeholder="Select Terms" allowClear disabled={isSalesSectionLocked}><Option value="prepaid">Prepaid</Option><Option value="collect">Collect</Option></Select></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Code" name="haulier_code"><Input placeholder="Enter Code" disabled={isBookingSectionLocked && !(isForwarding && currentStage === "3" && !jobData?.is_cnf_done)} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Enter any special instructions…" autoSize={{ minRows: 3, maxRows: 8 }} disabled={isSalesSectionLocked} /></Form.Item></Col>
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
+                  {/* Cross Trade: the Remarks the Sales Executive entered in Shipment Details, read-only
+                      (not a form field, so Approve / Save send the same values as before) */}
+                  {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea placeholder="Remarks" value={getShipmentRemarks(jobData)} disabled autoSize={{ minRows: 3, maxRows: 8 }} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                </Row>
-                <Row gutter={16}>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>
                 <Row gutter={16}>
                   {!isLiner && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6} style={crossTradeSalesStyle}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
                 </Row>
               </div>
             </Card>
@@ -627,7 +638,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
 
           {/* ════════ PLACEMENT DETAILS ════════ */}
           {(!isOthers || isMasterMode) && showPlacement && (
-            <Card className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
+            <Card style={crossTradeSalesStyle} className={Styles.card} bordered title={<CardHeader icon="hugeicons:delivery-truck-02" title="PLACEMENT DETAILS" open={open.placement} onToggle={() => toggle("placement")} />}>
               <div style={{ display: open.placement ? "block" : "none" }}>
                 <Form.List name="placementRows">
                   {(fields, { add, remove }) => (
@@ -662,8 +673,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                       const isObject = typeof r === 'object' && r !== null;
                       const text = isObject ? r.text : r;
                       const authorName = isObject ? r.user_name : null;
-                      const authorId = isObject ? r.user_id : null;
-                      const canDelete = isAdmin || authorId === user?.id || !authorId;
+                      const canDelete = canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
                           {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
@@ -676,12 +686,14 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, { text: newRemark.trim(), user_id: user?.id, user_name: user?.first_name || user?.name || "User", date: new Date().toISOString() }]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
                   <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
-                                  </Col>
+                  {/* OTHERS only: Sales Input saves its attachments as doc_type "Sales Executive" and the Executive Documents card is hidden for OTHERS; shown read-only so edits here can't drift from salesExecutiveFiles */}
+                  {isOthers && salesExecutiveFiles.length > 0 && <FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdmin} />}
+                </Col>
               </Row>
             </div>
           </Card>
@@ -734,7 +746,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               </Button>
               <Button
                 size="large"
-                onClick={() => navigate("/")}
+                onClick={() => confirmLeave(navigate)}
                 icon={<Icon icon="mdi:close" />}
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >
@@ -752,7 +764,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
               <Button type="primary" size="large" onClick={() => handleAction("Submit")} icon={<Icon icon="mdi:send" />} loading={loading} disabled={isDocumentUploading || loading} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Submit
               </Button>
-              <Button size="large" onClick={() => navigate("/")} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
+              <Button size="large" onClick={() => confirmLeave(navigate)} icon={<Icon icon="mdi:close" />} style={{ height: 48, padding: "0 40px", borderRadius: 8, fontSize: 16, fontWeight: '600' }}>
                 Cancel
               </Button>
             </div>

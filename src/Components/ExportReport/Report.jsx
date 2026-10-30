@@ -4,8 +4,10 @@ import apiClient from "../../api/apiclient";
 import dayjs from "../../dayjs-config";
 import { message, Tag, Select, Input, Button, DatePicker } from "antd";
 import CommonTable from "../Commontable/Commontable";
+import useReportExport from "./useReportExport";
 import { Icon } from "@iconify/react";
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
+import EquipmentTypeSelect from "../SalesInput/EquipmentType";
 
 const { Option } = Select;
 
@@ -19,10 +21,53 @@ const EMPTY_FILTERS = {
   customerName: "",
   afsysJobNo: "",
   bookingRef: "",
-  salesName: "",
+  salesHod: "",
   pol: "",
   fpod: "",
   pendingWith: "all",
+  status: "",
+  bookingVessel: "",
+  bookingVoyage: "",
+  loadList: "",
+  equipmentType: "",
+};
+
+const STATUS_OPTIONS = [
+  ["draft", "Draft"],
+  ["submitted", "Submitted"],
+  ["approved", "Approved"],
+  ["rejected", "Rejected"],
+  ["CS-REJECTED", "CS Rejected"],
+  ["CNF-REJECTED", "CNF Rejected"],
+  ["CSHOD-REJECTED", "CS HOD Rejected"],
+  ["ACCOUNTS-REJECTED", "Accounts Rejected"],
+  ["REJECTED-CLOSED", "Rejected Closed"],
+  ["STOPPED", "Stopped"],
+];
+
+
+const buildFilterParams = (f = {}) => {
+  const params = {};
+  if (f.pendingWith && f.pendingWith !== "all") params.pending_with = f.pendingWith;
+  if (f.jobType) params.job_type = f.jobType;
+  if (f.exportNumber) params.export_number = f.exportNumber;
+  
+  if (f.createdAtFrom) params.export_created_date_gte = dayjs(f.createdAtFrom).format("YYYY-MM-DD");
+  if (f.createdAtTo) params.export_created_date_lte = dayjs(f.createdAtTo).format("YYYY-MM-DD");
+  if (f.createdBy) params.created_by = f.createdBy;
+  if (f.carrier) params.carrier = f.carrier;
+  if (f.customerName) params.customer_name = f.customerName;
+  if (f.afsysJobNo) params.afsys_job_no = f.afsysJobNo;
+  if (f.bookingRef) params.booking_ref = f.bookingRef;
+  if (f.salesHod) params.sales_hod = f.salesHod;
+  if (f.pol) params.pol = f.pol;
+  if (f.fpod) params.fpod = f.fpod;
+  if (f.status) params.status = f.status;
+  if (f.bookingVessel) params.booking_vessel = f.bookingVessel;
+  if (f.bookingVoyage) params.booking_voyage = f.bookingVoyage;
+  if (f.loadList) params.load_list = f.loadList;
+  if (f.equipmentType) params.equipment_type = f.equipmentType;
+  return params;
 };
 
 const ExportReport = () => {
@@ -43,31 +88,35 @@ const ExportReport = () => {
   const [customerName, setCustomerName] = useState("");
   const [afsysJobNo, setAfsysJobNo] = useState("");
   const [bookingRef, setBookingRef] = useState("");
-  const [salesName, setSalesName] = useState("");
+  const [salesHod, setSalesHod] = useState("");
   const [pol, setPol] = useState("");
   const [fpod, setFpod] = useState("");
   const [pendingWith, setPendingWith] = useState("all");
+  const [status, setStatus] = useState("");
+  const [bookingVessel, setBookingVessel] = useState("");
+  const [bookingVoyage, setBookingVoyage] = useState("");
+  const [loadList, setLoadList] = useState("");
+  const [equipmentType, setEquipmentType] = useState("");
+
+  const currentFilters = {
+    jobType, exportNumber, createdAtFrom, createdAtTo,
+    createdBy, carrier, customerName, afsysJobNo,
+    bookingRef, salesHod, pol, fpod, pendingWith,
+    status, bookingVessel, bookingVoyage, loadList, equipmentType,
+  };
 
   const debounceRef = useRef(null);
+  const { exporting, startExport } = useReportExport();
+
+  const handleExport = () => {
+    startExport(buildFilterParams(currentFilters));
+  };
 
   const buildUrl = useCallback((page, size, f = {}) => {
     let url = `/liner/sales-input/reports/?page=${page}&page_size=${size}`;
-    if (f.pendingWith && f.pendingWith !== "all") url += `&pending_with=${encodeURIComponent(f.pendingWith)}`;
-    if (f.jobType)       url += `&job_type=${encodeURIComponent(f.jobType)}`;
-    if (f.exportNumber)  url += `&export_number=${encodeURIComponent(f.exportNumber)}`;
-    // export_created_date, not created_at: the "Created Date" column in the table below
-    // renders export_created_date, and the two diverge on back-dated and migrated jobs -
-    // so a range on created_at hid rows whose visible date was inside it.
-    if (f.createdAtFrom) url += `&export_created_date_gte=${dayjs(f.createdAtFrom).format("YYYY-MM-DD")}`;
-    if (f.createdAtTo)   url += `&export_created_date_lte=${dayjs(f.createdAtTo).format("YYYY-MM-DD")}`;
-    if (f.createdBy)     url += `&created_by=${encodeURIComponent(f.createdBy)}`;
-    if (f.carrier)       url += `&carrier=${encodeURIComponent(f.carrier)}`;
-    if (f.customerName)  url += `&customer_name=${encodeURIComponent(f.customerName)}`;
-    if (f.afsysJobNo)    url += `&afsys_job_no=${encodeURIComponent(f.afsysJobNo)}`;
-    if (f.bookingRef)    url += `&booking_ref=${encodeURIComponent(f.bookingRef)}`;
-    if (f.salesName)     url += `&sales_name=${encodeURIComponent(f.salesName)}`;
-    if (f.pol)           url += `&pol=${encodeURIComponent(f.pol)}`;
-    if (f.fpod)          url += `&fpod=${encodeURIComponent(f.fpod)}`;
+    Object.entries(buildFilterParams(f)).forEach(([key, value]) => {
+      url += `&${key}=${encodeURIComponent(value)}`;
+    });
     return url;
   }, []);
 
@@ -92,11 +141,7 @@ const ExportReport = () => {
 
   // Auto-fetch with debounce whenever any filter changes
   useEffect(() => {
-    const filters = {
-      jobType, exportNumber, createdAtFrom, createdAtTo,
-      createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
-    };
+    const filters = currentFilters;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -108,7 +153,8 @@ const ExportReport = () => {
   }, [
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
-    bookingRef, salesName, pol, fpod, pendingWith,
+    bookingRef, salesHod, pol, fpod, pendingWith,
+    status, bookingVessel, bookingVoyage, loadList, equipmentType,
   ]);
 
   // Pagination change — fetch immediately with current filters
@@ -116,11 +162,7 @@ const ExportReport = () => {
     const { current, pageSize: ps } = pagination;
     setCurrentPage(current);
     setPageSize(ps);
-    fetchData(current, ps, {
-      jobType, exportNumber, createdAtFrom, createdAtTo,
-      createdBy, carrier, customerName, afsysJobNo,
-      bookingRef, salesName, pol, fpod, pendingWith,
-    });
+    fetchData(current, ps, currentFilters);
   };
 
   const handleClear = () => {
@@ -133,10 +175,15 @@ const ExportReport = () => {
     setCustomerName("");
     setAfsysJobNo("");
     setBookingRef("");
-    setSalesName("");
+    setSalesHod("");
     setPol("");
     setFpod("");
     setPendingWith("all");
+    setStatus("");
+    setBookingVessel("");
+    setBookingVoyage("");
+    setLoadList("");
+    setEquipmentType("");
   };
 
   const labelCls = "block text-xs font-semibold text-gray-600 mb-1";
@@ -169,31 +216,31 @@ const ExportReport = () => {
               <label className={labelCls}>Customer Name</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
             </div>
- 
+
             <div className={colCls}>
               <label className={labelCls}>Carrier</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={carrier} onChange={(e) => setCarrier(e.target.value)} />
             </div>
 
-            
+
             <div className={colCls}>
               <label className={labelCls}>Export No (DMS)</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={exportNumber} onChange={(e) => setExportNumber(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
-              <label className={labelCls}>Sales Name</label>
-              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesName} onChange={(e) => setSalesName(e.target.value)} />
+              <label className={labelCls}>Sales HOD</label>
+              <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={salesHod} onChange={(e) => setSalesHod(e.target.value)} />
             </div>
 
-        
+
             <div className={colCls}>
               <label className={labelCls}>POL</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={pol} onChange={(e) => setPol(e.target.value)} />
             </div>
 
-       
+
             <div className={colCls}>
               <label className={labelCls}>FPOD</label>
               <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={fpod} onChange={(e) => setFpod(e.target.value)} />
@@ -209,10 +256,11 @@ const ExportReport = () => {
                   icon={<Icon icon={filtersExpanded ? "mdi:tune-vertical" : "mdi:tune"} width="16" height="16" />}
                 >
                   {(() => {
-                
+
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
-                      salesName, pol, fpod,
+                      salesHod, pol, fpod, status, bookingVessel, bookingVoyage,
+                      loadList, equipmentType,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
@@ -223,12 +271,23 @@ const ExportReport = () => {
                   })()}
                 </Button>
 
+                <Button
+                  type="primary"
+                  onClick={handleExport}
+                  loading={exporting}
+                  icon={<Icon icon="lucide:download" width="16" height="16" />}
+                  style={{ borderRadius: 8, fontWeight: 500 }}
+                >
+                  Export
+                </Button>
+
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
-                  customerName || afsysJobNo || bookingRef || salesName || pol || fpod || pendingWith !== "all") && (
-                  <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
-                    Clear
-                  </Button>
-                )}
+                  customerName || afsysJobNo || bookingRef || salesHod || pol || fpod || pendingWith !== "all" ||
+                  status || bookingVessel || bookingVoyage || loadList || equipmentType) && (
+                    <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
+                      Clear
+                    </Button>
+                  )}
               </div>
             </div>
 
@@ -246,7 +305,7 @@ const ExportReport = () => {
                   <label className={labelCls}>Job Type</label>
                   <Select value={jobType || undefined} onChange={setJobType} placeholder="All" allowClear style={{ width: "100%" }}>
                     <Option value="LINER">LINER</Option>
-                     
+
                     <Option value="FORWARDING">FORWARDING</Option>
                     <Option value="CROSS TRADE">CROSS-TRADE</Option>
                     <Option value="OTHERS">OTHERS</Option>
@@ -278,6 +337,44 @@ const ExportReport = () => {
                   <DatePicker value={createdAtTo} onChange={setCreatedAtTo} format="DD-MM-YYYY" placeholder="To date" style={{ width: "100%" }} />
                 </div>
 
+                <div className={colCls}>
+                  <label className={labelCls}>Status</label>
+                  <Select value={status || undefined} onChange={(v) => setStatus(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
+                    {STATUS_OPTIONS.map(([value, label]) => (
+                      <Option key={value} value={value}>{label}</Option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Booking Vessel</label>
+                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVessel} onChange={(e) => setBookingVessel(e.target.value)} />
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Booking Voyage</label>
+                  <Input prefix={<Icon icon="cil:search" width={16} color="#4b5563" />} placeholder="Search..." allowClear value={bookingVoyage} onChange={(e) => setBookingVoyage(e.target.value)} />
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Load List (Y/N)</label>
+                  <Select value={loadList || undefined} onChange={(v) => setLoadList(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
+                    <Option value="true">Yes</Option>
+                    <Option value="false">No</Option>
+                  </Select>
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>Equipment Type</label>
+                  <EquipmentTypeSelect
+                    value={equipmentType || undefined}
+                    onChange={(v) => setEquipmentType(v || "")}
+                    placeholder="All"
+                    allowClear
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
               </div>
             </div>
           )}
@@ -295,6 +392,8 @@ const ExportReport = () => {
                 { title: "POL", dataIndex: "port_of_loading", key: "port_of_loading", render: (v) => v || "-" },
                 { title: "FPOD", dataIndex: "final_pod", key: "final_pod", render: (v) => v || "-" },
                 { title: "Vessel / Voyage", dataIndex: "vessel_voyage", key: "vessel_voyage", render: (v) => v || "-" },
+                { title: "Booking Vessel", dataIndex: "booking_vessel", key: "booking_vessel", render: (v) => v || "-" },
+                { title: "Booking Voyage", dataIndex: "booking_voyage", key: "booking_voyage", render: (v) => v || "-" },
                 { title: "Job No (AFSYS)", dataIndex: "afsys_job_no", key: "afsys_job_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
                 { title: "Booking Ref", dataIndex: "booking_ref_no", key: "booking_ref_no", render: (v) => <span style={{ fontFamily: "monospace" }}>{v || "-"}</span> },
                 { title: "Sales HOD", dataIndex: "sales_hod", key: "sales_hod", render: (v) => v || "-" },
@@ -307,6 +406,11 @@ const ExportReport = () => {
                     </Tag>
                   ),
                 },
+                {
+                  title: "Load List (Y/N)", dataIndex: "is_load_list_uploaded", key: "is_load_list_uploaded",
+                  render: (v) => <Tag color={v ? "green" : "default"}>{v ? "Y" : "N"}</Tag>,
+                },
+                { title: "Equipment Type", dataIndex: "equipment_type", key: "equipment_type", render: (v) => v || "-" },
               ]}
               data={data}
               loading={loading}

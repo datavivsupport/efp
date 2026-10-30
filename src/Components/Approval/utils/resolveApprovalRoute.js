@@ -1,4 +1,5 @@
 import { computeUserRoles } from "./roleUtils";
+import { isCrossTradeJob } from "./jobContextUtils";
 
 /**
  * Given a job record + logged-in user, returns the correct
@@ -60,7 +61,8 @@ export const resolveApprovalRoute = (jobData, user) => {
     return `/approval/${id}/accounts`;
   }
 
-  if (roles.isCNF && !isSalesHod) {
+  // Cross Trade has no CNF stage — a CNF-department user falls through to the Approval page
+  if (roles.isCNF && !isSalesHod && !isCrossTradeJob(jobData)) {
     return `/approval/${id}/cnf-update`;
   }
 

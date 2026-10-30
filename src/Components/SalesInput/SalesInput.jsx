@@ -18,8 +18,10 @@ import {
   Upload,
   Tag,
   Timeline,
+  Table,
   Modal,
   Spin,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -39,10 +41,15 @@ import EquipmentTypeSelect from "./EquipmentType";
 import JobTypeSelect from "./JobTypeSelect";
 import TermsOfShipmentSelect from "./TermsOfShipmentSelect";
 import apiClient from "../../api/apiclient";
+import { deleteDocument } from "../../utils/documentApi";
 import { uploadErrorMessage } from "../../api/uploadError";
 import { renderUserOption, renderUserLabel, userOptionLabel } from "../StatusDot";
 import MultiFileViewer from "../Viewer/MultiFileViewer"; // Added MultiFileViewer
-import ScrollSafeTooltip, { ClampedText } from "../ScrollSafeTooltip";
+import ScrollSafeTooltip, { ClampedText, RemarksCell } from "../ScrollSafeTooltip";
+import { createRemark, canDeleteRemark } from "../Approval/utils/remarksUtils";
+import { isSalesOwnerOfJob, getShipmentRemarks } from "../Approval/utils/jobContextUtils";
+import { confirmAction } from "../Approval/utils/confirmAction";
+import { isWithinUploadLimit, MAX_UPLOAD_MB } from "../Approval/utils/fileSizeLimit";
 
 // const { Title } = Typography;
 const { TextArea } = Input;
@@ -63,7 +70,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </Space>
             <Space>
               <ScrollSafeTooltip title="Preview">
-                <Button icon={<EyeOutlined/>} type="link" size="small" onClick={() => onPreview(i)}/>
+                <Button icon={<EyeOutlined/>} type="link" size="small" disabled={false} onClick={() => onPreview(i)}/>
               </ScrollSafeTooltip>
               {!disabled && (
                 <ScrollSafeTooltip title="Delete">
@@ -109,7 +116,7 @@ const DocUploadField = ({
   user,
   isAdmin,
   onAutoSave,
-  isOthers
+  isOthers,
 }) => {
   const [uploading, setUploading] = useState(false);
   const pendingCountRef = useRef(0);
@@ -123,11 +130,7 @@ const DocUploadField = ({
       message.warning("Uploads are disabled in View-Only Mode");
       return false;
     }
-    const isPdf = file.type === "application/pdf" || file.name?.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      message.error(`${file.name} is not a PDF. Only .pdf files are allowed.`);
-      return false;
-    }
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length + pendingCountRef.current >= 20) {
       message.warning("Maximum 20 files allowed per section.");
       return false;
@@ -268,14 +271,14 @@ const DocUploadField = ({
     <Spin spinning={uploading} size="small">
       <div>
         {(!disabled || restrictionMessage) && (
-          <Space size={8}>
-            <Upload multiple showUploadList={false} accept=".pdf" beforeUpload={handleBeforeUpload}>
-              <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading} loading={uploading}>
+          <Space size={8} wrap>
+            <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+              <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={uploading || undefined} loading={uploading}>
                 {uploading ? "Uploading..." : (files.length === 0 ? `Upload ${label}` : "Add More")}
               </Button>
             </Upload>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              PDF only
+            <Typography.Text type="secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+              Max {MAX_UPLOAD_MB} MB
             </Typography.Text>
           </Space>
         )}
@@ -285,17 +288,34 @@ const DocUploadField = ({
             files={files}
             color={color}
             onRemove={(i) => {
-              const docId = files[i]?.id;
+              const doc = files[i];
+              const docId = doc?.id;
               if (!docId) return;
+              const isTemp = doc.isTemp || String(docId).startsWith("temp-");
               Modal.confirm({
                 title: "Delete attachment?",
                 content: "Are you sure you want to delete this attachment? This action cannot be undone.",
                 okText: "Delete",
                 okType: "danger",
                 cancelText: "Cancel",
-                onOk: () => {
+                onOk: async () => {
+                  // Queued but not yet uploaded — nothing on the server to delete
+                  if (isTemp || !salesInputId) {
+                    setFiles((p) => p.filter((f) => f.id !== docId));
+                    setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                    return;
+                  }
+
                   setFiles((p) => p.filter((f) => f.id !== docId));
-                  setPendingFiles?.((p) => p.filter((item) => item.tempId !== docId));
+                  try {
+                    await deleteDocument(salesInputId, docId);
+                    message.success("Attachment deleted");
+                  } catch (err) {
+                    // `files` is a filtered view of the shared `attachments` state,
+                    // so restore just this document instead of replacing the array.
+                    setFiles((p) => (p.some((f) => f.id === docId) ? p : [...p, doc]));
+                    message.error(err.response?.data?.message || "Failed to delete attachment");
+                  }
                 },
               });
             }}
@@ -359,6 +379,7 @@ const SalesInput = () => {
   const isOthers = jobType?.toUpperCase() === "OTHERS";
   const isLiner = jobType?.toUpperCase() === "LINER";
   const isForwarding = jobType?.toUpperCase() === "FORWARDING";
+  const isCrossTrade = jobType?.toUpperCase() === "CROSS TRADE";
   const isLLReqForm = Form.useWatch("is_load_list_required", form);
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
 
@@ -371,6 +392,11 @@ const SalesInput = () => {
   });
   const [approvalHistory, setApprovalHistory] = useState([]);
   const [instanceStatus, setInstanceStatus] = useState("draft");
+  // View mode on a CS-rejected job: its Sales Executive edits the form and resubmits, or rejects it
+  const [createdByUser, setCreatedByUser] = useState(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectRemarks, setRejectRemarks] = useState("");
+  const [rejectLoading, setRejectLoading] = useState(false);
   const [freightManifestFiles, setFreightManifestFiles] = useState([]);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrls, setPreviewUrls] = useState([]);
@@ -423,7 +449,39 @@ const SalesInput = () => {
 
   // PRD Section 3: Sales Input should not have role restrictions as per user.
   const isTerminal = instanceStatus === "approved" || instanceStatus === "REJECTED-CLOSED" || instanceStatus === "rejected" || parseInt(currentStage) === 9;
-  const isReadOnly = false; // Removed role and terminal restrictions for SalesInput page
+  // PRD Section 3: no role/terminal restrictions while creating or editing.
+  // `?view=1` opens an existing job read-only, laid out exactly as it was filled in
+  // (used by the dashboard "View" for Cross Trade jobs).
+  const isViewMode = searchParams.get("view") === "1";
+  // CS rejected the job back to Sales: its Sales Executive may resubmit (edit + submit) or reject it
+  // Cross Trade only
+  const isCsRejected = isCrossTrade && instanceStatus === "CS-REJECTED";
+  const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
+    { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
+    user,
+  );
+  // A CS-rejected job opens editable for its Sales Executive; every other view stays read-only
+  const isReadOnly = isViewMode && !canActOnRejection;
+
+  // Cross Trade: history shown as the same "Approval Status & History" table as the Approval pages
+  const approvalColumns = [
+    { title: "Stage", dataIndex: "stage", key: "stage" },
+    { title: "Pending With", dataIndex: "pending_with", key: "pending_with", render: (pw) => pw || "N/A" },
+    {
+      title: "Updated By",
+      dataIndex: "updated_by_user_name",
+      key: "updated_by_user_name",
+      render: (name, record) => (
+        <Space direction="vertical" size={0}>
+          <span>{name || record.updated_by_name || "N/A"}</span>
+          <span style={{ fontSize: 11, color: "#6b7280" }}>{record.updated_by_department || record.updated_by_role || ""}</span>
+        </Space>
+      ),
+    },
+    { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={s === "Submitted" ? "processing" : "default"}>{s?.toUpperCase()}</Tag> },
+    { title: "Remarks", dataIndex: "remarks", key: "remarks", width: 320, render: (value) => <RemarksCell value={value} /> },
+    { title: "Updated Date", dataIndex: "created_at", key: "created_at", render: (d) => (d ? dayjs(d).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm") : "N/A") },
+  ];
 
   const addCommodity = () => {
     if (commodityInput.trim() && !commodities.includes(commodityInput.trim())) {
@@ -545,6 +603,7 @@ const SalesInput = () => {
           });
           setApprovalHistory(data.approval_history || []);
           setInstanceStatus(data.status);
+          setCreatedByUser(data.created_by_user ?? null);
 
           // Load documents into state
           const docs = data.documents || [];
@@ -572,6 +631,9 @@ const SalesInput = () => {
             name_of_executive: data.name_of_executive,
             sales_hod: data.sales_hod,
             special_instructions: data.special_instructions,
+            // Cross Trade: bring back the saved Shipment Remarks, so viewing / resubmitting
+            // a returned job doesn't show (and resend) an empty Remarks box
+            ...((data.job_type || "").toUpperCase() === "CROSS TRADE" && { remarks: getShipmentRemarks(data) }),
             other_charges_remarks: data.approval_details?.other_charges_remarks,
             export_created_date: data.export_created_date ? dayjs(data.export_created_date, "YYYY-MM-DD") : dayjs(),
             export_number: data.export_number || "N/A",
@@ -890,11 +952,45 @@ const SalesInput = () => {
 
   const navigate = useNavigate();
 
+  // Sales rejects a CS-rejected job — same reject endpoint the approval pages use
+  // Resubmit a CS-rejected job: check the form first, then ask for confirmation
+  const handleResubmit = () => {
+    form.validateFields().then(async (values) => {
+      if (await confirmAction("resubmit")) onFinish(values, "submitted");
+    }).catch(handleFinishFailed);
+  };
+
+  // Reject: remarks are entered in the Reject modal, then confirmed here before sending
+  const handleConfirmReject = async () => {
+    if (!rejectRemarks.trim()) { message.warning("Please enter rejection remarks"); return; }
+    if (await confirmAction("reject", null, { content: "This cannot be undone." })) sendReject();
+  };
+
+  const sendReject = async () => {
+    setRejectLoading(true);
+    try {
+      const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, { remarks: rejectRemarks.trim() });
+      if (res.data?.status === "success") {
+        message.success(res.data?.message || "Job rejected successfully");
+        setRejectModalOpen(false);
+        navigate("/dashboard");
+      } else {
+        message.error(res.data?.message || "Rejection failed");
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || "Something went wrong");
+    } finally {
+      setRejectLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
       <Form
         layout="vertical"
         form={form}
+        disabled={isReadOnly}
+        className={isReadOnly ? Styles.readOnlyView : undefined}
         onFinish={onFinish}
         onFinishFailed={handleFinishFailed}
         initialValues={{
@@ -1241,6 +1337,7 @@ const SalesInput = () => {
                       className={Styles.formLabel}
                       label="E-mail"
                       name="email"
+                      rules={[{ type: "email", message: "Please enter a valid email address" }]}
                     >
                       <Input placeholder="E-mail" disabled={isReadOnly} />
                     </Form.Item>
@@ -1575,27 +1672,29 @@ const SalesInput = () => {
                       DOCUMENTATION
                     </Checkbox>
                   </Col>
-                  <Col xs={24} md={6}>
-                    <Checkbox
-                      className={Styles.checkboxSpaced}
-                      disabled={isReadOnly}
-                      checked={additionalService.showTransportation}
-                      onChange={(e) => {
-                        setAdditionalService((prev) => ({
-                          ...prev,
-                          showTransportation: e.target.checked,
-                        }));
-                        if (e.target.checked) {
-                          const current = form.getFieldValue("transportationRows") || [];
-                          if (current.length === 0) {
-                            form.setFieldsValue({ transportationRows: [{}] });
+                  {!isCrossTrade && (
+                    <Col xs={24} md={6}>
+                      <Checkbox
+                        className={Styles.checkboxSpaced}
+                        disabled={isReadOnly}
+                        checked={additionalService.showTransportation}
+                        onChange={(e) => {
+                          setAdditionalService((prev) => ({
+                            ...prev,
+                            showTransportation: e.target.checked,
+                          }));
+                          if (e.target.checked) {
+                            const current = form.getFieldValue("transportationRows") || [];
+                            if (current.length === 0) {
+                              form.setFieldsValue({ transportationRows: [{}] });
+                            }
                           }
-                        }
-                      }}
-                    >
-                      TRANSPORTATION
-                    </Checkbox>
-                  </Col>
+                        }}
+                      >
+                        TRANSPORTATION
+                      </Checkbox>
+                    </Col>
+                  )}
                 </Row>
 
 
@@ -1644,7 +1743,7 @@ const SalesInput = () => {
               </div>
             </Card>
           )}
-          {additionalService.showTransportation && !isOthers && (
+          {additionalService.showTransportation && !isOthers && !isCrossTrade && (
             <Card
               className={Styles.card}
               bordered
@@ -1775,8 +1874,8 @@ const SalesInput = () => {
             </Card>
           )}
 
-          {/* AUDIT TRAIL / APPROVAL HISTORY */}
-          {approvalHistory.length > 0 && (
+          {/* AUDIT TRAIL / APPROVAL HISTORY (other job types) */}
+          {!isCrossTrade && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered
@@ -1844,16 +1943,20 @@ const SalesInput = () => {
               <div style={{ flex: '1 1 50%', minWidth: 0 }}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>REMARKS</Typography.Text>
                   <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-                    {remarks.map((r, i) => (
+                    {remarks.map((r, i) => {
+                      const canDelete = canDeleteRemark(r);
+                      return (
                       <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          style={{ position: "absolute", top: 6, right: 6 }}
-                          onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
-                        />
+                        {canDelete && (
+                          <Button
+                            type="text"
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            style={{ position: "absolute", top: 6, right: 6 }}
+                            onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))}
+                          />
+                        )}
                         <ClampedText rows={3} style={{ fontSize: 13, color: '#1f2937' }}>{typeof r === 'object' ? r.text : r}</ClampedText>
                         {typeof r === 'object' && r.user_name && (
                           <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>
@@ -1861,7 +1964,8 @@ const SalesInput = () => {
                           </Typography.Text>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
 
@@ -1877,12 +1981,7 @@ const SalesInput = () => {
                     type="primary"
                     onClick={() => {
                       if (newRemark.trim()) {
-                        setRemarks(p => [...p, {
-                          text: newRemark.trim(),
-                          user_id: user?.id,
-                          user_name: user?.first_name || user?.name || "User",
-                          date: new Date().toISOString()
-                        }]);
+                        setRemarks(p => [...p, createRemark(newRemark, user)]);
                         setNewRemark("");
                       }
                     }}
@@ -1911,7 +2010,49 @@ const SalesInput = () => {
             </div>
           </Card>
 
-          {!isReadOnly && (
+          {/* Cross Trade: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
+          {isCrossTrade && approvalHistory.length > 0 && (
+            <Card
+              className={Styles.card}
+              bordered
+              title={
+                <Space align="center">
+                  <div className={Styles.mainhead}>
+                    <Icon icon="mdi:check-decagram-outline" width="18" height="18" />
+                  </div>
+                  <Typography.Title level={5} style={{ margin: 0 }}>
+                    APPROVAL STATUS & HISTORY
+                  </Typography.Title>
+                </Space>
+              }
+            >
+              <Table dataSource={approvalHistory} columns={approvalColumns} rowKey="id" pagination={false} size="small" scroll={{ x: "max-content" }} />
+            </Card>
+          )}
+
+          {canActOnRejection && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", width: "100%", marginTop: "1rem" }}>
+              {/* Same submit call as a new job (PUT with status "submitted") */}
+              <Button
+                icon={<Icon icon="mdi:send-check" />}
+                type="primary"
+                onClick={handleResubmit}
+                loading={loading}
+              >
+                Resubmit
+              </Button>
+              <Button danger icon={<Icon icon="mdi:close-circle" />} onClick={() => { setRejectRemarks(""); setRejectModalOpen(true); }} disabled={loading}>
+                Reject
+              </Button>
+              {/* Discards unsaved edits */}
+              <Button icon={<Icon icon="mdi:refresh" />} onClick={async () => {
+                if (await confirmAction("cancel", null, { title: "Discard your changes?", content: "The page will reload and your unsaved edits will be lost.", okText: "Yes, discard", cancelText: "Keep editing" })) window.location.reload();
+              }} disabled={loading}>
+                Reset
+              </Button>
+            </div>
+          )}
+          {!isReadOnly && !canActOnRejection && (
             <div
               style={{
                 display: "flex",
@@ -1925,7 +2066,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="mdi:tick-circle" />}
                 type="primary"
-                onClick={() => form.validateFields().then(values => onFinish(values, "submitted"))}
+                onClick={() => form.validateFields().then(async (values) => {
+                  if (await confirmAction("submit")) onFinish(values, "submitted");
+                })}
                 loading={loading}
               >
                 Submit
@@ -1933,7 +2076,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="mdi:content-save-edit" />}
                 type="primary"
-                onClick={() => onFinish(form.getFieldsValue(), "draft")}
+                onClick={async () => {
+                  if (await confirmAction("save", null, { title: "Save as draft?", content: "Your details will be saved as a draft." })) onFinish(form.getFieldsValue(), "draft");
+                }}
                 loading={loading}
               >
                 Save Draft
@@ -1941,7 +2086,9 @@ const SalesInput = () => {
               <Button
                 icon={<Icon icon="tabler:refresh" />}
                 type="primary"
-                onClick={handleCancel}
+                onClick={async () => {
+                  if (await confirmAction("cancel", null, { title: "Clear the form?", content: "Everything you entered and have not saved will be removed.", okText: "Yes, clear", cancelText: "Keep editing" })) handleCancel();
+                }}
                 disabled={loading}
               >
                 Refresh
@@ -1953,10 +2100,31 @@ const SalesInput = () => {
               <Typography.Text type="secondary" italic>
                 This job is currently in the approval workflow and is read-only.
               </Typography.Text>
+              {/* Editing and workflow actions stay on the approval page, unchanged */}
+              {id && !isTerminal && !canActOnRejection && (
+                <div style={{ marginTop: 12 }}>
+                  <Button type="primary" disabled={false} icon={<Icon icon="mdi:open-in-new" />} onClick={() => navigate(`/approval?id=${id}`)}>
+                    Open workflow page
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </>
       </Form>
+
+      <Modal
+        title="Reject Job"
+        open={rejectModalOpen}
+        onCancel={() => setRejectModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setRejectModalOpen(false)}>Cancel</Button>,
+          <Button key="reject" danger type="primary" loading={rejectLoading} onClick={handleConfirmReject}>Confirm Rejection</Button>,
+        ]}
+      >
+        <p style={{ fontWeight: 600, marginBottom: 8 }}>Please enter rejection remarks:</p>
+        <Input.TextArea rows={4} value={rejectRemarks} onChange={(e) => setRejectRemarks(e.target.value)} placeholder="Enter rejection reason" />
+      </Modal>
 
       {/* ════════ PREVIEW MODAL ════════ */}
       {/* <Modal

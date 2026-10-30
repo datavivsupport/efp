@@ -9,6 +9,8 @@ import dayjs from "../../../dayjs-config";
 import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { computeUserRoles } from "../utils/roleUtils";
+import { confirmAction, confirmLeave } from "../utils/confirmAction";
+import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -55,6 +57,7 @@ const FileChipList = ({ files, onRemove, onPreview, onRemarkChange, disabled, us
 const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, disabled, user, isAdmin }) => {
   const handleBeforeUpload = async (file) => {
     if (!salesInputId) return false;
+    if (!isWithinUploadLimit(file)) return false;
     if (files.length >= 20) { message.warning("Maximum 20 files allowed per section."); return false; }
     const formData = new FormData();
     formData.append("file", file);
@@ -245,7 +248,11 @@ const AccountsUpdatePage = ({ jobData, user }) => {
     setLoading(true);
     try {
       const values = await form.validateFields();
-      
+      const confirmed = actionType === "Approved"
+        ? await confirmAction("approve", setLoading)
+        : await confirmAction("reject", setLoading, { content: "The job will be sent back." });
+      if (!confirmed) return;
+
       let payload;
       if (actionType === "Approved") {
         // For approval
@@ -283,6 +290,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
+      if (!(await confirmAction("save", setLoading))) return;
       const payload = {
         carrier_name_2: values.carrier_name_2,
         account_remarks: values.account_remarks,
@@ -380,11 +388,8 @@ const AccountsUpdatePage = ({ jobData, user }) => {
           </div>
 
           <div style={{ marginTop: 24, borderTop: "1px solid #f0f0f0", paddingTop: 24 }}>
-            <Form.Item label="Approval Remarks" name="approvalRemarks">
-              <TextArea rows={3} placeholder="Optional remarks for approval/rejection" disabled={isDisabled} />
-            </Form.Item>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-              <Button size="large" onClick={() => navigate("/")}>Cancel</Button>
+              <Button size="large" onClick={() => confirmLeave(navigate)}>Cancel</Button>
               <Button size="large" type="primary" htmlType="submit" disabled={!isAccountsTeam || isDisabled}>Save Update</Button>
               <Button size="large" type="primary" style={{ backgroundColor: "#10b981", borderColor: "#10b981" }} onClick={() => handleAction("Approved")} disabled={!isAccountsTeam || isDisabled}>
                 Approve (Accounts)

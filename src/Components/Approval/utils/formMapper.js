@@ -26,6 +26,7 @@ export const mapJobToFormValues = (data) => ({
   is_lpo_required:        data.is_lpo_required,
   is_invoice_required:    data.is_invoice_required,
   is_release_order_required:       data.is_release_order_required,
+  is_boc_required:                 data.is_boc_required,
   is_payment_processing_required:  data.is_payment_processing_required,
   is_load_list_required:           data.is_load_list_required,
   is_haulier_note_required:        data.is_haulier_note_required,

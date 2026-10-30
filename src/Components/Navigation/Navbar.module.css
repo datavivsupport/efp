@@ -33,7 +33,7 @@
   background: transparent;
   color: #4b5563;
   font-weight: 500;
-  font-size: 15px;
+  font-size: 14.5px;
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;
@@ -47,7 +47,7 @@
 
 /* Active tab style */
 .navTab.active {
-  background: linear-gradient(to right, #003a75, #19d0c6);
+  background: var(--dms-teal-grad);
   color: #fff;
 }
 
@@ -112,7 +112,7 @@
 }
 
 .buttonnew4:hover {
-  background: linear-gradient(to right, #003A75, #19D0C6);
+  background: var(--dms-teal-grad);
   color: #fff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -133,7 +133,7 @@
   cursor: pointer;
 }
 .buttonnew:hover {
-  background: linear-gradient(to right, #003A75, #19D0C6);
+  background: var(--dms-teal-grad);
   color: #ffff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -185,7 +185,7 @@
   font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
-  background: linear-gradient(to right, #003a75, #19d0c6);
+  background: var(--dms-teal-grad);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -269,7 +269,7 @@
 }
 
 .badgenavnoti :global(.ant-badge-count) {
-  background: linear-gradient(to right, #003a75, #19d0c6) !important;
+  background: var(--dms-teal-grad) !important;
   color: #ffffff !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   border: none !important;
@@ -324,7 +324,7 @@
   white-space: nowrap;
   overflow: hidden;
 
-  background: linear-gradient(to right, #003a75, #19d0c6);
+  background: var(--dms-teal-grad);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
