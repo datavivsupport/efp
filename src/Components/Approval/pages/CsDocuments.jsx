@@ -573,8 +573,6 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
       if (csHodRequired && !csHodValue && !isCrossTrade) missing.push("CS HOD");
- 
-      if (isCrossTrade && preAlertToggle && !preAlertFiles.length) missing.push("Pre-Alert");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
 
@@ -945,8 +943,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <DocSlot
                     label="Pre-Alert"
                     toggle={{ label: "Required?", node: <RequirementSwitch name="is_pre_alert_required" hasFiles={preAlertFiles.length > 0} /> }}
-                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Must be uploaded before you submit."}
-                    warn={preAlertToggle && !preAlertFiles.length}
+                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Optional — not required before submit."}
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
