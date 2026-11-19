@@ -26,10 +26,11 @@ export const validateApprovalAction = (values, ctx) => {
     if (!values.booking_voyage)     missing.push("Booking Voyage");
     if (!values.vessel_eta)         missing.push("Vessel ETA Date");
     if (!values.vsl_initial_eta)    missing.push("Initial ETA");
-    if (!values.vsl_etd)            missing.push("ETD");
-    if (!values.booking_ref_no)     missing.push("Booking Reference No.");
-    if (!values.ll_cut_off_datetime) missing.push("Load List Cut-Off Date & Time");
-    if (!values.si_cut_off_date)    missing.push("SI Cut-Off Date & Time");
+    // Cross Trade: ETD, Load List Cut-Off and SI Cut-Off are optional.
+    if (!values.vsl_etd && !isCrossTrade) missing.push("ETD");
+    if (!values.booking_ref_no)     missing.push(isCrossTrade ? "Booking Reference No./ BL No." : "Booking Reference No.");
+    if (!values.ll_cut_off_datetime && !isCrossTrade) missing.push("Load List Cut-Off Date & Time");
+    if (!values.si_cut_off_date && !isCrossTrade)     missing.push("SI Cut-Off Date & Time");
     // Cross Trade and Liner answer Release Order Yes/No on this stage; No means no upload is needed.
     if (!releaseOrderFiles.length && !((isCrossTrade || isLiner) && !isReleaseOrderRequired)) missing.push("Release Order");
     if (missing.length) {

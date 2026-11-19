@@ -669,7 +669,7 @@ const Approval = () => {
           stage, isCS, isCNF, isForwarding, isLiner, needsLpoInvoice,
           releaseOrderFiles, lpoFiles, invoiceFiles,
           haulageCostFiles, haulierNoteFiles, loadListFiles, edFiles,
-          isReleaseOrderRequired: isROReq,
+          isCrossTrade, isReleaseOrderRequired: isROReq,
         });
         if (validationError) {
           message.error(validationError);
@@ -1195,7 +1195,7 @@ const Approval = () => {
                   <Row gutter={16}>
                     {/* Liner: shown only when HBL was ticked at creation */}
                     {(!isLiner || normalizeBoolean(jobData?.hbl)) && (
-                      <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                      <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{isCrossTrade ? "BL" : "HBL"}</span></Checkbox></Form.Item></Col>
                     )}
                     <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                     <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
@@ -1284,12 +1284,12 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
+                      <Form.Item label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
                         <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                      <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS && !isCrossTrade, message: "Required" }]}>
                         <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                       </Form.Item>
                     </Col>
@@ -1299,13 +1299,13 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label={isCrossTrade ? "Booking Reference No./ BL No." : "Booking Reference No."} name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS && !isCrossTrade, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS && !isCrossTrade, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
@@ -1652,8 +1652,8 @@ const Approval = () => {
                     )}
                     {!isLiner && (isMasterMode || hblFlag) && (
                       <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="HBL">
-                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <Form.Item className={Styles.formLabel} label={isCrossTrade ? "BL" : "HBL"}>
+                          <DocUploadField label={isCrossTrade ? "BL" : "HBL"} files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                     )}

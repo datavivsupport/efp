@@ -1619,7 +1619,7 @@ const SalesInput = () => {
                       className={Styles.formLabel}
                       label="Haulier Code"
                       name="haulier_code"
-                      rules={[{ required: !isOthers, message: "Required" }]}
+                      rules={[{ required: !isOthers && !isLiner, message: "Required" }]}
                     >
                       <Input placeholder="Enter Code" disabled={isReadOnly} />
                     </Form.Item>
@@ -1647,7 +1647,7 @@ const SalesInput = () => {
                           }))
                         }
                       >
-                        HBL
+                        {isCrossTrade ? "BL" : "HBL"}
                       </Checkbox>
                     </Col>
                   )}
