@@ -519,6 +519,8 @@ const Approval = () => {
   const showLinerStopAlert = isLiner && currentStage === "5" && !isPaymentReq;
 
   const isStoppedCrossTrade = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
+  const hblLabel = isCrossTrade ? "BL" : "HBL"; // Cross Trade calls the HBL "BL" (display only; doc_type stays "HBL")
+  const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   const executiveDocs = useMemo(
     () =>
       (jobData?.documents || [])
@@ -1195,7 +1197,7 @@ const Approval = () => {
                   <Row gutter={16}>
                     {/* Liner: shown only when HBL was ticked at creation */}
                     {(!isLiner || normalizeBoolean(jobData?.hbl)) && (
-                      <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>
+                      <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>
                     )}
                     <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                     <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
@@ -1284,12 +1286,12 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
+                      <Form.Item label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: isStage2 && !isCS && !hideOtherTeamSectionsForSales, message: "Required" }]}>
                         <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: isStage2 && isCS, message: "Required" }]}>
+                      <Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel}>
                         <DatePicker style={{ width: '100%' }} disabled={isBookingFieldLocked} format="DD-MM-YYYY" />
                       </Form.Item>
                     </Col>
@@ -1299,13 +1301,13 @@ const Approval = () => {
                       </Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="Booking Reference No./ BL No." name="booking_ref_no" rules={[{ required: isStage2 && isCS, message: "Required" }]}><Input placeholder="Booking Reference No./ BL No." disabled={isBookingSectionLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: isStage2 && isCS, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
+                      <Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={isBookingFieldLocked} /></Form.Item>
                     </Col>
                     <Col xs={24} md={6}>
                       <Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item>
@@ -1338,7 +1340,7 @@ const Approval = () => {
                                 </Form.Item>
                               </Col>
                               <Col xs={24} md={6} style={isCrossTrade ? { display: "none" } : undefined}>
-                                <Form.Item label="Load List Req?" name="is_load_list_required">
+                                <Form.Item label={`${loadListLabel} Req?`} name="is_load_list_required">
                                   <Radio.Group buttonStyle="solid" disabled={isRequirementSelectorLocked}>
                                     <Radio.Button value={true}>Yes</Radio.Button>
                                     <Radio.Button value={false}>No</Radio.Button>
@@ -1393,7 +1395,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Release Order"
-                            disabled={true}
+                            disabled={!isCS && !isCNF}
                             restrictionMessage={releaseOrderRestrictionMessage}
                             isMasterMode={isMasterMode}
                             user={user}
@@ -1521,11 +1523,11 @@ const Approval = () => {
                     <Col xs={24} md={6}>
                       <Form.Item
                         className={Styles.formLabel}
-                        label={<span>Load List{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
-                        rules={currentStage === "4" && !hideOtherTeamSectionsForSales ? [{ required: true, message: "Load List is required at Stage 4" }] : []}
+                        label={<span>{loadListLabel}{currentStage === "4" && <span style={{ color: "#ff4d4f" }}>*</span>}</span>}
+                        rules={currentStage === "4" && !hideOtherTeamSectionsForSales ? [{ required: true, message: `${loadListLabel} is required at Stage 4` }] : []}
                       >
                         <DocUploadField
-                          label="Load List"
+                          label={loadListLabel}
                           files={loadListFiles}
                           setFiles={setLoadListFiles}
                           color="gold"
@@ -1538,7 +1540,7 @@ const Approval = () => {
                             isCNFUploadLocked
                               ? null
                               : !isLLReq && currentStage !== "4"
-                                ? "Load List upload is disabled until the requirement is turned on."
+                                ? `${loadListLabel} upload is disabled until the requirement is turned on.`
                                 : currentStage === "2" && isCNF
                                   ? "Disabled until Sales & HOD approval is completed."
                                   : isLiner && jobData?.is_hod_approved && !isCNF
@@ -1652,8 +1654,8 @@ const Approval = () => {
                     )}
                     {!isLiner && (isMasterMode || hblFlag) && (
                       <Col xs={24} md={8}>
-                        <Form.Item className={Styles.formLabel} label="HBL">
-                          <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
+                        <Form.Item className={Styles.formLabel} label={hblLabel}>
+                          <DocUploadField label={hblLabel} files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={true} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} />
                         </Form.Item>
                       </Col>
                     )}

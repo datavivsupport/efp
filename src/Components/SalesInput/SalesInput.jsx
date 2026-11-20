@@ -1233,7 +1233,7 @@ const SalesInput = () => {
                       color={workflowStatus.is_cnf_loadlist_uploaded ? "#52c41a" : (workflowStatus.is_hod_approved && workflowStatus.is_cs_updated ? "#faad14" : "#bfbfbf")}
                       fontSize={24}
                     />
-                    <Typography.Text strong>CNF Load List</Typography.Text>
+                    <Typography.Text strong>{isLiner ? "Customer Load List" : "CNF Load List"}</Typography.Text>
                     <Typography.Text type="secondary">
                       {workflowStatus.is_cnf_loadlist_uploaded ? "Uploaded" : (
                         workflowStatus.is_hod_approved && workflowStatus.is_cs_updated ? "Ready to Upload" : "Blocked"
@@ -1619,7 +1619,7 @@ const SalesInput = () => {
                       className={Styles.formLabel}
                       label="Haulier Code"
                       name="haulier_code"
-                      rules={[{ required: !isOthers, message: "Required" }]}
+                      rules={[{ required: !isOthers && !isLiner, message: "Required" }]}
                     >
                       <Input placeholder="Enter Code" disabled={isReadOnly} />
                     </Form.Item>
@@ -1647,7 +1647,7 @@ const SalesInput = () => {
                           }))
                         }
                       >
-                        HBL
+                        {isCrossTrade ? "BL" : "HBL"}
                       </Checkbox>
                     </Col>
                   )}

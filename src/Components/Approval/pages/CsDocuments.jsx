@@ -346,6 +346,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   ].some((files) => (files || []).some((f) => f?.pending));
  
   const isCrossTrade = isCrossTradeJob(initialJob);
+  const hblLabel = isCrossTrade ? "BL" : "HBL"; // Cross Trade calls the HBL "BL" (display only; doc_type stays "HBL")
   // Cross Trade: LPO/Invoice Yes but no CS HOD selected -> the job skipped CS HOD after the
   // booking submit, so a CS HOD user has no action on it (no Save / Submit / Reject).
   const csHodSkipped = isCrossTrade && !initialJob?.cs_hod
@@ -361,6 +362,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const forwardingRejectDisabled = isForwarding && !isAdmin && !forwardingWithCsTeam;
   const FORWARDING_REJECT_HINT = "CS Team has approved the documents. Reject opens again when the job comes back to CS Team.";
   const isLiner = initialJob?.job_type === "LINER";
+  const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
   const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
@@ -802,7 +804,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   {/* Liner: shown only when HBL was ticked at creation */}
-                  {(!isLiner || hblSelected) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
+                  {(!isLiner || hblSelected) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {/* Cross Trade has no transportation: hidden, but kept mounted so the saved value is unchanged */}
@@ -839,16 +841,16 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled={false} variant="outlined" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={!canEditBookingTechnical} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No./ BL No." name="booking_ref_no"><Input placeholder="Booking Reference No./ BL No." disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled={false} format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
                 {!isCrossTrade && !isLiner && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                  <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
                 </Row>}
 
@@ -861,7 +863,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                       toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }}
                       hint={!isROReqCT ? "Not needed." : null}
                     >
-                      <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
+                      <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!isROReqCT} />
                     </DocSlot>
                     <DocSlot
                       label="BOC Attachment"
@@ -883,7 +885,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Row gutter={[16, 16]}>
                     <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={haulageCostFiles} disabled onPreview={(i) => openPreview(haulageCostFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={haulierNoteFiles} disabled onPreview={(i) => openPreview(haulierNoteFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                    <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                    <Col xs={24} md={12}><Form.Item label={loadListLabel} className={Styles.formLabel}><FileChipList files={loadListFiles} disabled onPreview={(i) => openPreview(loadListFiles, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={12}><Form.Item label="ED" className={Styles.formLabel}><DocUploadField ownerOnlyDelete label="ED" files={edFiles} setFiles={setEdFiles} salesInputId={id} docType="ED" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     <Col xs={24} md={24}><Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}><TextArea placeholder="CNF Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
                   </Row>
@@ -898,7 +900,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={12}><Form.Item label={<span>LPO {lpoRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}><DocUploadField label="LPO" files={lpoFiles} setFiles={setLpoFiles} salesInputId={id} docType="LPO" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(lpoFiles)} showStatus disabled={!lpoRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label={<span>INVOICE {invoiceRequired && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}><DocUploadField label="Invoice" files={invoiceFiles} setFiles={setInvoiceFiles} salesInputId={id} docType="Invoice" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus disabled={!invoiceRequired} deleteLocked={lpoInvoiceDeleteLocked} submittedAtStage={4} /></Form.Item></Col>
                   {/* Files uploaded before HBL was gated on the Sales selection stay visible (read-only) */}
-                  {(hblSelected || hblFiles.length > 0) && <Col xs={24} md={12}><Form.Item label="HBL" className={Styles.formLabel} extra={!hblSelected ? NOT_SELECTED_BY_SALES : null}><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} /></Form.Item></Col>}
+                  {(hblSelected || hblFiles.length > 0) && <Col xs={24} md={12}><Form.Item label={hblLabel} className={Styles.formLabel} extra={!hblSelected ? NOT_SELECTED_BY_SALES : null}><DocUploadField label={hblLabel} files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} /></Form.Item></Col>}
                   {csHodRequired && <Col xs={24} md={12}><Form.Item label={<span>CS HOD <span style={{ color: "#ff4d4f" }}>*</span></span>} name="cs_hod" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="HCS" className={Styles.formLabel}><DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="Pre-Alert" className={Styles.formLabel}><DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} /></Form.Item></Col>
@@ -912,7 +914,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {/* Release Order / BOC Yes/No are set on the CS Update stage; shown here for reference */}
                 <Gate title="Release Order & BOC" description="Release Order Yes/No is set on the CS Update stage. BOC can be switched to Yes and uploaded any time.">
                   <DocSlot label="Release Order(s)" rule={isROReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }} hint={!isROReqCT ? "Not needed." : null}>
-                    <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
+                    <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!isROReqCT} />
                   </DocSlot>
                   <DocSlot label="BOC Attachment" rule={isBOCReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" hasFiles={bocFiles.length > 0} /> }} hint={isBOCReqCT && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReqCT ? "Not needed. Choose Yes to upload." : null}>
                     <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
@@ -957,8 +959,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
                   {(hblSelected || hblFiles.length > 0) && (
-                    <DocSlot label="HBL" rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
-                      <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
+                    <DocSlot label={hblLabel} rule={hblSelected ? "optional" : "notRequired"} hint={hblSelected ? null : NOT_SELECTED_BY_SALES}>
+                      <DocUploadField label={hblLabel} files={hblFiles} setFiles={setHblFiles} salesInputId={id} docType="HBL" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hblSelected} />
                     </DocSlot>
                   )}
                   <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>

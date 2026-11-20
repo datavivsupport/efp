@@ -18,7 +18,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { computeUserRoles } from "../utils/roleUtils";
-import { isCnfSubmitted, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
+import { isCnfSubmitted, isWorkflowCompleted, isJobRejected, isCrossTradeJob } from "../utils/jobContextUtils";
 import { canCNFEditPlacement } from "../utils/sectionLocks";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
@@ -232,6 +232,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const isStage2or3  = currentStage === "2" || currentStage === "3";
   const isForwarding = initialJob?.job_type === "FORWARDING";
   const isLiner       = initialJob?.job_type === "LINER";
+  const linerRONotRequired = isLiner && !normalizeBoolean(initialJob?.is_release_order_required);
+  const hblLabel = isCrossTradeJob(initialJob) ? "BL" : "HBL"; // Cross Trade calls the HBL "BL" (display only; doc_type stays "HBL")
   // A completed Liner job (stage 9) has nothing left to reject — CNF keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
   const isAdmin     = user?.is_superuser || user?.roles?.some(r => r.name === "admin");
@@ -269,6 +271,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Liner: Load List is CNF's own Yes/No (defaults to Yes). Optional either way — it never gates Submit.
   const loadListToggle = normalizeBoolean(Form.useWatch("is_load_list_required", form), initialJob?.is_load_list_required ?? true);
+  // Liner: Haulier Note gets the same Yes/No (defaults to Yes); No closes the upload. Never gates Submit.
+  const haulierNoteToggle = normalizeBoolean(Form.useWatch("is_haulier_note_required", form), initialJob?.is_haulier_note_required ?? true);
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
@@ -347,7 +351,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     if (!initialJob) return;
     form.setFieldsValue(mapJobToFormValues(initialJob));
     // The switch needs a real boolean; a Liner job that never answered it starts on Yes.
-    if (isLiner) form.setFieldsValue({ is_load_list_required: normalizeBoolean(initialJob.is_load_list_required, true) });
+    if (isLiner) form.setFieldsValue({
+      is_load_list_required: normalizeBoolean(initialJob.is_load_list_required, true),
+      is_haulier_note_required: normalizeBoolean(initialJob.is_haulier_note_required, true),
+    });
 
     if (initialJob.documents) {
       const docs = partitionDocuments(initialJob.documents, initialJob.name_of_executive);
@@ -663,7 +670,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
           ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
-          ...(isLiner && !mandatoryDocsLocked && { is_load_list_required: loadListToggle }),
+          ...(isLiner && !mandatoryDocsLocked && { is_load_list_required: loadListToggle, is_haulier_note_required: haulierNoteToggle }),
         };
 
         if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
@@ -827,7 +834,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
                 {/* Liner: shown only when HBL was ticked at creation */}
-                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
+                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
                 <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                 <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
@@ -898,17 +905,20 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
 
-                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
+                <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No./ BL No." name="booking_ref_no"><Input placeholder="Booking Reference No./ BL No." disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                 <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><FileChipList files={releaseOrderFiles} onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}>
+                  {/* CNF may upload Release Orders at any stage; on Liner only the Yes/No requirement gates it */}
+                  <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} docType="Release Order" category="booking" user={user} isAdmin={isAdmin} disabled={linerRONotRequired} restrictionMessage={linerRONotRequired ? "Release Order upload is disabled until the requirement is turned on." : null} />
+                </Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
               </Row>
             </div>
@@ -933,19 +943,30 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} />
-                  </Form.Item>
+                  {isLiner ? (
+                    <DocSlot
+                      label="Haulier Note"
+                      rule={haulierNoteToggle ? "optional" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_haulier_note_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={haulierNoteFiles.length > 0} /> }}
+                      hint={!haulierNoteToggle ? "Not needed. Choose Yes to upload." : haulierNoteFiles.length ? "Delete the file first to choose No." : null}
+                    >
+                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!haulierNoteToggle} />
+                    </DocSlot>
+                  ) : (
+                    <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
+                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} />
+                    </Form.Item>
+                  )}
                 </Col>
                 <Col xs={24} md={12}>
                   {isLiner ? (
                     <DocSlot
-                      label="Load List"
+                      label="Customer Load List"
                       rule={loadListToggle ? "optional" : "notRequired"}
                       toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={loadListFiles.length > 0} /> }}
                       hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : null}
                     >
-                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
+                      <DocUploadField label="Customer Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
                     </DocSlot>
                   ) : (
                     <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>

@@ -31,6 +31,8 @@ import {
   PaperClipOutlined,
   EyeOutlined,
   CheckCircleOutlined,
+  EditOutlined,
+  CheckOutlined,
 } from "@ant-design/icons";
 import { Icon } from "@iconify/react";
 import dayjs from "../../../dayjs-config";
@@ -304,6 +306,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
 
 
+  const hblLabel = isCrossTrade ? "BL" : "HBL"; // Cross Trade calls the HBL "BL" (display only; doc_type stays "HBL")
+  const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   const csViewOnly = isLiner && !isMasterMode && (currentStage !== "2" || (!isCrossTrade && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "")));
 
   const {
@@ -364,7 +368,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
-  const releaseOrderDisabled = baseLocked || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
+  // Release Order: CS may upload at any stage/status — only the Yes/No requirement (Liner / Cross Trade) gates it
+  const releaseOrderDisabled = (isCS ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) return isLiner ? "CNF is allowed to upload it" : null;
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";
@@ -388,6 +393,29 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const transportationFlag = normalizeBoolean(transportationFlagForm, jobData?.transportation);
 
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
+  // Liner: CS may add extra container rows and edit saved ones. Rows CS adds are editable straight away;
+  // saved rows (they carry an id) are read-only until CS clicks Edit on that row. Changes persist on Save/Approve.
+  const canAddContainerRows = isLiner && isSalesSectionLocked && !baseLocked;
+  const [editingContainerIds, setEditingContainerIds] = useState(() => new Set());
+  const containerRowId = (name) => form.getFieldValue(["containerRows", name, "id"]);
+  const isContainerRowLocked = (name) => {
+    if (!isSalesSectionLocked) return false;
+    if (!canAddContainerRows) return true;
+    const rowId = containerRowId(name);
+    return !!rowId && !editingContainerIds.has(rowId);
+  };
+  const setContainerRowEditing = (rowId, editing) =>
+    setEditingContainerIds((prev) => {
+      const next = new Set(prev);
+      if (editing) next.add(rowId); else next.delete(rowId);
+      return next;
+    });
+  const finishContainerRowEdit = async (name) => {
+    try {
+      await form.validateFields([["containerRows", name, "equipment_type"]]);
+      setContainerRowEditing(containerRowId(name), false);
+    } catch { /* keep the row open so the error stays visible */ }
+  };
   const showPlacement = transportationFlag || isMasterMode;
   // Placement Details stays open to CS until Sales HOD approves — see sectionLocks.js
   const canEditPlacement = csViewOnly
@@ -704,17 +732,30 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 <Form.List name="containerRows">
                   {(fields, { add, remove }) => (
                     <>
-                      {fields.map(({ key, name, ...rest }) => (
+                      {fields.map(({ key, name, ...rest }) => {
+                        const rowLocked = isContainerRowLocked(name);
+                        return (
                         <Row gutter={16} key={key} align="middle">
-                          <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type" rules={[{ required: true }]}><EquipmentTypeSelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled={isSalesSectionLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled={isSalesSectionLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                          <Col xs={24} md={1}><Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || isSalesSectionLocked} icon={<DeleteOutlined />} onClick={() => remove(name)} /></Col>
-                          <Col xs={24} md={1}>{!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}</Col>
+                          <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type" rules={[{ required: true }]}><EquipmentTypeSelect disabled={rowLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={rowLocked} /></Form.Item></Col>
+                          <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled={rowLocked} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled={rowLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled={rowLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                          <Col xs={24} md={1}><Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || rowLocked || (isSalesSectionLocked && !!containerRowId(name))} icon={<DeleteOutlined />} onClick={() => remove(name)} /></Col>
+                          <Col xs={24} md={1}>
+                            {!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}
+                            {canAddContainerRows && !!containerRowId(name) && (
+                              editingContainerIds.has(containerRowId(name))
+                                ? <Button type="primary" title="Done" style={{ marginTop: "1rem" }} icon={<CheckOutlined />} onClick={() => finishContainerRowEdit(name)} />
+                                : <Button title="Edit" style={{ marginTop: "1rem" }} icon={<EditOutlined />} onClick={() => setContainerRowEditing(containerRowId(name), true)} />
+                            )}
+                          </Col>
                         </Row>
-                      ))}
+                        );
+                      })}
+                      {canAddContainerRows && (
+                        <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} style={{ marginBottom: 8 }}>Add</Button>
+                      )}
                     </>
                   )}
                 </Form.List>
@@ -767,7 +808,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>
                 <Row gutter={16}>
-                  {!isLiner && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
+                  {!isLiner && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {/* Cross Trade has no transportation: hidden, but kept mounted so the saved value is unchanged */}
@@ -813,12 +854,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage" rules={[{ required: true, message: "Required" }]}><Input placeholder="Booking Voyage" disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta" rules={[{ required: true, message: "Required" }]}><DatePicker format="DD-MM-YYYY" style={{ width: "100%" }} disabled={isBookingSectionLocked} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item label="Release ETA" name="vsl_initial_eta" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><DatePicker style={{ width: '100%' }} disabled={isBookingSectionLocked} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item label="Latest ETA" name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: false, message: "Required" }]}><DatePicker style={{ width: '100%' }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel} rules={[{ required: true, message: "Required" }]}><DatePicker style={{ width: '100%' }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta" className={Styles.formLabel} rules={[{ required: false, message: "Required" }]}><DatePicker style={{ width: '100%' }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item label="ETD" name="vsl_etd" className={Styles.formLabel}><DatePicker style={{ width: '100%' }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item label="POD ETA" name="pod_eta" className={Styles.formLabel} rules={[{ required: false, message: "Required" }]}><DatePicker style={{ width: '100%' }} disabled={false} format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no" rules={[{ required: true, message: "Required" }]}><Input placeholder="Booking Reference No." disabled={isBookingSectionLocked} /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime" rules={[{ required: true, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date" rules={[{ required: true, message: "Required" }]}><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No./ BL No." name="booking_ref_no" rules={[{ required: true, message: "Required" }]}><Input placeholder="Booking Reference No./ BL No." disabled={isBookingSectionLocked} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={false} /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea className={Styles.noResize} autoSize={{ minRows: 1 }} disabled={isBookingSectionLocked} /></Form.Item></Col>
 
                   {/* Workflow Configuration — Cross Trade and Liner both use the Gate/DocSlot UI
@@ -837,7 +878,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         </div>
                         <Row gutter={16}>
                           {!isLiner && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Payment Req?" name="is_payment_processing_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>}
-                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Req?" name="is_load_list_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
+                          <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={`${loadListLabel} Req?`} name="is_load_list_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                           <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Haulier Note Req?" name="is_haulier_note_required" valuePropName="checked"><Switch checkedChildren="Yes" unCheckedChildren="No" disabled={isRequirementSelectorLocked} /></Form.Item></Col>
                         </Row>
                       </div>
@@ -887,7 +928,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     </Row>
                     <Row gutter={16}>
                       <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ED"><DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} category="financial" docType="ED" disabled={isEDUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
-                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List"><DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="booking" docType="Load List" disabled={!isLLReq || !jobData?.is_hod_approved || isCNFUploadLocked} restrictionMessage={isCNFUploadLocked ? null : !isLLReq ? "Load List upload is disabled until the requirement is turned on." : isLiner && jobData?.is_hod_approved ? "CNF is allowed to upload it" : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={loadListLabel}><DocUploadField label={loadListLabel} files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} category="booking" docType="Load List" disabled={!isLLReq || !jobData?.is_hod_approved || isCNFUploadLocked} restrictionMessage={isCNFUploadLocked ? null : !isLLReq ? "Load List upload is disabled until the requirement is turned on." : isLiner && jobData?.is_hod_approved ? "CNF is allowed to upload it" : null} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
                       <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="CNF Remarks" name="cnf_remarks"><TextArea disabled={isCNFUploadLocked} autoSize={{ minRows: 2 }} /></Form.Item></Col>
@@ -970,9 +1011,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 {/* HBL / HCS can only be uploaded when the Sales Executive ticked them; HBL is hidden
                     when not ticked unless files were already uploaded */}
                 {(hblFlag || hblFiles.length > 0) && (
-                  <DocSlot label="HBL" rule={hblFlag ? undefined : "notRequired"}>
+                  <DocSlot label={hblLabel} rule={hblFlag ? undefined : "notRequired"}>
                     {(showDocumentUploads || showROBOCForCS)
-                      ? <DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                      ? <DocUploadField label={hblLabel} files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={baseLocked || !hblFlag} restrictionMessage={hblFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                       : <FileChipList files={hblFiles} disabled onPreview={(i) => openPreview(hblFiles, i)} user={user} isAdmin={isAdmin} />}
                   </DocSlot>
                 )}
@@ -997,7 +1038,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     </>
                   )}
                   {!isLiner && (isMasterMode || hblFlag) && (
-                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="HBL"><DocUploadField label="HBL" files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
+                    <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label={hblLabel}><DocUploadField label={hblLabel} files={hblFiles} setFiles={setHblFiles} color="blue" onPreview={openPreview} salesInputId={id} category="financial" docType="HBL" disabled={isCSUploadLocked} user={user} isAdmin={isAdmin} isMasterMode={isMasterMode} /></Form.Item></Col>
                   )}
                   {!isLiner && (
                     <Col xs={24} md={8}><Form.Item className={Styles.formLabel} label="CS HOD" name="cs_hod" rules={[{ required: needsLpoInvoice, message: "Required" }]}><Select placeholder="Select CS HOD" allowClear showSearch optionFilterProp="label" options={csHodOptions} optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} disabled={isCSUploadLocked || isMasterMode} /></Form.Item></Col>

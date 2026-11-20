@@ -262,7 +262,9 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   // (same Cross Trade Documents section, read-only). Display only — Approve / Save
   // don't read any of it, so their payloads are unchanged.
   const isCrossTrade = isCrossTradeJob(initialJob);
+  const hblLabel = isCrossTrade ? "BL" : "HBL"; // Cross Trade calls the HBL "BL" (display only; doc_type stays "HBL")
   const isLiner = initialJob?.job_type === "LINER";
+  const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   // No transportation → CNF has no part in the job, so its card would only be empty boxes.
   // Still shown if CNF content was filed anyway, so nothing real is hidden.
   const hasCnfContent =
@@ -585,7 +587,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   {/* Liner: shown only when HBL was ticked at creation */}
-                  {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HBL</span></Checkbox></Form.Item></Col>}
+                  {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
                   <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
                   <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {!isCrossTrade && <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>}
@@ -620,10 +622,10 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Voyage" name="booking_voyage"><Input placeholder="Booking Voyage" disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Vessel ETA Date" name="vessel_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Release ETA" name="vsl_initial_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Latest ETA" name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label={isLiner ? "Actual ETA" : "Latest ETA"} name="vsl_latest_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="ETD" name="vsl_etd"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="POD ETA" name="pod_eta"><DatePicker placeholder="DD-MM-YYYY" style={{ width: "100%" }} disabled format="DD-MM-YYYY" /></Form.Item></Col>
-                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No." name="booking_ref_no"><Input placeholder="Booking Reference No." disabled variant="filled" /></Form.Item></Col>
+                  <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Booking Reference No./ BL No." name="booking_ref_no"><Input placeholder="Booking Reference No./ BL No." disabled variant="filled" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Load List Cut-Off Date & Time" name="ll_cut_off_datetime"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="SI Cut-Off Date & Time" name="si_cut_off_date"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime style={{ width: "100%" }} disabled format="DD-MM-YYYY HH:mm" /></Form.Item></Col>
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
@@ -641,7 +643,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                 <Row gutter={[16, 16]}>
                   <Col xs={24} md={12}><Form.Item label="Haulage Cost Sheet" className={Styles.formLabel}><FileChipList files={docs?.haulageCostFiles || []} onPreview={(i) => openPreview(docs?.haulageCostFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="Haulier Note" className={Styles.formLabel}><FileChipList files={docs?.haulierNoteFiles || []} onPreview={(i) => openPreview(docs?.haulierNoteFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item label="Load List" className={Styles.formLabel}><FileChipList files={docs?.loadListFiles || []} onPreview={(i) => openPreview(docs?.loadListFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label={loadListLabel} className={Styles.formLabel}><FileChipList files={docs?.loadListFiles || []} onPreview={(i) => openPreview(docs?.loadListFiles || [], i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
                   <Col xs={24} md={12}>
                     <Form.Item label="ED" className={Styles.formLabel}>
                       {(docs?.edFiles || []).length === 0 ? (
@@ -671,7 +673,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     : <span className={Styles.roEmpty}>CS HOD approval not required.</span>)}
                   {ctSlot("Pre-Alert", ctPreAlert, ctList("preAlertFiles"))}
                   {/* HBL / HCS are only uploaded when the Sales Executive ticked them */}
-                  <DocSlot label="HBL" rule={normalizeBoolean(initialJob?.hbl) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.hbl) ? null : "Not selected by Sales Executive."}>{ctList("hblFiles")}</DocSlot>
+                  <DocSlot label={hblLabel} rule={normalizeBoolean(initialJob?.hbl) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.hbl) ? null : "Not selected by Sales Executive."}>{ctList("hblFiles")}</DocSlot>
                   <DocSlot label="HCS" rule={normalizeBoolean(initialJob?.fac) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.fac) ? null : "Not selected by Sales Executive."}>{ctList("hcsFiles")}</DocSlot>
                 </Gate>
               </CrossTradeDocuments>
