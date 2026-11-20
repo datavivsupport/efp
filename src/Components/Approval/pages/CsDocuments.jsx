@@ -346,6 +346,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   ].some((files) => (files || []).some((f) => f?.pending));
  
   const isCrossTrade = isCrossTradeJob(initialJob);
+  // Forwarding: Reject is always shown. It is enabled while the job is with CS Team for LPO /
+  // Invoice (stage 4 — first pass, or sent back by CS HOD / Accounts) and disabled once CS
+  // approves (stage 5+, with CS HOD / Accounts) until it comes back to CS. CS's approve at
+  // stage 4 always moves the job to stage 5. Mirrors liner/forwarding.py cs_team_reject_blocked.
+  const isForwarding = String(initialJob?.job_type || "").replace(/[_-]/g, " ").trim().toUpperCase() === "FORWARDING";
+  const forwardingWithCsTeam = currentStage === "4";
+  const forwardingRejectDisabled = isForwarding && !isAdmin && !forwardingWithCsTeam;
+  const FORWARDING_REJECT_HINT = "CS Team has approved the documents. Reject opens again when the job comes back to CS Team.";
   const isLiner = initialJob?.job_type === "LINER";
   // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
@@ -546,6 +554,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       return;
     }
     if (action === "Rejected") {
+      if (forwardingRejectDisabled) { message.warning(FORWARDING_REJECT_HINT); return; }
       // Show rejection modal instead of directly rejecting
       setRejectionModalVisible(true);
       setRejectionRemarks("");
@@ -1074,17 +1083,19 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   >
                     Submit Documents & Approve
                   </Button>
-                  <Button
-                    danger
-                    size="large"
-                    onClick={() => handleAction("Rejected")}
-                    icon={<Icon icon="mdi:close-circle" />}
-                    loading={rejectionLoading}
-                    disabled={isDocumentUploading || rejectionLoading}
-                    style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
-                  >
-                    Reject
-                  </Button>
+                  <ScrollSafeTooltip title={forwardingRejectDisabled ? FORWARDING_REJECT_HINT : null}>
+                    <Button
+                      danger
+                      size="large"
+                      onClick={() => handleAction("Rejected")}
+                      icon={<Icon icon="mdi:close-circle" />}
+                      loading={rejectionLoading}
+                      disabled={forwardingRejectDisabled || isDocumentUploading || rejectionLoading}
+                      style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
+                    >
+                      Reject
+                    </Button>
+                  </ScrollSafeTooltip>
                 </>
               )}
               <Button
