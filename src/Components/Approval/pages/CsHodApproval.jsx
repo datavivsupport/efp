@@ -663,7 +663,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   {ctSlot("Release Order(s)", ctRO, ctList("releaseOrderFiles"))}
                   {ctSlot("BOC Attachment", ctBOC, ctList("bocFiles"))}
                 </Gate>
-                <Gate title="LPO, Invoice & CS HOD" description="CS HOD approval is required when LPO or Invoice is required (or uploaded), and not needed when both are No.">
+                <Gate title="LPO, Invoice & CS HOD" description="CS HOD is optional. Select one if LPO or Invoice needs approval; leave it blank to skip CS HOD approval.">
                   {ctSlot("LPO", ctLPO, ctList("lpoFiles", { additionalFiles: getAdditionalDocs(ctFiles("lpoFiles")), showStatus: true }))}
                   {ctSlot("Invoice", ctInvoice, ctList("invoiceFiles", { additionalFiles: getAdditionalDocs(ctFiles("invoiceFiles")), showStatus: true }))}
                   {ctSlot("CS HOD Approval", ctCsHod, ctCsHod

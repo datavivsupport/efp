@@ -359,6 +359,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
  
   const csHodForcedCT = isLpoReqCT || isInvoiceReqCT || lpoFiles.length > 0 || invoiceFiles.length > 0;
   const csHodRequiredCT = csHodForcedCT;
+  const csHodSelectedCT = !!Form.useWatch("cs_hod", form);
   // A Yes can't be switched back to No while that document still has files — delete them first.
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
@@ -499,7 +500,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   // with CS HOD = No no CS HOD is sent, as on the CS Documents stage.
   const withCrossTradeCsHod = (payload, values) => (isCrossTrade ? {
     ...payload,
-    is_cs_hod_required: csHodRequiredCT,
+    // CS HOD is optional: only required (and sent) when one was actually chosen
+    is_cs_hod_required: csHodRequiredCT && !!values.cs_hod,
     cs_hod: csHodRequiredCT && values.cs_hod ? String(values.cs_hod) : null,
     is_pre_alert_required: isPreAlertReqCT,
   } : payload);
@@ -920,7 +922,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                     : <FileChipList files={bocFiles} disabled onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
               </Gate>
-              <Gate title="LPO, Invoice & CS HOD" description="CS HOD approval is required when LPO or Invoice is required (or uploaded), and not needed when both are No.">
+              <Gate title="LPO, Invoice & CS HOD" description="CS HOD is optional. Select one if LPO or Invoice needs approval; leave it blank to skip CS HOD approval.">
                 <DocSlot
                   label="LPO"
                   rule={isLpoReqCT ? "required" : "notRequired"}
@@ -943,10 +945,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </DocSlot>
                 <DocSlot
                   label="CS HOD Approval"
-                  rule={csHodRequiredCT ? "required" : "notRequired"}
-                  toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequiredCT} /> }}
+                  rule={csHodRequiredCT ? "optional" : "notRequired"}
+                  toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequiredCT && csHodSelectedCT} /> }}
                   hint={csHodRequiredCT
-                    ? (isLpoReqCT || isInvoiceReqCT ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
+                    ? "Optional — select a CS HOD only if approval is needed."
                     : "Not required — LPO and Invoice are both No."}
                 >
                   {csHodRequiredCT && (

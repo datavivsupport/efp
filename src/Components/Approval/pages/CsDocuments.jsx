@@ -246,7 +246,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
 
-  const { isAdmin, isCS } = computeUserRoles(user);
+  const { isAdmin, isCS, isCSHOD } = computeUserRoles(user);
   const currentStage = String(initialJob?.current_stage || "4");
   const canEditBookingTechnical = isAdmin && isCS;
   const canEditBocAttachment = isCS;
@@ -346,6 +346,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   ].some((files) => (files || []).some((f) => f?.pending));
  
   const isCrossTrade = isCrossTradeJob(initialJob);
+  // Cross Trade: LPO/Invoice Yes but no CS HOD selected -> the job skipped CS HOD after the
+  // booking submit, so a CS HOD user has no action on it (no Save / Submit / Reject).
+  const csHodSkipped = isCrossTrade && !initialJob?.cs_hod
+    && (initialJob?.is_lpo_required || initialJob?.is_invoice_required)
+    && !["1", "2", "3", "4"].includes(currentStage);
+  const hideCsHodActions = csHodSkipped && isCSHOD && !isAdmin;
   // Forwarding: Reject is always shown. It is enabled while the job is with CS Team for LPO /
   // Invoice (stage 4 — first pass, or sent back by CS HOD / Accounts) and disabled once CS
   // approves (stage 5+, with CS HOD / Accounts) until it comes back to CS. CS's approve at
@@ -369,6 +375,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const invoiceRequired = (!isCrossTrade && !isLiner) || invoiceToggle;
 
   const csHodRequired = (isCrossTrade || isLiner) ? csHodForced : true;
+  // Cross Trade: CS HOD is optional. The selector shows when LPO/Invoice is involved, but the job only
+  // goes to CS HOD approval if one is actually chosen; left blank, that step is skipped.
+  const csHodWatched = Form.useWatch("cs_hod", form);
+  const csHodFlag = isCrossTrade ? csHodForced && !!csHodWatched : csHodForced;
  
   const isROReqCT = normalizeBoolean(initialJob?.is_release_order_required);
  
@@ -381,8 +391,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
   useEffect(() => {
-    if (isCrossTrade || isLiner) form.setFieldsValue({ is_cs_hod_required: csHodForced });
-  }, [isCrossTrade, isLiner, csHodForced, form]);
+    if (isCrossTrade || isLiner) form.setFieldsValue({ is_cs_hod_required: csHodFlag });
+  }, [isCrossTrade, isLiner, csHodFlag, form]);
 
   useEffect(() => {
     if (isLiner && !csHodForced) form.setFieldsValue({ cs_hod: null });
@@ -538,13 +548,13 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const crossTradeRequirementFlags = () => (isCrossTrade ? {
     is_lpo_required: lpoToggle,
     is_invoice_required: invoiceToggle,
-    is_cs_hod_required: csHodForced,
+    is_cs_hod_required: csHodFlag,
     is_pre_alert_required: preAlertToggle,
     is_boc_required: isBOCReqCT,
   } : isLiner ? {
     is_lpo_required: lpoToggle,
     is_invoice_required: invoiceToggle,
-    is_cs_hod_required: csHodForced,
+    is_cs_hod_required: csHodFlag,
     is_pre_alert_required: preAlertToggle,
   } : {});
 
@@ -571,9 +581,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const missing = [];
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
-      if (csHodRequired && !csHodValue) missing.push("CS HOD");
- 
-      if (isCrossTrade && preAlertToggle && !preAlertFiles.length) missing.push("Pre-Alert");
+      if (csHodRequired && !csHodValue && !isCrossTrade) missing.push("CS HOD");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
 
@@ -910,7 +918,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
                   </DocSlot>
                 </Gate>
-                <Gate title="LPO, Invoice & CS HOD" description="CS HOD approval is required when LPO or Invoice is required (or uploaded), and not needed when both are No.">
+                <Gate title="LPO, Invoice & CS HOD" description="CS HOD is optional. Select one if LPO or Invoice needs approval; leave it blank to skip CS HOD approval.">
                   <DocSlot
                     label="LPO"
                     rule={lpoRequired ? "required" : "notRequired"}
@@ -931,21 +939,20 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   </DocSlot>
                   <DocSlot
                     label="CS HOD Approval"
-                    rule={csHodRequired ? "required" : "notRequired"}
-                    toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequired} /> }}
+                    rule={csHodRequired ? (isCrossTrade ? "optional" : "required") : "notRequired"}
+                    toggle={{ label: "Required?", node: <RequirementSwitch value={isCrossTrade ? csHodFlag : csHodRequired} /> }}
                     hint={csHodRequired
-                      ? (lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
+                      ? (isCrossTrade ? "Optional — select a CS HOD only if approval is needed." : lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
                       : "Not required — LPO and Invoice are both No."}
                   >
                     {csHodRequired
-                      ? <Form.Item name="cs_hod" rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
+                      ? <Form.Item name="cs_hod" rules={[{ required: !isCrossTrade, message: "Required" }]}><Select placeholder="Select CS HOD (optional)" allowClear options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
                       : <Typography.Text type="secondary" style={{ fontSize: 13 }}>CS HOD approval skipped.</Typography.Text>}
                   </DocSlot>
                   <DocSlot
                     label="Pre-Alert"
                     toggle={{ label: "Required?", node: <RequirementSwitch name="is_pre_alert_required" hasFiles={preAlertFiles.length > 0} /> }}
-                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Must be uploaded before you submit."}
-                    warn={preAlertToggle && !preAlertFiles.length}
+                    hint={preAlertToggle && preAlertFiles.length > 0 ? YES_LOCKED_HINT : !preAlertToggle ? "Not needed. Choose Yes to upload." : "Optional — not required before submit."}
                   >
                     <DocUploadField label="Pre-Alert" files={preAlertFiles} setFiles={setPreAlertFiles} salesInputId={id} docType="PRE-ALERT" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!preAlertToggle} />
                   </DocSlot>
@@ -994,14 +1001,14 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     </DocSlot>
                     <DocSlot
                       label="CS HOD Approval"
-                      rule={csHodRequired ? "required" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch value={csHodRequired} /> }}
+                      rule={csHodRequired ? (isCrossTrade ? "optional" : "required") : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch value={isCrossTrade ? csHodFlag : csHodRequired} /> }}
                       hint={csHodRequired
-                        ? (lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
+                        ? (isCrossTrade ? "Optional — select a CS HOD only if approval is needed." : lpoToggle || invoiceToggle ? "Required because LPO or Invoice is required." : "Required because an LPO or Invoice is uploaded.")
                         : "Not required — LPO and Invoice are both No."}
                     >
                       {csHodRequired
-                        ? <Form.Item name="cs_hod" rules={[{ required: true, message: "Required" }]}><Select placeholder="Select CS HOD" options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
+                        ? <Form.Item name="cs_hod" rules={[{ required: !isCrossTrade, message: "Required" }]}><Select placeholder="Select CS HOD (optional)" allowClear options={csHodOptions} showSearch optionFilterProp="label" optionRender={renderUserOption} labelRender={renderUserLabel(csHodOptions)} /></Form.Item>
                         : <Typography.Text type="secondary" style={{ fontSize: 13 }}>CS HOD approval skipped.</Typography.Text>}
                     </DocSlot>
                   </Gate>
@@ -1060,7 +1067,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
             {/* ACTION BUTTONS (BOTTOM CENTER) */}
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: 16, width: '100%', paddingBottom: '40px', flexWrap: 'wrap' }}>
-              <Button
+              {!hideCsHodActions && <Button
                 size="large"
                 onClick={handleSave}
                 icon={<Icon icon="mdi:content-save-outline" />}
@@ -1069,8 +1076,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}
               >
                 Save
-              </Button>
-              {!isLinerCompleted && (
+              </Button>}
+              {!isLinerCompleted && !hideCsHodActions && (
                 <>
                   <Button
                     type="primary"
