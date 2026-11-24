@@ -260,6 +260,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [bankSlips, setBankSlips] = useState([]);
   const [releaseOrderFiles, setReleaseOrderFiles] = useState([]);
   const [bocFiles, setBocFiles] = useState([]);
+  const [agentDebitCreditFiles, setAgentDebitCreditFiles] = useState([]);
   const [haulageCostFiles, setHaulageCostFiles] = useState([]);
   const [loadListFiles, setLoadListFiles] = useState([]);
   const [lpoFiles, setLpoFiles] = useState([]);
@@ -334,6 +335,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const isHNReqForm = Form.useWatch("is_haulier_note_required", form);
   const isROReqForm = Form.useWatch("is_release_order_required", form);
   const isBOCReqForm = Form.useWatch("is_boc_required", form);
+  const isAgentDebitCreditReqForm = Form.useWatch("is_agent_debit_credit_required", form);
   const isLNR_LPO_ReqForm = Form.useWatch("is_lpo_invoice_required", form);
   const isPaymentReqForm = Form.useWatch("is_payment_processing_required", form);
   const facFlagForm = Form.useWatch("fac", form);
@@ -360,7 +362,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const isInvoiceReqCT = normalizeBoolean(Form.useWatch("is_invoice_required", form), jobData?.is_invoice_required ?? true);
  
   const isPreAlertReqCT = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), jobData?.is_pre_alert_required ?? true);
- 
+  const isAgentDebitCreditReqCT = normalizeBoolean(isAgentDebitCreditReqForm, jobData?.is_agent_debit_credit_required ?? false);
+
   const csHodForcedCT = isLpoReqCT || isInvoiceReqCT || lpoFiles.length > 0 || invoiceFiles.length > 0;
   const csHodRequiredCT = csHodForcedCT;
   const csHodSelectedCT = !!Form.useWatch("cs_hod", form);
@@ -462,6 +465,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
         is_invoice_required: normalizeBoolean(jobData.is_invoice_required, true),
         is_pre_alert_required: normalizeBoolean(jobData.is_pre_alert_required, true),
         is_boc_required: normalizeBoolean(jobData.is_boc_required, true),
+        is_agent_debit_credit_required: normalizeBoolean(jobData.is_agent_debit_credit_required, false),
       });
     }
     if (jobData.documents) {
@@ -479,6 +483,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setBankSlips(buckets.bankSlips);
       setHblFiles(buckets.hblFiles);
       setPreAlertFiles(buckets.preAlertFiles);
+      setAgentDebitCreditFiles(buckets.agentDebitCreditFiles || []);
       setAttachments(buckets.attachments);
       setExecutiveDocuments(buckets.executiveDocuments || []);
       setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
@@ -532,6 +537,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     is_cs_hod_required: csHodRequiredCT && !!values.cs_hod,
     cs_hod: csHodRequiredCT && values.cs_hod ? String(values.cs_hod) : null,
     is_pre_alert_required: isPreAlertReqCT,
+    is_agent_debit_credit_required: isAgentDebitCreditReqCT,
   } : payload);
 
   const handleAction = async (actionType, remarksVal = "") => {
@@ -635,7 +641,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const handleReset = () => {
     form.resetFields(); setOtherCharges([]); setRemarks([]); setAttachments([]); setBankSlips([]);
     setReleaseOrderFiles([]); setBocFiles([]); setHaulageCostFiles([]); setHaulierNoteFiles([]);
-    setLoadListFiles([]); setLpoFiles([]); setInvoiceFiles([]); setHcsFiles([]); setPreAlertFiles([]);
+    setLoadListFiles([]); setLpoFiles([]); setInvoiceFiles([]); setHcsFiles([]); setPreAlertFiles([]); setAgentDebitCreditFiles([]);
     message.info("Form reset");
   };
 
@@ -735,27 +741,28 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       {fields.map(({ key, name, ...rest }) => {
                         const rowLocked = isContainerRowLocked(name);
                         return (
-                        <Row gutter={16} key={key} align="middle">
+                        <Row gutter={16} key={key}>
                           <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type" rules={[{ required: true }]}><EquipmentTypeSelect disabled={rowLocked} /></Form.Item></Col>
-                          <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={rowLocked} /></Form.Item></Col>
+                          <Col xs={24} md={3}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={rowLocked} /></Form.Item></Col>
                           <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled={rowLocked} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled={rowLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
                           <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled={rowLocked} autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                          <Col xs={24} md={1}><Button danger style={{ marginTop: "1rem" }} disabled={fields.length <= 1 || rowLocked || (isSalesSectionLocked && !!containerRowId(name))} icon={<DeleteOutlined />} onClick={() => remove(name)} /></Col>
-                          <Col xs={24} md={1}>
-                            {!isSalesSectionLocked && <Button type="primary" style={{ marginTop: "1rem" }} icon={<PlusOutlined />} onClick={() => add()} />}
-                            {canAddContainerRows && !!containerRowId(name) && (
-                              editingContainerIds.has(containerRowId(name))
-                                ? <Button type="primary" title="Done" style={{ marginTop: "1rem" }} icon={<CheckOutlined />} onClick={() => finishContainerRowEdit(name)} />
-                                : <Button title="Edit" style={{ marginTop: "1rem" }} icon={<EditOutlined />} onClick={() => setContainerRowEditing(containerRowId(name), true)} />
-                            )}
+                          <Col xs={24} md={3}>
+                            <Form.Item className={Styles.formLabel} label=" ">
+                              <Space size={8} wrap={false}>
+                                <Button danger title="Delete" disabled={fields.length <= 1 || rowLocked || (isSalesSectionLocked && !!containerRowId(name))} icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                                {(!isSalesSectionLocked || canAddContainerRows) && <Button type="primary" title="Add" icon={<PlusOutlined />} onClick={() => add()} />}
+                                {canAddContainerRows && !!containerRowId(name) && (
+                                  editingContainerIds.has(containerRowId(name))
+                                    ? <Button type="primary" title="Done" icon={<CheckOutlined />} onClick={() => finishContainerRowEdit(name)} />
+                                    : <Button title="Edit" icon={<EditOutlined />} onClick={() => setContainerRowEditing(containerRowId(name), true)} />
+                                )}
+                              </Space>
+                            </Form.Item>
                           </Col>
                         </Row>
                         );
                       })}
-                      {canAddContainerRows && (
-                        <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} style={{ marginBottom: 8 }}>Add</Button>
-                      )}
                     </>
                   )}
                 </Form.List>
@@ -1021,6 +1028,15 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   {(showDocumentUploads || showROBOCForCS)
                     ? <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} color="magenta" onPreview={openPreview} salesInputId={id} category="financial" docType="HCS" disabled={baseLocked || !facFlag} restrictionMessage={facFlag ? null : NOT_SELECTED_BY_SALES} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
                     : <FileChipList files={hcsFiles} disabled onPreview={(i) => openPreview(hcsFiles, i)} user={user} isAdmin={isAdmin} />}
+                </DocSlot>
+                <DocSlot
+                  label="Agent Debit/Credit Note"
+                  rule={isAgentDebitCreditReqCT ? undefined : "notRequired"}
+                  toggle={{ label: "Required?", node: <RequirementSwitch name="is_agent_debit_credit_required" disabled={isRequirementSelectorLocked} hasFiles={agentDebitCreditFiles.length > 0} /> }}
+                >
+                  {(showDocumentUploads || showROBOCForCS)
+                    ? <DocUploadField label="Agent Debit/Credit Note" files={agentDebitCreditFiles} setFiles={setAgentDebitCreditFiles} color="orange" onPreview={openPreview} salesInputId={id} category="financial" docType="Agent Debit/Credit Note" disabled={baseLocked || !isAgentDebitCreditReqCT} isMasterMode={isMasterMode} user={user} isAdmin={isAdmin} />
+                    : <FileChipList files={agentDebitCreditFiles} disabled onPreview={(i) => openPreview(agentDebitCreditFiles, i)} user={user} isAdmin={isAdmin} />}
                 </DocSlot>
               </Gate>
             </CrossTradeDocuments>

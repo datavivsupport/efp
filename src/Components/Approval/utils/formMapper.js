@@ -27,6 +27,7 @@ export const mapJobToFormValues = (data) => ({
   is_invoice_required:    data.is_invoice_required,
   is_release_order_required:       data.is_release_order_required,
   is_boc_required:                 data.is_boc_required,
+  is_agent_debit_credit_required:  data.is_agent_debit_credit_required,
   is_payment_processing_required:  data.is_payment_processing_required,
   is_load_list_required:           data.is_load_list_required,
   is_haulier_note_required:        data.is_haulier_note_required,
@@ -124,6 +125,7 @@ const DOC_TYPE_CONFIG = [
   { key: "bankSlips",         types: ["BANK SLIP"],                                  keywords: ["BANK_SLIP", "BANK SLIP"] },
   { key: "hblFiles",          types: ["HBL"],                                        keywords: ["HBL"] },
   { key: "preAlertFiles",     types: ["PRE-ALERT", "PRE ALERT", "PREALERT"],         keywords: ["PRE_ALERT", "PREALERT"] },
+  { key: "agentDebitCreditFiles", types: ["AGENT DEBIT/CREDIT NOTE", "AGENT DEBIT CREDIT NOTE", "AGENT DEBIT/CREDIT", "AGENT D/C NOTE"], keywords: ["AGENT_DEBIT", "AGENTDEBIT"] },
   { key: "otherDocsFiles",    types: ["OTHER DOCS", "OTHER"],                        keywords: ["OTHER_DOCS", "OTHER"] },
   { key: "salesExecutiveFiles", types: ["SALES EXECUTIVE"],                           keywords: [] },
 ];

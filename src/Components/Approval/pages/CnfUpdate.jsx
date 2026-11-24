@@ -273,6 +273,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const loadListToggle = normalizeBoolean(Form.useWatch("is_load_list_required", form), initialJob?.is_load_list_required ?? true);
   // Liner: Haulier Note gets the same Yes/No (defaults to Yes); No closes the upload. Never gates Submit.
   const haulierNoteToggle = normalizeBoolean(Form.useWatch("is_haulier_note_required", form), initialJob?.is_haulier_note_required ?? true);
+  // Liner: ED Yes/No — null means not yet selected; upload is hidden until a selection is made.
+  const edRaw = Form.useWatch("ed_selection", form);
+  const edToggle = typeof edRaw === "boolean" ? edRaw : initialJob?.ed_selection === "YES";
   // Unchanged for admins; CNF may change only Date/Time, Pickup/Delivery and
   // Remarks, which go out with the Submit/Approve payload and with Save.
   const placementLocked = !canUpdateTransportation && !canEditPlacement;
@@ -354,6 +357,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     if (isLiner) form.setFieldsValue({
       is_load_list_required: normalizeBoolean(initialJob.is_load_list_required, true),
       is_haulier_note_required: normalizeBoolean(initialJob.is_haulier_note_required, true),
+      ed_selection: initialJob.ed_selection === "YES",
     });
 
     if (initialJob.documents) {
@@ -670,7 +674,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           approval_details: { id: ad.id, cnf_remarks: values.cnf_remarks },
           ...(isForwarding && currentStage === "3" && { haulier_code: values.haulier_code }),
           ...(canEditPlacement && { transportation_rows: buildTransportationRows(values) }),
-          ...(isLiner && !mandatoryDocsLocked && { is_load_list_required: loadListToggle, is_haulier_note_required: haulierNoteToggle }),
+          ...(isLiner && !mandatoryDocsLocked && {
+            is_load_list_required: loadListToggle,
+            is_haulier_note_required: haulierNoteToggle,
+            ed_selection: edToggle ? "YES" : "NO",
+          }),
         };
 
         if (CNF_POST_CS_HOD_STAGES.includes(currentStage)) {
@@ -948,7 +956,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       label="Haulier Note"
                       rule={haulierNoteToggle ? "optional" : "notRequired"}
                       toggle={{ label: "Required?", node: <RequirementSwitch name="is_haulier_note_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={haulierNoteFiles.length > 0} /> }}
-                      hint={!haulierNoteToggle ? "Not needed. Choose Yes to upload." : haulierNoteFiles.length ? "Delete the file first to choose No." : null}
+                      hint={!haulierNoteToggle ? "Not needed. Choose Yes to upload." : haulierNoteFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
                       <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!haulierNoteToggle} />
                     </DocSlot>
@@ -964,7 +972,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       label="Customer Load List"
                       rule={loadListToggle ? "optional" : "notRequired"}
                       toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={loadListFiles.length > 0} /> }}
-                      hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : null}
+                      hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
                       <DocUploadField label="Customer Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} disabled={!loadListToggle} />
                     </DocSlot>
@@ -975,9 +983,20 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   )}
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item label="ED" className={Styles.formLabel}>
-                    <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} />
-                  </Form.Item>
+                  {isLiner ? (
+                    <DocSlot
+                      label="ED"
+                      rule={edToggle ? "optional" : "notRequired"}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="ed_selection" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={edFiles.length > 0} /> }}
+                      hint={!edToggle ? "Not needed. Choose Yes to upload." : edFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
+                    >
+                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} disabled={!edToggle} />
+                    </DocSlot>
+                  ) : (
+                    <Form.Item label="ED" className={Styles.formLabel}>
+                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} />
+                    </Form.Item>
+                  )}
                 </Col>
                 <Col xs={24}>
                   <Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}>
