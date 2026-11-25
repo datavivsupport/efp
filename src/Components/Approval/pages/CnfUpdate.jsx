@@ -1167,7 +1167,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           <MultiFileViewer
             files={previewUrls.map((item) => {
               const url = typeof item === "string" ? item : item.url || item.file_url || "";
-              const name = decodeURIComponent(url.split("/").pop() || "unknown");
+              const name = item?.name || item?.file_name || decodeURIComponent(url.split("/").pop() || "unknown");
               return { url, name, mimeType: item?.mimeType };
             })}
             defaultIndex={previewIndex || 0}

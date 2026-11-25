@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { getFileCategory } from "../../utils/fileUtils";
+import { getFileCategory, resolveFileType } from "../../utils/fileUtils";
 import UniversalEmbedViewer from "./UniversalEmbedViewer";
 
 const FILE_ICONS = {
@@ -41,8 +41,8 @@ const MultiFileViewer = ({ files = [], urls = [], defaultIndex = 0 }) => {
 
   const selectedFile = effectiveFiles[selectedIndex];
   const fileUrl = getFileUrl(selectedFile);
-  const fileMime = selectedFile?.mimeType || selectedFile?.type || "";
   const fileName = getFileName(selectedFile);
+  const fileMime = resolveFileType(selectedFile?.mimeType || selectedFile?.type, fileName, fileUrl);
 
   return (
     <div style={{ display: "flex", height: "85vh", background: "#111", overflow: "hidden" }}>
@@ -61,10 +61,9 @@ const MultiFileViewer = ({ files = [], urls = [], defaultIndex = 0 }) => {
         {effectiveFiles.map((f, i) => {
           const active = i === selectedIndex;
           const url = getFileUrl(f);
-          const mime = f?.mimeType || f?.type || "";
-          const cat = getFileCategory(mime || url);
-          const emoji = FILE_ICONS[cat] || "📎";
           const name = getFileName(f);
+          const cat = getFileCategory(resolveFileType(f?.mimeType || f?.type, name, url));
+          const emoji = FILE_ICONS[cat] || "📎";
 
           return (
             <div
