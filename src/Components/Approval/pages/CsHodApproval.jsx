@@ -284,6 +284,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const ctLPO = normalizeBoolean(initialJob?.is_lpo_required, true);
   const ctInvoice = normalizeBoolean(initialJob?.is_invoice_required, true);
   const ctPreAlert = ctFlag(initialJob?.is_pre_alert_required, ctFiles("preAlertFiles"), false);
+  const ctAgentDebitCredit = ctFlag(initialJob?.is_agent_debit_credit_required, ctFiles("agentDebitCreditFiles"), false);
   const ctCsHod = ctLPO || ctInvoice || ctFiles("lpoFiles").length > 0 || ctFiles("invoiceFiles").length > 0;
   const ctNone = <span className={Styles.roEmpty}>No document uploaded.</span>;
   const ctList = (k, extra = {}) => ctFiles(k).length
@@ -672,6 +673,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     ? <Form.Item name="cs_hod" noStyle><Select disabled options={csHodOptions} labelRender={renderUserLabel(csHodOptions)} placeholder="—" variant="filled" style={{ width: "100%" }} /></Form.Item>
                     : <span className={Styles.roEmpty}>CS HOD approval not required.</span>)}
                   {ctSlot("Pre-Alert", ctPreAlert, ctList("preAlertFiles"))}
+                  {ctSlot("Agent Debit/Credit Note", ctAgentDebitCredit, ctList("agentDebitCreditFiles"))}
                   {/* HBL / HCS are only uploaded when the Sales Executive ticked them */}
                   <DocSlot label={hblLabel} rule={normalizeBoolean(initialJob?.hbl) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.hbl) ? null : "Not selected by Sales Executive."}>{ctList("hblFiles")}</DocSlot>
                   <DocSlot label="HCS" rule={normalizeBoolean(initialJob?.fac) ? undefined : "notRequired"} hint={normalizeBoolean(initialJob?.fac) ? null : "Not selected by Sales Executive."}>{ctList("hcsFiles")}</DocSlot>

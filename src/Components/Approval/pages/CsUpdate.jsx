@@ -564,6 +564,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
           isCrossTrade, isReleaseOrderRequired: isROReq,
         });
         if (validationError) { message.error(validationError); setLoading(false); actionThrottleRef.current = false; return; }
+        if (isCrossTrade && isAgentDebitCreditReqCT && !agentDebitCreditFiles.length) {
+          message.error("Please upload required document: Agent Debit/Credit Note"); setLoading(false); actionThrottleRef.current = false; return;
+        }
       }
       if (!(await confirmAction(actionType === "Submit" ? "submit" : "verify", setLoading))) return;
 
@@ -1031,7 +1034,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </DocSlot>
                 <DocSlot
                   label="Agent Debit/Credit Note"
-                  rule={isAgentDebitCreditReqCT ? undefined : "notRequired"}
+                  rule={isAgentDebitCreditReqCT ? "required" : "notRequired"}
+                  hint={!isAgentDebitCreditReqCT ? "Not needed. Choose Yes to upload." : !agentDebitCreditFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
+                  warn={isAgentDebitCreditReqCT && !agentDebitCreditFiles.length}
                   toggle={{ label: "Required?", node: <RequirementSwitch name="is_agent_debit_credit_required" disabled={isRequirementSelectorLocked} hasFiles={agentDebitCreditFiles.length > 0} /> }}
                 >
                   {(showDocumentUploads || showROBOCForCS)

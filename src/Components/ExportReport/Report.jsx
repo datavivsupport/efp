@@ -31,6 +31,8 @@ const EMPTY_FILTERS = {
   vslVoy: "",
   loadList: "",
   equipmentType: "",
+  roAttached: "",
+  roRemarks: "",
 };
 
 const STATUS_OPTIONS = [
@@ -70,6 +72,7 @@ const TEXT_SEARCH_PARAMS = [
   ["bookingVessel", "booking_vessel"],
   ["bookingVoyage", "booking_voyage"],
   ["vslVoy", "vsl_voy"],
+  ["roRemarks", "ro_remarks"],
 ];
 
 const buildFilterParams = (f = {}) => {
@@ -86,6 +89,7 @@ const buildFilterParams = (f = {}) => {
   if (f.status) params.status = f.status;
   if (f.loadList) params.load_list = f.loadList;
   if (f.equipmentType) params.equipment_type = f.equipmentType;
+  if (f.roAttached) params.ro_attached = f.roAttached;
   return params;
 };
 
@@ -139,12 +143,15 @@ const ExportReport = () => {
   const [vslVoy, setVslVoy] = useState("");
   const [loadList, setLoadList] = useState("");
   const [equipmentType, setEquipmentType] = useState("");
+  const [roAttached, setRoAttached] = useState("");
+  const [roRemarks, setRoRemarks] = useState("");
 
   const currentFilters = {
     jobType, exportNumber, createdAtFrom, createdAtTo,
     createdBy, carrier, customerName, afsysJobNo,
     bookingRef, salesHod, pol, fpod, pendingWith,
     status, bookingVessel, bookingVoyage, vslVoy, loadList, equipmentType,
+    roAttached, roRemarks,
   };
 
   const debounceRef = useRef(null);
@@ -224,6 +231,8 @@ const ExportReport = () => {
     setVslVoy("");
     setLoadList("");
     setEquipmentType("");
+    setRoAttached("");
+    setRoRemarks("");
   };
 
   const labelCls = "block text-xs font-semibold text-gray-600 mb-1";
@@ -300,7 +309,7 @@ const ExportReport = () => {
                     const extra = [jobType, exportNumber, createdAtFrom, createdAtTo,
                       createdBy, carrier, customerName, afsysJobNo, bookingRef,
                       salesHod, pol, fpod, status, bookingVessel, bookingVoyage, vslVoy,
-                      loadList, equipmentType,
+                      loadList, equipmentType, roAttached, roRemarks,
                       pendingWith !== "all" ? pendingWith : ""].filter(Boolean).length;
                     return extra > 0 ? (
                       <span style={{
@@ -323,7 +332,8 @@ const ExportReport = () => {
 
                 {(jobType || exportNumber || createdAtFrom || createdAtTo || createdBy || carrier ||
                   customerName || afsysJobNo || bookingRef || salesHod || pol || fpod || pendingWith !== "all" ||
-                  status || bookingVessel || bookingVoyage || vslVoy || loadList || equipmentType) && (
+                  status || bookingVessel || bookingVoyage || vslVoy || loadList || equipmentType ||
+                  roAttached || roRemarks) && (
                     <Button onClick={handleClear} icon={<Icon icon="pajamas:clear" width={14} />}>
                       Clear
                     </Button>
@@ -420,6 +430,19 @@ const ExportReport = () => {
                   />
                 </div>
 
+                <div className={colCls}>
+                  <label className={labelCls}>RO Attached (Y/N)</label>
+                  <Select value={roAttached || undefined} onChange={(v) => setRoAttached(v || "")} placeholder="All" allowClear style={{ width: "100%" }}>
+                    <Option value="true">Yes</Option>
+                    <Option value="false">No</Option>
+                  </Select>
+                </div>
+
+                <div className={colCls}>
+                  <label className={labelCls}>RO Remarks</label>
+                  <SearchInput value={roRemarks} onChange={setRoRemarks} />
+                </div>
+
               </div>
             </div>
           )}
@@ -456,6 +479,15 @@ const ExportReport = () => {
                   render: (v) => <Tag color={v ? "green" : "default"}>{v ? "Y" : "N"}</Tag>,
                 },
                 { title: "Equipment Type", dataIndex: "equipment_type", key: "equipment_type", render: (v) => v || "-" },
+                {
+                  title: "RO Attached (Y/N)", dataIndex: "is_ro_attached", key: "is_ro_attached",
+                  render: (v) => v ? <Tag color={v === "Yes" ? "green" : "default"}>{v === "Yes" ? "Y" : "N"}</Tag> : "-",
+                },
+                {
+                  title: "RO Remarks", dataIndex: "ro_remarks", key: "ro_remarks", width: 260,
+                  // The table sizes columns to their content; a fixed-width box makes long remarks wrap instead.
+                  render: (v) => <div style={{ width: 240, whiteSpace: "normal", wordBreak: "break-word" }}>{v || "-"}</div>,
+                },
               ]}
               data={data}
               loading={loading}

@@ -174,6 +174,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
   const [hblFiles, setHblFiles] = useState([]);
   const [hcsFiles, setHcsFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
+  const [agentDebitCreditFiles, setAgentDebitCreditFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
@@ -197,6 +198,7 @@ const AccountsUpdatePage = ({ jobData, user }) => {
       setHblFiles(docs.hblFiles);
       setHcsFiles(docs.hcsFiles);
       setPreAlertFiles(docs.preAlertFiles);
+      setAgentDebitCreditFiles(docs.agentDebitCreditFiles || []);
       setEdFiles(docs.edFiles);
       setExecutiveDocuments(docs.executiveDocuments || []);
       setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
@@ -404,6 +406,12 @@ const AccountsUpdatePage = ({ jobData, user }) => {
                 <Typography.Text strong>Invoice</Typography.Text>
                 <div style={{ marginTop: 8 }}><FileListView files={invoiceFiles} onPreview={openPreview} additionalFiles={getAdditionalDocs(invoiceFiles)} showStatus /></div>
               </Col>
+              {(String(jobData?.job_type || "").toUpperCase() === "CROSS TRADE" || agentDebitCreditFiles.length > 0) && (
+                <Col span={12}>
+                  <Typography.Text strong>Agent Debit/Credit Note</Typography.Text>
+                  <div style={{ marginTop: 8 }}><FileListView files={agentDebitCreditFiles} onPreview={openPreview} /></div>
+                </Col>
+              )}
             </Row>
           </div>
 

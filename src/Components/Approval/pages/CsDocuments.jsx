@@ -7,7 +7,7 @@ import {
 import { Icon } from "@iconify/react";
 import {
   CheckCircleOutlined, EyeOutlined,
-  UploadOutlined, DeleteOutlined, PlusOutlined
+  UploadOutlined, DeleteOutlined, PlusOutlined, EditOutlined, CheckOutlined
 } from "@ant-design/icons";
 import dayjs from "../../../dayjs-config";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
@@ -289,6 +289,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const [hcsFiles, setHcsFiles] = useState([]);
   const [edFiles, setEdFiles] = useState([]);
   const [preAlertFiles, setPreAlertFiles] = useState([]);
+  const [agentDebitCreditFiles, setAgentDebitCreditFiles] = useState([]);
   const [releaseOrderFiles, setReleaseOrderFiles] = useState([]);
   const [bocFiles, setBocFiles] = useState([]);
   const [haulageCostFiles, setHaulageCostFiles] = useState([]);
@@ -365,11 +366,44 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
+  // Liner: CS may add container rows and edit saved ones at every stage it works on, same
+  // controls as CS Update. Saved rows (they carry an id) stay read-only until Edit is clicked.
+  const canEditContainerRows = isLiner && (isCS || isAdmin) && initialJob?.status !== "REJECTED-CLOSED";
+  const [editingContainerIds, setEditingContainerIds] = useState(() => new Set());
+  const containerRowId = (name) => form.getFieldValue(["containerRows", name, "id"]);
+  const isContainerRowLocked = (name) => {
+    if (!canEditContainerRows) return true;
+    const rowId = containerRowId(name);
+    return !!rowId && !editingContainerIds.has(rowId);
+  };
+  const setContainerRowEditing = (rowId, editing) =>
+    setEditingContainerIds((prev) => {
+      const next = new Set(prev);
+      if (editing) next.add(rowId); else next.delete(rowId);
+      return next;
+    });
+  const finishContainerRowEdit = async (name) => {
+    try {
+      await form.validateFields([["containerRows", name, "equipment_type"]]);
+      setContainerRowEditing(containerRowId(name), false);
+    } catch { /* keep the row open so the error stays visible */ }
+  };
+  const containerRowsPayload = () => (canEditContainerRows ? {
+    container_details: (form.getFieldValue("containerRows") || []).map((r) => ({
+      id: r.id,
+      equipment_type: r.equipment_type,
+      quantity: parseInt(r.quantity) || 0,
+      category: r.category,
+      quote: r.quote,
+      cost: r.cost,
+    })),
+  } : {});
   const csPreSubmitDelete = isLiner && isCS && !isAdmin && !isCsDocumentsSubmitted(initialJob);
   const lpoToggle = normalizeBoolean(Form.useWatch("is_lpo_required", form), initialJob?.is_lpo_required ?? true);
   const invoiceToggle = normalizeBoolean(Form.useWatch("is_invoice_required", form), initialJob?.is_invoice_required ?? true);
  
   const preAlertToggle = normalizeBoolean(Form.useWatch("is_pre_alert_required", form), initialJob?.is_pre_alert_required ?? true);
+  const agentDebitCreditToggle = normalizeBoolean(Form.useWatch("is_agent_debit_credit_required", form), initialJob?.is_agent_debit_credit_required ?? false);
   const hasLpoOrInvoice = lpoFiles.length > 0 || invoiceFiles.length > 0;
  
   const csHodForced = lpoToggle || invoiceToggle || hasLpoOrInvoice;
@@ -424,6 +458,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     setHcsFiles(docs.hcsFiles);
     setEdFiles(docs.edFiles);
     setPreAlertFiles(docs.preAlertFiles);
+    setAgentDebitCreditFiles(docs.agentDebitCreditFiles || []);
     setReleaseOrderFiles(docs.releaseOrderFiles);
     setBocFiles(docs.bocFiles);
     setHaulageCostFiles(docs.haulageCostFiles);
@@ -449,6 +484,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       is_invoice_required: normalizeBoolean(initialJob.is_invoice_required, true),
       is_pre_alert_required: normalizeBoolean(initialJob.is_pre_alert_required, true),
       is_boc_required: normalizeBoolean(initialJob.is_boc_required, true),
+      is_agent_debit_credit_required: normalizeBoolean(initialJob.is_agent_debit_credit_required, false),
       is_cs_hod_required: normalizeBoolean(initialJob.is_cs_hod_required, true),
       vessel_eta: ad.vessel_eta ? dayjs(ad.vessel_eta) : null,
       vsl_initial_eta: initialJob.vsl_initial_eta ? dayjs(initialJob.vsl_initial_eta) : null,
@@ -498,24 +534,27 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const resolve = async (arr) =>
       Promise.all((arr || []).map((f) => (f?.pending ? uploadOne(f) : Promise.resolve(f))));
 
-    const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newHcs, newEd, newPreAlert, newHN, newAttach] =
+    const [newRO, newBoc, newHaulage, newLL, newLpo, newInv, newHbl, newHcs, newEd, newPreAlert, newHN, newAttach, newAgentDC] =
       await Promise.all([
         resolve(releaseOrderFiles), resolve(bocFiles), resolve(haulageCostFiles),
         resolve(loadListFiles), resolve(lpoFiles), resolve(invoiceFiles),
         resolve(hblFiles), resolve(hcsFiles), resolve(edFiles),
         resolve(preAlertFiles), resolve(haulierNoteFiles), resolve(attachments),
+        resolve(agentDebitCreditFiles),
       ]);
 
     setReleaseOrderFiles(newRO); setBocFiles(newBoc); setHaulageCostFiles(newHaulage);
     setLoadListFiles(newLL); setLpoFiles(newLpo); setInvoiceFiles(newInv);
     setHblFiles(newHbl); setHcsFiles(newHcs); setEdFiles(newEd);
     setPreAlertFiles(newPreAlert); setHaulierNoteFiles(newHN); setAttachments(newAttach);
+    setAgentDebitCreditFiles(newAgentDC);
 
     return {
       releaseOrderFiles: newRO, bocFiles: newBoc, haulageCostFiles: newHaulage,
       loadListFiles: newLL, lpoFiles: newLpo, invoiceFiles: newInv,
       hblFiles: newHbl, hcsFiles: newHcs, edFiles: newEd,
-      preAlertFiles: newPreAlert, haulierNoteFiles: newHN, attachments: newAttach
+      preAlertFiles: newPreAlert, haulierNoteFiles: newHN, attachments: newAttach,
+      agentDebitCreditFiles: newAgentDC,
     };
   };
 
@@ -534,6 +573,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       ...dm(d.hcsFiles, "HCS", "financial"),
       ...dm(d.edFiles, "ED", "financial"),
       ...dm(d.preAlertFiles, "PRE-ALERT", "financial"),
+      ...dm(d.agentDebitCreditFiles, "Agent Debit/Credit Note", "financial"),
       ...(d.attachments || []).map(f => ({ ...f, doc_type: f.doc_type || "Attachment", category: f.category || "attachments" })),
     ];
   };
@@ -553,6 +593,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     is_cs_hod_required: csHodFlag,
     is_pre_alert_required: preAlertToggle,
     is_boc_required: isBOCReqCT,
+    is_agent_debit_credit_required: agentDebitCreditToggle,
   } : isLiner ? {
     is_lpo_required: lpoToggle,
     is_invoice_required: invoiceToggle,
@@ -584,6 +625,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (lpoRequired && !lpoFiles.length) missing.push("LPO");
       if (invoiceRequired && !invoiceFiles.length) missing.push("Invoice");
       if (csHodRequired && !csHodValue && !isCrossTrade) missing.push("CS HOD");
+      if (isCrossTrade && agentDebitCreditToggle && !agentDebitCreditFiles.length) missing.push("Agent Debit/Credit Note");
       if (missing.length) { message.error(`Required: ${missing.join(", ")}`); return; }
     }
 
@@ -603,6 +645,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         remarks: approvalRemarks,
         cs_hod: csHodValue ? String(csHodValue) : null,
         ...crossTradeRequirementFlags(),
+        ...containerRowsPayload(),
         general_remarks: remarks,
         booking_vessel: form.getFieldValue("booking_vessel"),
         booking_voyage: form.getFieldValue("booking_voyage"),
@@ -689,6 +732,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         general_remarks: remarks,
         cs_hod: csHodRequired && form.getFieldValue("cs_hod") ? String(form.getFieldValue("cs_hod")) : null,
         ...crossTradeRequirementFlags(),
+        ...containerRowsPayload(),
         booking_vessel: form.getFieldValue("booking_vessel"),
         booking_voyage: form.getFieldValue("booking_voyage"),
         booking_ref_no: form.getFieldValue("booking_ref_no"),
@@ -717,6 +761,17 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
         message.success(res.data.message || "Saved successfully");
         setSavedDocIds(new Set(Object.values(resolved).flat().map((f) => f?.id).filter(Boolean)));
+        if (canEditContainerRows) {
+          // New rows need their saved ids, or the next Save would create them a second time.
+          try {
+            const fresh = await apiClient.get(`/liner/sales-input/${id}/`);
+            const rows = fresh.data?.data?.container_details;
+            if (Array.isArray(rows)) {
+              form.setFieldsValue({ containerRows: mapJobToFormValues(fresh.data.data).containerRows });
+              setEditingContainerIds(new Set());
+            }
+          } catch { /* the rows were saved; a reload of the page shows them */ }
+        }
       } else {
         message.error(res.data.message || "Save failed");
       }
@@ -760,15 +815,34 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
             <Card className={Styles.card} bordered title={<CardHeader icon="octicon:container-24" title="CONTAINER DETAILS" open={open.container} onToggle={() => toggle("container")} />}>
               <div style={{ display: open.container ? "block" : "none" }}>
                 <Form.List name="containerRows">
-                  {(fields) => fields.map(({ key, name, ...rest }) => (
-                    <Row gutter={16} key={key} align="middle">
-                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type"><EquipmentTypeSelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled variant="filled" /></Form.Item></Col>
-                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled /></Form.Item></Col>
-                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
-                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled variant="filled" autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                  {(fields, { add, remove }) => fields.map(({ key, name, ...rest }) => {
+                    const rowLocked = isContainerRowLocked(name);
+                    const rowId = containerRowId(name);
+                    return (
+                    <Row gutter={16} key={key}>
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "equipment_type"]} label="Equipment Type" rules={canEditContainerRows ? [{ required: true }] : undefined}><EquipmentTypeSelect disabled={rowLocked} /></Form.Item></Col>
+                      <Col xs={24} md={canEditContainerRows ? 3 : 4}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quantity"]} label="Qty"><Input placeholder="Qty" disabled={rowLocked} variant={rowLocked ? "filled" : "outlined"} /></Form.Item></Col>
+                      <Col xs={24} md={5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "category"]} label="Category"><CategorySelect disabled={rowLocked} /></Form.Item></Col>
+                      <Col xs={24} md={canEditContainerRows ? 4 : 5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "quote"]} label="Quote"><TextArea placeholder="Quote" disabled={rowLocked} variant={rowLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                      <Col xs={24} md={canEditContainerRows ? 4 : 5}><Form.Item className={Styles.formLabel} {...rest} name={[name, "cost"]} label="Cost"><TextArea placeholder="Cost" disabled={rowLocked} variant={rowLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
+                      {canEditContainerRows && (
+                        <Col xs={24} md={3}>
+                          <Form.Item className={Styles.formLabel} label=" ">
+                            <Space size={8} wrap={false}>
+                              <Button danger title="Delete" disabled={fields.length <= 1 || !!rowId} icon={<DeleteOutlined />} onClick={() => remove(name)} />
+                              <Button type="primary" title="Add" icon={<PlusOutlined />} onClick={() => add()} />
+                              {!!rowId && (
+                                editingContainerIds.has(rowId)
+                                  ? <Button type="primary" title="Done" icon={<CheckOutlined />} onClick={() => finishContainerRowEdit(name)} />
+                                  : <Button title="Edit" icon={<EditOutlined />} onClick={() => setContainerRowEditing(rowId, true)} />
+                              )}
+                            </Space>
+                          </Form.Item>
+                        </Col>
+                      )}
                     </Row>
-                  ))}
+                    );
+                  })}
                 </Form.List>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   <Col xs={24}>
@@ -965,6 +1039,15 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   )}
                   <DocSlot label="HCS" rule={hcsSelected ? "optional" : "notRequired"} hint={hcsSelected ? null : NOT_SELECTED_BY_SALES}>
                     <DocUploadField label="HCS" files={hcsFiles} setFiles={setHcsFiles} salesInputId={id} docType="HCS" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!hcsSelected} />
+                  </DocSlot>
+                  <DocSlot
+                    label="Agent Debit/Credit Note"
+                    rule={agentDebitCreditToggle ? "required" : "notRequired"}
+                    toggle={{ label: "Required?", node: <RequirementSwitch name="is_agent_debit_credit_required" hasFiles={agentDebitCreditFiles.length > 0} /> }}
+                    hint={!agentDebitCreditToggle ? "Not needed. Choose Yes to upload." : !agentDebitCreditFiles.length ? "Must be uploaded before you submit." : YES_LOCKED_HINT}
+                    warn={agentDebitCreditToggle && !agentDebitCreditFiles.length}
+                  >
+                    <DocUploadField label="Agent Debit/Credit Note" files={agentDebitCreditFiles} setFiles={setAgentDebitCreditFiles} salesInputId={id} docType="Agent Debit/Credit Note" category="financial" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!agentDebitCreditToggle} />
                   </DocSlot>
                 </Gate>
               </CrossTradeDocuments>
