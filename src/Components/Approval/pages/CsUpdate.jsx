@@ -398,7 +398,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const toggle = (key) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   // Liner: CS may add extra container rows and edit saved ones. Rows CS adds are editable straight away;
   // saved rows (they carry an id) are read-only until CS clicks Edit on that row. Changes persist on Save/Approve.
-  const canAddContainerRows = isLiner && isSalesSectionLocked && !baseLocked;
+  // CS keeps the rows until it submits the LPO / Invoice (stage 4, CsDocuments) - also after its
+  // Verify & Confirm (stage 2, waiting for Sales HOD) and while the job is with CNF (stage 3), when
+  // this page is otherwise view-only. From stage 5 on they are read-only (see CsDocuments).
+  const linerContainersOpenAfterVerify = isLiner && csViewOnly && ["2", "3"].includes(currentStage) && !isTerminal;
+  const canAddContainerRows = isLiner && ((isSalesSectionLocked && !baseLocked) || linerContainersOpenAfterVerify);
   const [editingContainerIds, setEditingContainerIds] = useState(() => new Set());
   const containerRowId = (name) => form.getFieldValue(["containerRows", name, "id"]);
   const isContainerRowLocked = (name) => {
@@ -1165,10 +1169,10 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             </div>
           )}
 
-          {/* ════════ AFTER VERIFY & CONFIRM: only Save (Placement Details) and Cancel ════════ */}
+          {/* ════════ AFTER VERIFY & CONFIRM: only Save (Placement Details / Liner containers) and Cancel ════════ */}
           {!isMasterMode && csViewOnly && !isTerminal && (
             <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap", width: "100%", marginTop: "24px", paddingBottom: "40px" }}>
-              {canEditPlacement && showPlacement && (
+              {((canEditPlacement && showPlacement) || linerContainersOpenAfterVerify) && (
                 <Button htmlType="submit" size="large" icon={<Icon icon="mdi:content-save-outline" />} loading={loading} disabled={isDocumentUploading || loading} style={{ borderRadius: 8, height: 48, padding: "0 40px", fontSize: 16, fontWeight: '600' }}>
                   Save
                 </Button>

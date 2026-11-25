@@ -366,9 +366,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
   const loadListLabel = isLiner ? "Customer Load List" : "Load List"; // Liner calls the CNF Load List "Customer Load List" (display only)
   // A completed Liner job (stage 9) has nothing left to approve — CS keeps only Save / Cancel
   const isLinerCompleted = isLiner && (currentStage === "9" || isWorkflowCompleted(initialJob));
-  // Liner: CS may add container rows and edit saved ones at every stage it works on, same
-  // controls as CS Update. Saved rows (they carry an id) stay read-only until Edit is clicked.
-  const canEditContainerRows = isLiner && (isCS || isAdmin) && initialJob?.status !== "REJECTED-CLOSED";
+  // Liner: CS may add container rows and edit saved ones only while the job is at CS level here -
+  // stage 4 (LPO / Invoice), the first pass or sent back by CS HOD / Accounts - until CS submits.
+  // Once it has moved on (CS HOD, Accounts, Pending Docs, Completed) the rows are read-only for CS,
+  // the same as CS Update after Verify & Confirm. Saved rows stay read-only until Edit is clicked.
+  const canEditContainerRows = isLiner && initialJob?.status !== "REJECTED-CLOSED"
+    && (isAdmin || (isCS && currentStage === "4"));
   const [editingContainerIds, setEditingContainerIds] = useState(() => new Set());
   const containerRowId = (name) => form.getFieldValue(["containerRows", name, "id"]);
   const isContainerRowLocked = (name) => {
