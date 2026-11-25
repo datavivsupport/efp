@@ -567,6 +567,9 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
           resolvedDocs,
           { remarks, otherCharges, jobData: initialJob, includeApprovalDetails: true }
         ),
+        // Liner ED Yes/No - buildCommonPayload does not carry it, so without this a Submit
+        // left ed_selection unsaved and the page showed No again on reopening. Same as Save.
+        ...(isLiner && !mandatoryDocsLocked && { ed_selection: edToggle ? "YES" : "NO" }),
         action,
         remarks: approvalRemarks,
       };

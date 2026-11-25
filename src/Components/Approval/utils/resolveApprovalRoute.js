@@ -1,5 +1,5 @@
 import { computeUserRoles } from "./roleUtils";
-import { isCrossTradeJob } from "./jobContextUtils";
+import { isCrossTradeJob, salesReverifyPath } from "./jobContextUtils";
 
 
 export const resolveApprovalRoute = (jobData, user) => {
@@ -14,7 +14,10 @@ export const resolveApprovalRoute = (jobData, user) => {
   }
   
   if (currentStage=="1"){
-    
+      // CS (Liner: or CNF) rejected the job back to its Sales Executive - straight to Sales Input
+      const reverifyPath = salesReverifyPath(jobData, user);
+      if (reverifyPath) return reverifyPath;
+
       if (roles.isAccountsTeam && !isSalesHod) {
     return `/approval/${id}/accounts`;
   }

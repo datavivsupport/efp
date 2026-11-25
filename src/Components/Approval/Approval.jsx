@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
 import { resolveApprovalRoute } from "./utils/resolveApprovalRoute";
-import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks, isJobRejected } from "./utils/jobContextUtils";
+import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks, isJobRejected, salesReverifyPath } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
@@ -435,12 +435,12 @@ const Approval = () => {
 
 
 
-  const redirectToSalesView =
-    (hideOtherTeamSectionsForSales && isJobSalesOwner && jobData?.status === "CS-REJECTED") ||
-    (isLiner && isJobSalesOwner && jobData?.status === "CNF-REJECTED");
+  // Rejected back to its Sales Executive: links normally resolve straight to Sales Input
+  // (resolveApprovalRoute); this catches the ones that only carry the job id - email, notifications.
+  const salesViewPath = salesReverifyPath(jobData, user);
   useEffect(() => {
-    if (redirectToSalesView && id) navigate(`/sales-input?id=${id}&view=1`, { replace: true });
-  }, [redirectToSalesView, id, navigate]);
+    if (salesViewPath) navigate(salesViewPath, { replace: true });
+  }, [salesViewPath, navigate]);
 
   // Reactive visibility using Form.useWatch (handles both initial values and live changes)
   const isLLReqForm = Form.useWatch("is_load_list_required", form);

@@ -24,6 +24,31 @@ export const isSalesOwnerOfJob = (jobData, user) => {
 };
 
 
+/**
+ * A Liner / Cross Trade job CS rejected (Liner: or CNF) is back at stage 1 with its Sales
+ * Executive, who re-verifies and resubmits it, or closes it, on the Sales Input page.
+ */
+export const isRejectedToSalesExecutive = (jobData) => {
+  const status = String(jobData?.status || "").toUpperCase();
+  const jobTypeUpper = String(jobData?.job_type || "").toUpperCase();
+  const isLiner = matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.LINER);
+  if (status === "CS-REJECTED") return isLiner || matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.CROSS_TRADE);
+  if (status === "CNF-REJECTED") return isLiner;
+  return false;
+};
+
+/**
+ * Where that Sales Executive works on such a job - the Sales Input page, opened editable -
+ * or null for anyone else / any other job. Links resolve straight to it (resolveApprovalRoute);
+ * the Approval page forwards there for links that carry only the job id (email, notifications).
+ * The job's chosen CS HOD is never sent there, even when they also match as its sales owner.
+ */
+export const salesReverifyPath = (jobData, user) => {
+  if (!jobData?.id || !isRejectedToSalesExecutive(jobData)) return null;
+  if (String(jobData?.cs_hod ?? "") === String(user?.id ?? "")) return null;
+  return isSalesOwnerOfJob(jobData, user) ? `/sales-input?id=${jobData.id}&view=1` : null;
+};
+
 export const isSalesHodOfJob = (jobData, user) => {
   const fullName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim().toLowerCase();
   return !!fullName && String(jobData?.sales_hod || "").trim().toLowerCase() === fullName;

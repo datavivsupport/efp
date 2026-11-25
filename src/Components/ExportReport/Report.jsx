@@ -8,6 +8,7 @@ import useReportExport from "./useReportExport";
 import { Icon } from "@iconify/react";
 import { resolveApprovalRoute } from "../Approval/utils/resolveApprovalRoute";
 import EquipmentTypeSelect from "../SalesInput/EquipmentType";
+import { ClampedText } from "../ScrollSafeTooltip";
 
 const { Option } = Select;
 
@@ -485,8 +486,11 @@ const ExportReport = () => {
                 },
                 {
                   title: "RO Remarks", dataIndex: "ro_remarks", key: "ro_remarks", width: 260,
-                  // The table sizes columns to their content; a fixed-width box makes long remarks wrap instead.
-                  render: (v) => <div style={{ width: 240, whiteSpace: "normal", wordBreak: "break-word" }}>{v || "-"}</div>,
+                  // The table sizes columns to their content, so the box gets a fixed width. Long remarks
+                  // show 2 lines; the full text is in a tooltip, which opens only when the text is cut off.
+                  render: (v) => (v
+                    ? <ClampedText rows={2} style={{ width: 240 }}>{v}</ClampedText>
+                    : "-"),
                 },
               ]}
               data={data}

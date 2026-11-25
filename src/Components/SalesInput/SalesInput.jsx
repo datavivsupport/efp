@@ -396,6 +396,7 @@ const SalesInput = () => {
   const [instanceStatus, setInstanceStatus] = useState("draft");
   // View mode on a CS-rejected job: its Sales Executive edits the form and resubmits, or rejects it
   const [createdByUser, setCreatedByUser] = useState(null);
+  const [createdByName, setCreatedByName] = useState("");
   const [savedRejectionRemarks, setSavedRejectionRemarks] = useState("");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRemarks, setRejectRemarks] = useState("");
@@ -458,8 +459,10 @@ const SalesInput = () => {
   const isCsRejected =
     (isCrossTrade && instanceStatus === "CS-REJECTED") ||
     (isLiner && (instanceStatus === "CS-REJECTED" || instanceStatus === "CNF-REJECTED"));
+  // Same ownership fields the Approval page checks before sending the user here, so the two
+  // pages never disagree (that would bounce Sales Input -> "Open workflow page" -> back here).
   const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
-    { created_by_user: createdByUser, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
+    { created_by_user: createdByUser, created_by_name: createdByName, approval_history: approvalHistory, name_of_executive: form.getFieldValue("name_of_executive") },
     user,
   );
   // A CS/CNF-rejected job opens editable for its Sales Executive; every other view stays read-only
@@ -608,6 +611,7 @@ const SalesInput = () => {
           setApprovalHistory(data.approval_history || []);
           setInstanceStatus(data.status);
           setCreatedByUser(data.created_by_user ?? null);
+          setCreatedByName(data.created_by_name || "");
           setSavedRejectionRemarks(data.rejection_remarks || "");
 
           // Load documents into state
