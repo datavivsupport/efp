@@ -326,6 +326,8 @@ const Approval = () => {
   const [uploadingDocsCount, setUploadingDocsCount] = useState(0);
   const isDocumentUploading = uploadingDocsCount > 0;
   const [jobData, setJobData] = useState(null);
+  // False until the first job fetch settles - the workflow layout waits for it (see the render)
+  const [jobFetchDone, setJobFetchDone] = useState(false);
   const [open, setOpen] = useState({
     export: true,
     container: true,
@@ -577,10 +579,13 @@ const Approval = () => {
       if (response.data.status === "success") {
         const data = response.data.data;
 
-        // Liner: CS opening /approval?id= directly (notification, report link) lands on their own page
-        const csRoute = data?.job_type?.toUpperCase() === "LINER" && computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null;
-        if (csRoute) {
-          navigate(csRoute, { replace: true });
+        // Leave before anything of this page is drawn when the job belongs elsewhere for this user:
+        //  - rejected back to its Sales Executive -> Sales Input (email / notification links carry only the id)
+        //  - Liner CS opening /approval?id= directly (notification, report link) -> their own page
+        const earlyRoute = salesReverifyPath(data, user)
+          || (data?.job_type?.toUpperCase() === "LINER" && computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null);
+        if (earlyRoute) {
+          navigate(earlyRoute, { replace: true });
           return;
         }
         setJobData(data);
@@ -625,6 +630,7 @@ const Approval = () => {
       console.error(err);
     } finally {
       setLoading(false);
+      setJobFetchDone(true);
     }
   };
 
@@ -842,6 +848,17 @@ const Approval = () => {
   ];
 
   /* RENDER */
+  // Until the job is loaded only a spinner shows: the job may belong on another page for this
+  // user (e.g. a rejected job back with its Sales Executive), so the workflow layout must not
+  // flash first. A failed load falls through to the page as before (with its error message).
+  if (id && !jobData && !jobFetchDone) {
+    return (
+      <div style={{ minHeight: "70vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#eff8ff" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: "10px 20px", backgroundColor: "#eff8ff" }}>
       <UploadActivityContext.Provider
