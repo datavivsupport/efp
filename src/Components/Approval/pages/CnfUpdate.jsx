@@ -883,7 +883,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "category"]} label="Category"><CategorySelect disabled={!canUpdateTransportation} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "placement_time"]} label="Date/Time"><DatePicker placeholder="DD-MM-YYYY HH:mm" showTime format="DD-MM-YYYY HH:mm" style={{ width: "100%" }} disabled={placementLocked} /></Form.Item></Col>
                         <Col xs={24} md={4}><Form.Item {...restField} name={[name, "pickup_location"]} label="Pickup/Delivery"><Input placeholder="Pickup/Delivery" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} /></Form.Item></Col>
-                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} className={Styles.remarksResize} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} rows={1} /></Form.Item></Col>
+                        <Col xs={24} md={canUpdateTransportation ? 3 : 4}><Form.Item {...restField} name={[name, "special_remarks"]} label="Remarks"><TextArea placeholder="Remarks" disabled={placementLocked} variant={placementLocked ? "filled" : "outlined"} autoSize={{ minRows: 1 }} /></Form.Item></Col>
                         {canUpdateTransportation && (
                           <Col xs={24} md={1} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0px' }}>
                             <Button
