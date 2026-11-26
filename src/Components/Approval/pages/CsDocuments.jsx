@@ -22,6 +22,7 @@ import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks"
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
+import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
 import { normalizeBoolean } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -154,6 +155,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.status === "success") {
         const d = res.data.data;
+        addUnsavedUpload(salesInputId, d.id); // read on Liner only: stays deletable across a refresh until Save / Submit
         setFiles((prev) => prev.map((f) => f._tempId === tempId ? {
           id: d.id, name: d.file_name, file_name: d.file_name,
           url: d.file_url, file_url: d.file_url,
@@ -266,7 +268,11 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const idsOf = (list) => list.map((d) => d?.id).filter((docId) => docId != null);
     if (isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)) return new Set(idsOf(docs));
     // Liner: every file already on the job is locked; files uploaded in this visit stay deletable until Save / Submit
-    if (initialJob?.job_type === "LINER") return new Set(idsOf(docs));
+    // (files uploaded in this tab but not yet saved stay out of the set, so a page refresh doesn't lock them)
+    if (initialJob?.job_type === "LINER") {
+      const unsaved = getUnsavedUploadIds(id);
+      return new Set(idsOf(docs).filter((docId) => !unsaved.has(String(docId))));
+    }
     // LPO / Invoice are mandatory: once CS has submitted, every one already on the job stays,
     // additional uploads included — not only the first set isMandatoryDocDeleteLocked covers
     if (lpoInvoiceDeleteLocked) {
@@ -682,7 +688,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
       const endpoint = `/liner/sales-input/${id}/approve/`;
       const res = await apiClient.post(endpoint, payload);
-      if (res.data.status === "success") { message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
+      if (res.data.status === "success") { clearUnsavedUploads(id); message.success(res.data.message || `${action} successfully`); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
@@ -712,6 +718,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
 
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") {
+        clearUnsavedUploads(id);
         message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -769,6 +776,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
         message.success(res.data.message || "Saved successfully");
         setSavedDocIds(new Set(Object.values(resolved).flat().map((f) => f?.id).filter(Boolean)));
+        clearUnsavedUploads(id);
         if (canEditContainerRows) {
           // New rows need their saved ids, or the next Save would create them a second time.
           try {
