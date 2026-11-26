@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, createContext, useContext, useMemo } from "react";
 import { computeUserRoles } from "./utils/roleUtils";
 import { resolveApprovalRoute } from "./utils/resolveApprovalRoute";
-import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks, isJobRejected, salesReverifyPath } from "./utils/jobContextUtils";
+import { computeJobContext, isSalesOwnerOfJob, isSalesHodOfJob, getShipmentRemarks, isJobRejected, salesReverifyPath, isCrossTradeJob } from "./utils/jobContextUtils";
 import { computeSectionLocks } from "./utils/sectionLocks";
 import { computeCanApprove } from "./utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "./utils/formMapper";
@@ -9,6 +9,7 @@ import { normalizeBoolean } from "./utils/formUtils";
 import { buildCommonPayload } from "./utils/payloadBuilders";
 import { validateApprovalAction } from "./utils/approvalValidations";
 import { isWithinUploadLimit } from "./utils/fileSizeLimit";
+import UploadButtonWithLimit from "./components/Common/UploadButtonWithLimit";
 import { deleteDocument } from "../../utils/documentApi";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelector } from "react-redux";
@@ -261,11 +262,13 @@ const DocUploadField = ({
 
   return (
     <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>
-          {files.length === 0 ? `Upload ${label}` : "Add More"}
-        </Button>
-      </Upload>
+      <UploadButtonWithLimit disabled={disabled}>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>
+            {files.length === 0 ? `Upload ${label}` : "Add More"}
+          </Button>
+        </Upload>
+      </UploadButtonWithLimit>
       {disabled && restrictionMessage && (
         <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>
           {restrictionMessage}
@@ -583,12 +586,14 @@ const Approval = () => {
         //  - rejected back to its Sales Executive -> Sales Input (email / notification links carry only the id)
         //  - Liner CS opening /approval?id= directly (notification, report link) -> their own page
         //  - CNF-only user on a Liner / Forwarding job without Transportation -> the view-only CNF page
+        //  - Cross Trade, any role (email links) -> the same page the dashboard opens for them
         const jobType = data?.job_type?.toUpperCase();
         const roles = computeUserRoles(user);
         const cnfWithoutTransport = (jobType === "LINER" || jobType === "FORWARDING")
           && !normalizeBoolean(data?.transportation) && roles.isCNF && !roles.isCS && !roles.isAdmin;
+        const routeLikeDashboard = (jobType === "LINER" && roles.isCS) || cnfWithoutTransport || isCrossTradeJob(data);
         const earlyRoute = salesReverifyPath(data, user)
-          || ((jobType === "LINER" && roles.isCS) || cnfWithoutTransport ? resolveApprovalRoute(data, user) : null);
+          || (routeLikeDashboard ? resolveApprovalRoute(data, user) : null);
         if (earlyRoute) {
           navigate(earlyRoute, { replace: true });
           return;

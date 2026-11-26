@@ -14,6 +14,7 @@ import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
 import ScrollSafeTooltip, { RemarksCell } from "../../ScrollSafeTooltip";
 import ProtectedApprovalRoute from "../ProtectedApprovalRoute";
@@ -111,9 +112,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   return (
     <div>
       <Input type="file" id={`upload-${docType}`} style={{ display: 'none' }} onChange={(e) => handleBeforeUpload(e.target.files[0])} />
-      <Button icon={<UploadOutlined />} size="small" onClick={() => document.getElementById(`upload-${docType}`).click()} disabled={disabled}>
-        {files.length === 0 ? `Upload ${label}` : "Add More"}
-      </Button>
+      <UploadButtonWithLimit disabled={disabled}>
+        <Button icon={<UploadOutlined />} size="small" onClick={() => document.getElementById(`upload-${docType}`).click()} disabled={disabled}>
+          {files.length === 0 ? `Upload ${label}` : "Add More"}
+        </Button>
+      </UploadButtonWithLimit>
       {files.length > 0 && (
         <FileChipList
           files={files}

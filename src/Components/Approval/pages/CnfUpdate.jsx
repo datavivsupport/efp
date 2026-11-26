@@ -27,6 +27,7 @@ import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import { normalizeBoolean } from "../utils/formUtils";
 import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import RejectionReasonBox from "../components/Common/RejectionReasonBox";
+import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
@@ -174,9 +175,11 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
 
   return (
     <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-      </Upload>
+      <UploadButtonWithLimit disabled={disabled}>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+        </Upload>
+      </UploadButtonWithLimit>
       {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
       {files.length > 0 && (
         <FileChipList

@@ -28,6 +28,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs, isMandatoryDocDeleteLocked } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
@@ -189,9 +190,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
 
   return (
     <div>
-      <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
-        <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-      </Upload>
+      <UploadButtonWithLimit disabled={disabled}>
+        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
+          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+        </Upload>
+      </UploadButtonWithLimit>
       {files.length > 0 && (
         <FileChipList
           files={files}

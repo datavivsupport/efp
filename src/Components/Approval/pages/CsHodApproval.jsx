@@ -21,6 +21,7 @@ import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
+import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import { isCrossTradeJob, getShipmentRemarks } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
@@ -145,9 +146,11 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
   return (
     <Spin spinning={uploading} size="small">
       <div>
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
-          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-        </Upload>
+        <UploadButtonWithLimit disabled={disabled}>
+          <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload} disabled={disabled}>
+            <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+          </Upload>
+        </UploadButtonWithLimit>
         {files.length > 0 && (
           <FileChipList
             files={files}

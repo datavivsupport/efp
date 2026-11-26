@@ -44,6 +44,7 @@ import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
+import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
@@ -156,9 +157,11 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
   return (
     <Spin spinning={uploading} size="small">
       <div>
-        <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
-          <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
-        </Upload>
+        <UploadButtonWithLimit disabled={disabled}>
+          <Upload multiple showUploadList={false} beforeUpload={handleBeforeUpload}>
+            <Button size="small" icon={<UploadOutlined />} style={{ fontSize: 12 }} disabled={disabled || uploading}>{files.length === 0 ? `Upload ${label}` : "Add More"}</Button>
+          </Upload>
+        </UploadButtonWithLimit>
         {disabled && restrictionMessage && <Typography.Text type="secondary" style={{ display: "block", marginTop: 4, fontSize: 12 }}>{restrictionMessage}</Typography.Text>}
         {files.length > 0 && (
           <FileChipList
