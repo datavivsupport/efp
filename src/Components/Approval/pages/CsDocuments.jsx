@@ -855,7 +855,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                     {/* Liner: editable for CS while the container rows are */}
                     {canEditContainerRows ? (
                       <Form.Item className={Styles.formLabel} label="Other Charges" name="other_charges_remarks">
-                        <Input.TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} />
+                        {/* opens with the rows' Edit button: locked until a container row is being edited */}
+                        <Input.TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} disabled={editingContainerIds.size === 0} variant={editingContainerIds.size === 0 ? "filled" : "outlined"} />
                       </Form.Item>
                     ) : (
                     <Form.Item className={Styles.formLabel} label="Other Charges">

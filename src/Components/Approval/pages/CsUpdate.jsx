@@ -792,7 +792,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24}>
                     {canCSEditOtherCharges ? (
                       <Form.Item className={Styles.formLabel} label="Other Charges" name="other_charges_remarks">
-                        <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} />
+                        {/* opens with the rows' Edit button: locked until a container row is being edited */}
+                        <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} disabled={editingContainerIds.size === 0} variant={editingContainerIds.size === 0 ? "filled" : "outlined"} />
                       </Form.Item>
                     ) : (
                     <Form.Item className={Styles.formLabel} label="Other Charges">
