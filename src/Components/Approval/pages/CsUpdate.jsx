@@ -43,7 +43,7 @@ import { computeJobContext, isCrossTradeJob, getShipmentRemarks, isJobRejected }
 import { computeSectionLocks, canCSEditPlacement } from "../utils/sectionLocks";
 import { computeCanApprove } from "../utils/canApprove";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
-import { normalizeBoolean } from "../utils/formUtils";
+import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
 import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
@@ -509,6 +509,20 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       setAttachments(buckets.attachments);
       setExecutiveDocuments(buckets.executiveDocuments || []);
       setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
+      // Liner / Cross Trade: a Yes/No slot that already has files opens on Yes (see yesWhereFilesExist)
+      const isLinerJob = jobData.job_type === "LINER";
+      if (isLinerJob || isCrossTradeJob(jobData)) {
+        form.setFieldsValue(yesWhereFilesExist(buckets, {
+          is_release_order_required: "releaseOrderFiles",
+          is_boc_required: "bocFiles",
+          ...(!isLinerJob && {
+            is_lpo_required: "lpoFiles",
+            is_invoice_required: "invoiceFiles",
+            is_pre_alert_required: "preAlertFiles",
+            is_agent_debit_credit_required: "agentDebitCreditFiles",
+          }),
+        }));
+      }
     }
     // Keep backend order as-is
     setApprovalHistory(jobData.approval_history || []);

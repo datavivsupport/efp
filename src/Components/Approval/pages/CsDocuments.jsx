@@ -23,7 +23,7 @@ import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks, isWorkflow
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
-import { normalizeBoolean } from "../utils/formUtils";
+import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs, isMandatoryDocDeleteLocked } from "../utils/additionalDocs";
@@ -513,6 +513,20 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
         return t ? dayjs.tz(`${d} ${t}`, "Asia/Dubai") : dayjs.tz(d, "Asia/Dubai");
       })(),
     });
+
+    // Liner / Cross Trade: a Yes/No slot that already has files opens on Yes (see yesWhereFilesExist)
+    const isLinerJob = initialJob.job_type === "LINER";
+    if (isLinerJob || isCrossTradeJob(initialJob)) {
+      form.setFieldsValue(yesWhereFilesExist(docs, {
+        is_lpo_required: "lpoFiles",
+        is_invoice_required: "invoiceFiles",
+        is_pre_alert_required: "preAlertFiles",
+        ...(!isLinerJob && {
+          is_boc_required: "bocFiles",
+          is_agent_debit_credit_required: "agentDebitCreditFiles",
+        }),
+      }));
+    }
   }, [initialJob, form, ad]);
 
   const openPreview = (filesArray, idx) => {

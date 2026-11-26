@@ -25,7 +25,7 @@ import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
-import { normalizeBoolean } from "../utils/formUtils";
+import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
 import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import RejectionReasonBox from "../components/Common/RejectionReasonBox";
 import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
@@ -399,6 +399,12 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       setAttachments(docs.attachments);
       setExecutiveDocuments(docs.executiveDocuments || []);
       setSalesExecutiveFiles(docs.salesExecutiveFiles || []);
+      // Liner: a Yes/No slot that already has files opens on Yes (see yesWhereFilesExist)
+      if (isLiner) form.setFieldsValue(yesWhereFilesExist(docs, {
+        is_haulier_note_required: "haulierNoteFiles",
+        is_load_list_required: "loadListFiles",
+        ed_selection: "edFiles",
+      }));
     }
 
     // Try to get other_charges from approval_details, then fall back to ad.other_charges or empty array
