@@ -414,6 +414,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   // this page is otherwise view-only. From stage 5 on they are read-only (see CsDocuments).
   const linerContainersOpenAfterVerify = isLiner && csViewOnly && ["2", "3"].includes(currentStage) && !isTerminal;
   const canAddContainerRows = isLiner && ((isSalesSectionLocked && !baseLocked) || linerContainersOpenAfterVerify);
+  // Liner: Other Charges opens to CS together with the container rows (Sales' own chip editor is unchanged)
+  const canCSEditOtherCharges = isSalesSectionLocked && canAddContainerRows;
   const [editingContainerIds, setEditingContainerIds] = useState(() => new Set());
   const containerRowId = (name) => form.getFieldValue(["containerRows", name, "id"]);
   const isContainerRowLocked = (name) => {
@@ -507,6 +509,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     setApprovalHistory(jobData.approval_history || []);
     setOtherCharges(jobData.approval_details?.other_charges || []);
     setChargeInput(jobData.approval_details?.other_charges_remarks || "");
+    // Saved text for the CS Other Charges box; only sent while that box is on screen (Liner, containers open)
+    form.setFieldsValue({ other_charges_remarks: jobData.approval_details?.other_charges_remarks || "" });
     setRemarks(jobData.general_remarks || []);
   }, [jobData, form]);
 
@@ -786,6 +790,11 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                 </Form.List>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   <Col xs={24}>
+                    {canCSEditOtherCharges ? (
+                      <Form.Item className={Styles.formLabel} label="Other Charges" name="other_charges_remarks">
+                        <TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} />
+                      </Form.Item>
+                    ) : (
                     <Form.Item className={Styles.formLabel} label="Other Charges">
                       {isSalesSectionLocked ? (
                         <TextArea
@@ -805,6 +814,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                         </div>
                       )}
                     </Form.Item>
+                    )}
                   </Col>
                 </Row>
               </div>

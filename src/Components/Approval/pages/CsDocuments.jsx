@@ -852,6 +852,12 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 </Form.List>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   <Col xs={24}>
+                    {/* Liner: editable for CS while the container rows are */}
+                    {canEditContainerRows ? (
+                      <Form.Item className={Styles.formLabel} label="Other Charges" name="other_charges_remarks">
+                        <Input.TextArea className={Styles.textAreaField} placeholder="Enter any additional charges or fees" autoSize={{ minRows: 2 }} />
+                      </Form.Item>
+                    ) : (
                     <Form.Item className={Styles.formLabel} label="Other Charges">
                       <Input.TextArea
                         className={Styles.textAreaField}
@@ -862,6 +868,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                         autoSize={{ minRows: 2 }}
                       />
                     </Form.Item>
+                    )}
                   </Col>
                 </Row>
               </div>
