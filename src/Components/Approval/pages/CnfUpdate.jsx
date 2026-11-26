@@ -65,7 +65,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, deleteLocked = false }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, deleteLocked = false, savedDocIds }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isPending = !!file.pending;
@@ -86,7 +86,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canEditFile && (!deleteLocked || isPending) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && (!deleteLocked || isPending || !savedDocIds?.has(file.id)) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -104,7 +104,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 // Liner / Forwarding job without Transportation: CNF has no role, so every upload slot on the page is closed
 const CnfNoRoleContext = createContext(false);
 
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false, savedDocIds }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const cnfNoRole = useContext(CnfNoRoleContext);
@@ -189,7 +189,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
             const f = files[i];
             if (!f) return;
             if (disabled && cnfNoRole) return;
-            if (deleteLocked && f.id && !f.pending) return;
+            if (deleteLocked && f.id && !f.pending && savedDocIds?.has(f.id)) return;
             if (f?.id && !f.pending) {
               const prev = files;
               Modal.confirm({
@@ -218,6 +218,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           user={user}
           isAdmin={isAdmin}
           deleteLocked={deleteLocked}
+          savedDocIds={savedDocIds}
         />
       )}
     </div>
@@ -270,6 +271,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Once CNF has submitted, its mandatory documents (Haulier Note, Load List) stay.
   const mandatoryDocsLocked = cnfHasSubmitted;
+  // Only documents already on the job are locked; anything CNF uploads now stays deletable until Save/Approve (same as CsDocuments)
+  const [savedDocIds] = useState(() => new Set((initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null)));
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — including at stage 2 before Sales HOD approves — right up to
@@ -964,7 +967,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                   <Form.Item label={<span>Haulage Cost Sheet {isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isLiner && mandatoryDocsLocked} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isLiner && mandatoryDocsLocked} savedDocIds={savedDocIds} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -975,11 +978,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       toggle={{ label: "Required?", node: <RequirementSwitch name="is_haulier_note_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={haulierNoteFiles.length > 0} /> }}
                       hint={!haulierNoteToggle ? "Not needed. Choose Yes to upload." : haulierNoteFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
-                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!haulierNoteToggle} />
+                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} savedDocIds={savedDocIds} disabled={!haulierNoteToggle} />
                     </DocSlot>
                   ) : (
                     <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} />
+                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} savedDocIds={savedDocIds} />
                     </Form.Item>
                   )}
                 </Col>
@@ -995,7 +998,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     </DocSlot>
                   ) : (
                     <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} savedDocIds={savedDocIds} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                     </Form.Item>
                   )}
                 </Col>
