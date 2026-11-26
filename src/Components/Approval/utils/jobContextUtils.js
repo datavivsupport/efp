@@ -31,7 +31,9 @@ export const isSalesOwnerOfJob = (jobData, user) => {
 export const isRejectedToSalesExecutive = (jobData) => {
   const status = String(jobData?.status || "").toUpperCase();
   const jobTypeUpper = String(jobData?.job_type || "").toUpperCase();
-  const isLiner = matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.LINER);
+  // Forwarding rejections follow the Liner process (backend liner/forwarding.py reject)
+  const isLiner = matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.LINER)
+    || matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.FORWARDING);
   if (status === "CS-REJECTED") return isLiner || matchJobType(jobTypeUpper, JOB_TYPE_CONFIG.CROSS_TRADE);
   if (status === "CNF-REJECTED") return isLiner;
   return false;
