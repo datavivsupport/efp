@@ -582,8 +582,13 @@ const Approval = () => {
         // Leave before anything of this page is drawn when the job belongs elsewhere for this user:
         //  - rejected back to its Sales Executive -> Sales Input (email / notification links carry only the id)
         //  - Liner CS opening /approval?id= directly (notification, report link) -> their own page
+        //  - CNF-only user on a Liner / Forwarding job without Transportation -> the view-only CNF page
+        const jobType = data?.job_type?.toUpperCase();
+        const roles = computeUserRoles(user);
+        const cnfWithoutTransport = (jobType === "LINER" || jobType === "FORWARDING")
+          && !normalizeBoolean(data?.transportation) && roles.isCNF && !roles.isCS && !roles.isAdmin;
         const earlyRoute = salesReverifyPath(data, user)
-          || (data?.job_type?.toUpperCase() === "LINER" && computeUserRoles(user).isCS ? resolveApprovalRoute(data, user) : null);
+          || ((jobType === "LINER" && roles.isCS) || cnfWithoutTransport ? resolveApprovalRoute(data, user) : null);
         if (earlyRoute) {
           navigate(earlyRoute, { replace: true });
           return;

@@ -100,7 +100,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
  
-// Liner job without Transportation: CNF has no role, so every upload slot on the page is closed
+// Liner / Forwarding job without Transportation: CNF has no role, so every upload slot on the page is closed
 const CnfNoRoleContext = createContext(false);
 
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false }) => {
@@ -240,8 +240,16 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // const isCNF        = user?.roles?.some(r => r.name?.toLowerCase().includes("cnf"));
   const { isCNF } = computeUserRoles(user);
  
-  // Liner: when Sales did not select Transportation, CNF has no role on the job — page is view-only
-  const cnfNoRole = isLiner && !isAdmin && !normalizeBoolean(initialJob?.transportation);
+  // Liner / Forwarding: when Sales did not select Transportation, CNF has no role on the job — page is view-only
+  // (matches the backend's forwarding_without_cnf rule)
+  const cnfNoRole = (isLiner || isForwarding) && !isAdmin && !normalizeBoolean(initialJob?.transportation);
+
+  // Forwarding: CNF sees only the services ticked at job creation (HBL, HCS, Documentation, Transportation).
+  // Hidden with display:none so the saved value stays on the form; admins still see all four.
+  const SERVICE_FLAGS = ["hbl", "fac", "documentation", "transportation"];
+  const hideUnselectedService = (flag) => isForwarding && !isAdmin && !normalizeBoolean(initialJob?.[flag]);
+  const noServiceSelected = SERVICE_FLAGS.every(hideUnselectedService);
+  const hiddenServiceStyle = (flag) => (hideUnselectedService(flag) ? { display: "none" } : undefined);
 
   const canSubmitStage2   = currentStage === "2" && !!initialJob?.is_hod_approved;
 
@@ -833,7 +841,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Terms of Shipment" name="terms_of_shipment"><Input placeholder="Terms of Shipment" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}>
                   <Form.Item label="Haulier Code" name="haulier_code" className={Styles.formLabel}>
-                    <Input placeholder="Haulier Code" disabled={!(isForwarding && currentStage === "3")} />
+                    <Input placeholder="Haulier Code" disabled={cnfNoRole || !(isForwarding && currentStage === "3")} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Special Instruction if Any" name="special_instructions"><TextArea placeholder="Special Instructions" className={Styles.textAreaField} disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>
@@ -845,10 +853,11 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={16} style={{ marginTop: 8 }}>
                 {/* Liner: shown only when HBL was ticked at creation */}
-                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
-                <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
-                <Col xs={12} md={6}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                {(!isLiner || normalizeBoolean(initialJob?.hbl)) && <Col xs={12} md={6} style={hiddenServiceStyle("hbl")}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
+                <Col xs={12} md={6} style={hiddenServiceStyle("fac")}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
+                <Col xs={12} md={6} style={hiddenServiceStyle("documentation")}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
+                <Col xs={12} md={6} style={hiddenServiceStyle("transportation")}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                {noServiceSelected && <Col span={24}><span style={{ color: "rgba(0, 0, 0, 0.45)" }}>No additional services selected by Sales.</span></Col>}
               </Row>
             </div>
           </Card>

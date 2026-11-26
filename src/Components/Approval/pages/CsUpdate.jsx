@@ -371,6 +371,13 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
+  // Forwarding: CS sees only the services Sales ticked (HBL, HCS, Documentation, Transportation).
+  // Hidden with display:none so the saved value stays on the form; admins still see all four.
+  const SERVICE_FLAGS = ["hbl", "fac", "documentation", "transportation"];
+  const hideUnselectedService = (flag) => isForwarding && !_userIsAdmin && !normalizeBoolean(jobData?.[flag]);
+  const noServiceSelected = SERVICE_FLAGS.every(hideUnselectedService);
+  const hiddenServiceStyle = (flag) => (hideUnselectedService(flag) ? { display: "none" } : undefined);
+
   // Release Order: on Liner, CS may upload at any stage/status (only the Yes/No gates it).
   // Forwarding / Cross Trade keep the normal stage lock.
   const releaseOrderDisabled = ((isCS && isLiner) ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
@@ -823,11 +830,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
                 </Row>
                 <Row gutter={16}>
-                  {!isLiner && <Col xs={12} md={6}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
-                  <Col xs={12} md={6}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
-                  <Col xs={12} md={6}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
+                  {!isLiner && <Col xs={12} md={6} style={hiddenServiceStyle("hbl")}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
+                  <Col xs={12} md={6} style={hiddenServiceStyle("fac")}><Form.Item name="fac" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>HCS</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6} style={hiddenServiceStyle("documentation")}><Form.Item name="documentation" valuePropName="checked" noStyle><Checkbox disabled={isRequirementSelectorLocked || isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Documentation</span></Checkbox></Form.Item></Col>
                   {/* Cross Trade has no transportation: hidden, but kept mounted so the saved value is unchanged */}
-                  <Col xs={12} md={6} style={isCrossTrade ? { display: "none" } : undefined}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  <Col xs={12} md={6} style={isCrossTrade ? { display: "none" } : hiddenServiceStyle("transportation")}><Form.Item name="transportation" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>Transportation</span></Checkbox></Form.Item></Col>
+                  {noServiceSelected && <Col span={24}><span style={{ color: "rgba(0, 0, 0, 0.45)" }}>No additional services selected by Sales.</span></Col>}
                 </Row>
               </div>
             </Card>
