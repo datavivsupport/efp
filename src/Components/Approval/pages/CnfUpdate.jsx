@@ -927,8 +927,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               </Row>
               <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
                 <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}>
-                  {/* CNF may upload Release Orders at any stage; on Liner only the Yes/No requirement gates it */}
-                  <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} docType="Release Order" category="booking" user={user} isAdmin={isAdmin} disabled={linerRONotRequired} restrictionMessage={linerRONotRequired ? "Release Order upload is disabled until the requirement is turned on." : null} />
+                  {/* Liner only: CNF may upload Release Orders at any stage, gated by the Yes/No. Other job types stay read-only. */}
+                  {isLiner
+                    ? <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} color="blue" onPreview={openPreview} salesInputId={id} docType="Release Order" category="booking" user={user} isAdmin={isAdmin} disabled={linerRONotRequired} restrictionMessage={linerRONotRequired ? "Release Order upload is disabled until the requirement is turned on." : null} />
+                    : <FileChipList files={releaseOrderFiles} onPreview={(i) => openPreview(releaseOrderFiles, i)} user={user} isAdmin={isAdmin} disabled />}
                 </Form.Item></Col>
                 <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><FileChipList files={bocFiles} onPreview={(i) => openPreview(bocFiles, i)} user={user} isAdmin={isAdmin} disabled /></Form.Item></Col>
               </Row>

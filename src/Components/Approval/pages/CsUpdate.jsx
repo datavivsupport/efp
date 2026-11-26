@@ -371,8 +371,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const YES_LOCKED_HINT = "Delete the file first to choose No.";
   const NOT_SELECTED_BY_SALES = "Not selected by Sales Executive.";
 
-  // Release Order: CS may upload at any stage/status — only the Yes/No requirement (Liner / Cross Trade) gates it
-  const releaseOrderDisabled = (isCS ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
+  // Release Order: on Liner, CS may upload at any stage/status (only the Yes/No gates it).
+  // Forwarding / Cross Trade keep the normal stage lock.
+  const releaseOrderDisabled = ((isCS && isLiner) ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) return isLiner ? "CNF is allowed to upload it" : null;
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";

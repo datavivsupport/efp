@@ -927,7 +927,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   <Col xs={24} md={24}><Form.Item className={Styles.formLabel} label="Booking Remarks" name="booking_remarks"><TextArea placeholder="Booking Remarks" disabled={!canEditBookingTechnical} variant={canEditBookingTechnical ? "outlined" : "filled"} autoSize={{ minRows: 2 }} /></Form.Item></Col>
                 </Row>
                 {!isCrossTrade && !isLiner && <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
-                  <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={false} /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item label="Release Order(s)" className={Styles.formLabel}><DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item label="BOC Attachment" className={Styles.formLabel}><DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment} /></Form.Item></Col>
                 </Row>}
 
@@ -991,7 +991,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                 {/* Release Order / BOC Yes/No are set on the CS Update stage; shown here for reference */}
                 <Gate title="Release Order & BOC" description="Release Order Yes/No is set on the CS Update stage. BOC can be switched to Yes and uploaded any time.">
                   <DocSlot label="Release Order(s)" rule={isROReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch value={isROReqCT} /> }} hint={!isROReqCT ? "Not needed." : null}>
-                    <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!isROReqCT} />
+                    <DocUploadField label="Release Order" files={releaseOrderFiles} setFiles={setReleaseOrderFiles} salesInputId={id} docType="Release Order" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={canEditBookingTechnical} disabled={!canEditBookingTechnical || !isROReqCT} />
                   </DocSlot>
                   <DocSlot label="BOC Attachment" rule={isBOCReqCT ? "required" : "notRequired"} toggle={{ label: "Required?", node: <RequirementSwitch name="is_boc_required" hasFiles={bocFiles.length > 0} /> }} hint={isBOCReqCT && bocFiles.length > 0 ? YES_LOCKED_HINT : !isBOCReqCT ? "Not needed. Choose Yes to upload." : null}>
                     <DocUploadField label="BOC" files={bocFiles} setFiles={setBocFiles} salesInputId={id} docType="BOC" category="booking" onPreview={openPreview} savedDocIds={savedDocIds} user={user} isAdmin={isAdmin} disabled={!canEditBocAttachment || !isBOCReqCT} />
