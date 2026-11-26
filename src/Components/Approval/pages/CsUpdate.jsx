@@ -450,8 +450,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
+  // Liner: every file already on the job is locked; files uploaded in this visit stay deletable until Save / Verify & Confirm
   const lockedDocIds = new Set(
-    isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)
+    (isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)) || isLiner
       ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null)
       : []
   );

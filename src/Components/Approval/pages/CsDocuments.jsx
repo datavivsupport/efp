@@ -93,7 +93,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               {!isPending && <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>}
-              {canDeleteFile && !isDeleteLocked && (preSubmitDelete || !savedDocIds?.has(file.id)) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canDeleteFile && !isDeleteLocked && !savedDocIds?.has(file.id) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -202,7 +202,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
             const f = files[i];
             if (!f) return;
             if (submittedAtStage != null && f.id && !f.pending && isMandatoryDocDeleteLocked(f, deleteLocked, submittedAtStage)) return;
-            if (f.id && !preSubmitDelete && savedDocIds?.has(f.id)) return;
+            if (f.id && savedDocIds?.has(f.id)) return;
             if (f?.id && !f.pending) {
               Modal.confirm({
                 title: "Delete attachment?",
@@ -265,6 +265,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const docs = initialJob?.documents || [];
     const idsOf = (list) => list.map((d) => d?.id).filter((docId) => docId != null);
     if (isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)) return new Set(idsOf(docs));
+    // Liner: every file already on the job is locked; files uploaded in this visit stay deletable until Save / Submit
+    if (initialJob?.job_type === "LINER") return new Set(idsOf(docs));
     // LPO / Invoice are mandatory: once CS has submitted, every one already on the job stays,
     // additional uploads included — not only the first set isMandatoryDocDeleteLocked covers
     if (lpoInvoiceDeleteLocked) {
