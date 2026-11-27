@@ -22,7 +22,7 @@ import { isCnfDataVisibleToCS, canCSEditPlacement } from "../utils/sectionLocks"
 import { isCsDocumentsSubmitted, isCrossTradeJob, getShipmentRemarks, isWorkflowCompleted, isJobRejected } from "../utils/jobContextUtils";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
-import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
+import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds, saveUnsavedUploads } from "../utils/unsavedUploads";
 import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
 import { buildTransportationRows } from "../utils/payloadBuilders";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
@@ -791,8 +791,10 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
         message.success(res.data.message || "Saved successfully");
-        setSavedDocIds(new Set(Object.values(resolved).flat().map((f) => f?.id).filter(Boolean)));
-        clearUnsavedUploads(id, user?.id);
+        // CS's own turn: Save locks - except files saved earlier while the job was with CNF (kept list)
+        saveUnsavedUploads(id, user?.id, false);
+        const stillOpen = getUnsavedUploadIds(id, user?.id);
+        setSavedDocIds(new Set(Object.values(resolved).flat().map((f) => f?.id).filter((docId) => docId != null && !stillOpen.has(String(docId)))));
         if (canEditContainerRows) {
           // New rows need their saved ids, or the next Save would create them a second time.
           try {
