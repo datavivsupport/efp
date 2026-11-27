@@ -50,7 +50,7 @@ import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
 import { getAdditionalDocs } from "../utils/additionalDocs";
-import { createRemark, canDeleteRemark, withUnsavedRemarks, storeUnsavedRemarks, clearUnsavedRemarks } from "../utils/remarksUtils";
+import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import RejectionReasonBox from "../components/Common/RejectionReasonBox";
@@ -283,8 +283,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const [otherCharges, setOtherCharges] = useState([]);
   const [chargeInput, setChargeInput] = useState("");
   const [remarks, setRemarks] = useState([]);
-  // Every add / delete also updates this user's unsaved remarks in localStorage (kept across a refresh).
-  const changeRemarks = (next) => { setRemarks(next); storeUnsavedRemarks(id, user?.id, next); };
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
   
@@ -533,7 +531,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
     setChargeInput(jobData.approval_details?.other_charges_remarks || "");
     // Saved text for the CS Other Charges box; only sent while that box is on screen (Liner, containers open)
     form.setFieldsValue({ other_charges_remarks: jobData.approval_details?.other_charges_remarks || "" });
-    setRemarks(withUnsavedRemarks(jobData.general_remarks, id, user?.id));
+    setRemarks(jobData.general_remarks || []);
   }, [jobData, form]);
 
   useEffect(() => {
@@ -624,7 +622,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       
       const endpoint = actionType === "Submit" ? `/liner/sales-input/${id}/submit/` : actionType === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
       const response = await apiClient.post(endpoint, payload);
-      if (response.data.status === "success") { clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id); message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success") { clearUnsavedUploads(id, user?.id); message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Action failed"); }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
@@ -650,7 +648,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (response.data.status === "success") {
-        clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id);
+        clearUnsavedUploads(id, user?.id);
         message.success(response.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -677,14 +675,14 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: csViewOnly ? (jobData?.status || "draft") : "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
-      if (response.data.status === "success" || response.status === 200 || response.status === 201) { clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id); message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success" || response.status === 200 || response.status === 201) { clearUnsavedUploads(id, user?.id); message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
     } catch (err) { message.error(err.response?.data?.message || "Internal server error"); }
     finally { actionThrottleRef.current = false; setLoading(false); }
   };
 
   const handleReset = () => {
-    form.resetFields(); setOtherCharges([]); changeRemarks([]); setAttachments([]); setBankSlips([]);
+    form.resetFields(); setOtherCharges([]); setRemarks([]); setAttachments([]); setBankSlips([]);
     setReleaseOrderFiles([]); setBocFiles([]); setHaulageCostFiles([]); setHaulierNoteFiles([]);
     setLoadListFiles([]); setLpoFiles([]); setInvoiceFiles([]); setHcsFiles([]); setPreAlertFiles([]); setAgentDebitCreditFiles([]);
     message.info("Form reset");
@@ -1141,7 +1139,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                       const canDelete = canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => changeRemarks(remarks.filter((_, j) => j !== i))} />}
+                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
                         </div>
@@ -1151,7 +1149,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { changeRemarks([...remarks, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>

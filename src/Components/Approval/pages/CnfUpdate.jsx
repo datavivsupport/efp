@@ -24,7 +24,7 @@ import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
-import { createRemark, canDeleteRemark, withUnsavedRemarks, storeUnsavedRemarks, clearUnsavedRemarks } from "../utils/remarksUtils";
+import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
 import { DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
 import RejectionReasonBox from "../components/Common/RejectionReasonBox";
@@ -335,8 +335,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   const [executiveDocuments, setExecutiveDocuments] = useState([]);
   const [salesExecutiveFiles, setSalesExecutiveFiles] = useState([]);
   const [remarks, setRemarks]                   = useState([]);
-  // Every add / delete also updates this user's unsaved remarks in localStorage (kept across a refresh).
-  const changeRemarks = (next) => { setRemarks(next); storeUnsavedRemarks(id, user?.id, next); };
   const [newRemark, setNewRemark]               = useState("");
   const [otherCharges, setOtherCharges]         = useState([]);
   const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
@@ -415,7 +413,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     const charges = initialJob.approval_details?.other_charges || ad?.other_charges || [];
     setOtherCharges(charges);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || ad?.other_charges_remarks || "");
-    setRemarks(withUnsavedRemarks(initialJob.general_remarks, id, user?.id));
+    setRemarks(initialJob.general_remarks || []);
     
     form.setFieldsValue({
       cnf_remarks: ad.cnf_remarks,
@@ -613,7 +611,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       if (res.data.status === "success") {
         // The job has left CNF's desk: no more saving from this page.
         setHasApproved(true);
-        clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id);
+        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || `${action} successfully`);
         setTimeout(() => navigate("/"), 1500);
       } else {
@@ -645,7 +643,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (res.data.status === "success") {
-        clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id);
+        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -727,7 +725,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         }
       }
 
-      clearUnsavedUploads(id, user?.id); clearUnsavedRemarks(id, user?.id);
+      clearUnsavedUploads(id, user?.id);
       message.success(saveMessage);
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {
@@ -1067,7 +1065,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                       const canDelete = !cnfNoRole && canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => changeRemarks(remarks.filter((_, j) => j !== i))} />}
+                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && <Typography.Text style={{ fontSize: '12px', fontWeight: 500, color: '#4b5563', display: 'block', marginTop: 6 }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
                         </div>
@@ -1077,7 +1075,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} disabled={cnfNoRole} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { changeRemarks([...remarks, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole}>Add Remark</Button>
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
