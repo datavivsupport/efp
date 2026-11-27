@@ -28,7 +28,8 @@ export const renderUserLabel = (options) => ({ label, value }) => {
   // Match loosely: the API returns cs_hod as a string while option values may be numeric ids.
   const matched = (options || []).find((o) => String(o.value) === String(value));
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    // className: hidden while the user types a search (see index.css) so it doesn't overlap the typed text
+    <span className="user-select-label" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <StatusDot onLeave={matched?.isOnLeave} />
       {label ?? matched?.label ?? value}
     </span>
