@@ -40,7 +40,7 @@ export const validateApprovalAction = (values, ctx) => {
     const missing = [];
     if (!lpoFiles.length)     missing.push("LPO");
     if (!invoiceFiles.length) missing.push("Invoice");
-    if (!values.cs_hod && !isCrossTrade) missing.push("CS HOD");
+    if (!values.cs_hod && !isCrossTrade && !isLiner) missing.push("CS HOD"); // optional on Cross Trade / Liner
     if (missing.length) {
       return `Required at this stage: ${missing.join(", ")}`;
     }
