@@ -401,6 +401,10 @@ const Approval = () => {
   } = computeJobContext({ jobData, id, user, approvalHistory, roles });
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // Cross Trade has no CNF: a CNF user only views the job here - every section, upload and
+  // selector is locked (same as CsUpdate's csViewOnly, which also goes in through isTerminal)
+  const crossTradeCnfViewOnly = isCrossTrade && isCNF && !isCS && !isAdmin && !isMasterMode;
+
   const {
     baseLocked, isCNFDone, isSalesHODLinerRestricted,
     csBookingEditStage, isSalesSectionLocked, isBookingSectionLocked,
@@ -411,7 +415,7 @@ const Approval = () => {
   } = computeSectionLocks({
     isAdmin, isCS, isCNF, isSalesExecutive, isCreator,
     isCSHOD, isAccountsTeam, isHOD, isSalesHOD,
-    currentStage, isMasterMode, isTerminal, isForwarding,
+    currentStage, isMasterMode, isTerminal: isTerminal || crossTradeCnfViewOnly, isForwarding,
     isLiner, isExtended, isOthers,
     isStage2, isCNFStage, isCSHODStage, isAccountsStage,
     stage2, isCSDoneWaitingHOD, jobData,
@@ -1342,7 +1346,8 @@ const Approval = () => {
 
                     {/* PRD v4.0 Branching Selectors (Requirement Toggles) */}
                     {((isLiner || isCrossTrade) || isMasterMode) && (
-                      <Col span={24}>
+                      // Cross Trade has no CNF: hidden from CNF users, kept mounted so the saved Release Order value is unchanged
+                      <Col span={24} style={crossTradeCnfViewOnly ? { display: "none" } : undefined}>
                         <Alert
                           message="Workflow Configuration (Action Required)"
                           description={
@@ -1422,7 +1427,7 @@ const Approval = () => {
                             salesInputId={id}
                             category="booking"
                             docType="Release Order"
-                            disabled={!isCS && !isCNF}
+                            disabled={(!isCS && !isCNF) || crossTradeCnfViewOnly}
                             restrictionMessage={releaseOrderRestrictionMessage}
                             isMasterMode={isMasterMode}
                             user={user}

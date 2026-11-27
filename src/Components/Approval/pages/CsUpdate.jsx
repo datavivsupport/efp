@@ -383,9 +383,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const noServiceSelected = SERVICE_FLAGS.every(hideUnselectedService);
   const hiddenServiceStyle = (flag) => (hideUnselectedService(flag) ? { display: "none" } : undefined);
 
-  // Release Order: on Liner, CS may upload at any stage/status (only the Yes/No gates it).
-  // Forwarding / Cross Trade keep the normal stage lock.
-  const releaseOrderDisabled = ((isCS && isLiner) ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
+  // Release Order: on Liner and Forwarding, CS may upload at any stage/status (on Liner only the Yes/No gates it).
+  // Cross Trade keeps the normal stage lock.
+  const releaseOrderDisabled = ((isCS && (isLiner || isForwarding)) ? isMasterMode : baseLocked) || (isCNFUploadLocked && !isCS) || (!releaseOrderRequirementMet && !isCS) || crossTradeRODisabled || linerRODisabled;
   const releaseOrderRestrictionMessage = (() => {
     if (isCNFUploadLocked && !isCS) return isLiner ? "CNF is allowed to upload it" : null;
     if (!releaseOrderRequirementMet && !isCS) return "Release Order upload is disabled until the requirement is turned on.";
