@@ -917,6 +917,8 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
                   {isCrossTrade && <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Remarks"><TextArea className={Styles.textAreaField} placeholder="Remarks" value={getShipmentRemarks(initialJob)} disabled variant="filled" autoSize={{ minRows: 2 }} /></Form.Item></Col>}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
+                  {/* Sales HOD picked at Sales Input, read-only (not a form field, so Save / Approve send the same values as before) */}
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Sales HOD"><Input placeholder="Sales HOD" value={initialJob?.sales_hod || ""} disabled variant="filled" /></Form.Item></Col>
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   {/* Liner: shown only when HBL was ticked at creation */}

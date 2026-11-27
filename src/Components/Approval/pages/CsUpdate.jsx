@@ -865,6 +865,8 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Enter Remarks" rows={3} disabled={isSalesSectionLocked} /></Form.Item></Col> */}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdminForCsUpdate} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive" rules={[{ required: !isOthers, message: "Required" }]}><Input placeholder="Sales Executive" disabled={true} /></Form.Item></Col>
+                  {/* Sales HOD picked at Sales Input, read-only (not a form field, so Save / Approve send the same values as before) */}
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Sales HOD"><Input placeholder="Sales HOD" value={jobData?.sales_hod || ""} disabled /></Form.Item></Col>
                 </Row>
                 <Row gutter={16}>
                   {!isLiner && <Col xs={12} md={6} style={hiddenServiceStyle("hbl")}><Form.Item name="hbl" valuePropName="checked" noStyle><Checkbox disabled={isSalesSectionLocked}><span style={{ color: "rgba(0, 0, 0, 0.88)" }}>{hblLabel}</span></Checkbox></Form.Item></Col>}
