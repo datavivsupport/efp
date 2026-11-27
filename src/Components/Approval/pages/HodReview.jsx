@@ -45,7 +45,7 @@ import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
 import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
-import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
+import { createRemark, canDeleteRemark, withUnsavedRemarks, storeUnsavedRemarks, clearUnsavedRemarks } from "../utils/remarksUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import MultiFileViewer from "../../Viewer/MultiFileViewer";
@@ -246,6 +246,8 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
   const [chargeInput, setChargeInput] = useState("");
   const otherChargesDisplay = otherCharges.length > 0 ? otherCharges.join(", ") : chargeInput || "";
   const [remarks, setRemarks] = useState([]);
+  // Every add / delete also updates this user's unsaved remarks in localStorage (kept across a refresh).
+  const changeRemarks = (next) => { setRemarks(next); storeUnsavedRemarks(id, user?.id, next); };
   const [newRemark, setNewRemark] = useState("");
   const [approvalHistory, setApprovalHistory] = useState([]);
   
@@ -357,7 +359,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
     setApprovalHistory(jobData.approval_history || []);
     setOtherCharges(jobData.approval_details?.other_charges || []);
     setChargeInput(jobData.approval_details?.other_charges_remarks || "");
-    setRemarks(jobData.general_remarks || []);
+    setRemarks(withUnsavedRemarks(jobData.general_remarks, id, user?.id));
   }, [jobData, form]);
 
   useEffect(() => {
@@ -431,7 +433,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       
       const endpoint = actionType === "Submit" ? `/liner/sales-input/${id}/submit/` : actionType === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
       const response = await apiClient.post(endpoint, payload);
-      if (response.data.status === "success") { message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success") { clearUnsavedRemarks(id, user?.id); message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Action failed"); }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
@@ -457,6 +459,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (response.data.status === "success") {
+        clearUnsavedRemarks(id, user?.id);
         message.success(response.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -483,7 +486,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
       if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...getCommonPayload(values), status: "submitted Level 2" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
-      if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success" || response.status === 200 || response.status === 201) { clearUnsavedRemarks(id, user?.id); message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
     } catch (err) { message.error(err.response?.data?.message || "Internal server error"); }
     finally { actionThrottleRef.current = false; setLoading(false); }
@@ -683,7 +686,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                       const canDelete = canDeleteRemark(r);
                       return (
                         <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
+                          {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => changeRemarks(remarks.filter((_, j) => j !== i))} />}
                           <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{text}</p>
                           {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD-MM-YYYY HH:mm")}` : ""}</Typography.Text>}
                         </div>
@@ -693,7 +696,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                   <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { changeRemarks([...remarks, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
