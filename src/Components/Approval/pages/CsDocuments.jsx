@@ -270,8 +270,9 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
     const unsaved = getUnsavedUploadIds(id, user?.id);
     const idsOf = (list) => list.map((d) => d?.id).filter((docId) => docId != null && !unsaved.has(String(docId)));
     if (isCrossTradeJob(initialJob) && normalizeBoolean(initialJob?.is_cs_updated)) return new Set(idsOf(docs));
-    // Liner: every file already on the job is locked, except this user's unsaved uploads
-    if (initialJob?.job_type === "LINER") return new Set(idsOf(docs));
+    // Liner / Forwarding: every file already on the job is locked - mandatory or not - except this user's unsaved uploads
+    const jobTypeUpper = String(initialJob?.job_type || "").replace(/[_-]/g, " ").trim().toUpperCase();
+    if (jobTypeUpper === "LINER" || jobTypeUpper === "FORWARDING") return new Set(idsOf(docs));
     // LPO / Invoice are mandatory: once CS has submitted, every one already on the job stays,
     // additional uploads included — not only the first set isMandatoryDocDeleteLocked covers
     if (lpoInvoiceDeleteLocked) {

@@ -452,12 +452,12 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
-  // Liner (and Cross Trade once CS has submitted): every file already on the job is locked, except
-  // the ones this user uploaded and has not saved yet - they stay deletable until Save / Verify & Confirm,
-  // even when the job is reopened in another tab (see unsavedUploads.js)
+  // Liner / Forwarding (and Cross Trade once CS has submitted): every file already on the job is locked -
+  // mandatory or not - except the ones this user uploaded and has not saved yet; they stay deletable until
+  // Save / Verify & Confirm, even when the job is reopened in another tab (see unsavedUploads.js)
   const unsavedUploadIds = getUnsavedUploadIds(id, user?.id);
   const lockedDocIds = new Set(
-    (isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)) || isLiner
+    (isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)) || isLiner || isForwarding
       ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null && !unsavedUploadIds.has(String(docId)))
       : []
   );

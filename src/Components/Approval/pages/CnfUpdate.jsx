@@ -274,8 +274,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
 
   // Once CNF has submitted, its mandatory documents (Haulier Note, Load List) stay.
   const mandatoryDocsLocked = cnfHasSubmitted;
-  // Liner only: files already on the job are locked; anything uploaded in this visit stays deletable until Save/Submit/Approve (same as CsDocuments)
-  // (files uploaded in this tab but not yet saved stay out of the set, so a page refresh doesn't lock them)
+  // Liner / Forwarding: files already on the job are locked - mandatory or not; anything uploaded since this
+  // user's last Save/Submit/Approve stays deletable until then (same as CsDocuments)
+  // (files uploaded but not yet saved stay out of the set, so a page refresh doesn't lock them)
+  const saveLockedDocs = isLiner || isForwarding;
   const [savedDocIds] = useState(() => {
     const unsaved = getUnsavedUploadIds(id, user?.id);
     return new Set((initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null && !unsaved.has(String(docId))));
@@ -983,7 +985,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                   <Form.Item label={<span>Haulage Cost Sheet {isLiner && initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isLiner} savedDocIds={isLiner ? savedDocIds : undefined} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                    <DocUploadField label="Haulage Cost" files={haulageCostFiles} setFiles={setHaulageCostFiles} color="orange" onPreview={openPreview} salesInputId={id} docType="Haulage Cost" category="booking" user={user} isAdmin={isAdmin} deleteLocked={saveLockedDocs} savedDocIds={saveLockedDocs ? savedDocIds : undefined} disabled={isLiner && !initialJob?.is_hod_approved} restrictionMessage={isLiner && !initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
@@ -998,7 +1000,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     </DocSlot>
                   ) : (
                     <Form.Item label={<span>Haulier Note {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} />
+                      <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isForwarding || mandatoryDocsLocked} savedDocIds={isForwarding ? savedDocIds : undefined} />
                     </Form.Item>
                   )}
                 </Col>
@@ -1014,7 +1016,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     </DocSlot>
                   ) : (
                     <Form.Item label={<span>Load List {initialJob?.is_hod_approved && <span style={{ color: "#ff4d4f" }}>*</span>}</span>} className={Styles.formLabel}>
-                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={mandatoryDocsLocked} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
+                      <DocUploadField label="Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked={isForwarding || mandatoryDocsLocked} savedDocIds={isForwarding ? savedDocIds : undefined} disabled={!initialJob?.is_hod_approved} restrictionMessage={!initialJob?.is_hod_approved ? "Disabled until Sales HOD approves the job." : null} />
                     </Form.Item>
                   )}
                 </Col>
@@ -1030,7 +1032,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     </DocSlot>
                   ) : (
                     <Form.Item label="ED" className={Styles.formLabel}>
-                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} />
+                      <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} deleteLocked={isForwarding} savedDocIds={isForwarding ? savedDocIds : undefined} />
                     </Form.Item>
                   )}
                 </Col>
@@ -1075,7 +1077,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} deleteLocked={isLiner} savedDocIds={isLiner ? savedDocIds : undefined} />
+                  <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} deleteLocked={saveLockedDocs} savedDocIds={saveLockedDocs ? savedDocIds : undefined} />
                 </Col>
               </Row>
             </div>
