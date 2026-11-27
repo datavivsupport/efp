@@ -19,7 +19,7 @@ import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import { mapJobToFormValues, partitionDocuments } from "../utils/formMapper";
 import { getAdditionalDocs } from "../utils/additionalDocs";
-import { createRemark, canDeleteRemark, withUnsavedRemarks, storeUnsavedRemarks, clearUnsavedRemarks } from "../utils/remarksUtils";
+import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
 import UploadButtonWithLimit from "../components/Common/UploadButtonWithLimit";
 import CrossTradeDocuments, { Gate, DocSlot, RequirementSwitch } from "../components/CrossTrade/CrossTradeDocuments";
@@ -216,10 +216,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const [remarks, setRemarks] = useState([]);
-
-  // Every add / delete also updates this user's unsaved remarks in localStorage (kept across a refresh).
-
-  const changeRemarks = (next) => { setRemarks(next); storeUnsavedRemarks(id, user?.id, next); };
   const [newRemark, setNewRemark] = useState("");
   const [otherCharges, setOtherCharges] = useState([]);
   const [otherChargesRemarks, setOtherChargesRemarks] = useState("");
@@ -317,7 +313,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
     setSalesExecutiveFiles(buckets.salesExecutiveFiles || []);
     setOtherCharges(initialJob.approval_details?.other_charges || []);
     setOtherChargesRemarks(initialJob.approval_details?.other_charges_remarks || "");
-    setRemarks(withUnsavedRemarks(initialJob.general_remarks, id, user?.id));
+    setRemarks(initialJob.general_remarks || []);
 
     form.setFieldsValue({
       afsys_job_no: ad.afsys_job_no,
@@ -406,7 +402,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       };
 
       const res = await apiClient.post(endpoint, payload);
-      if (res.data.status === "success") { clearUnsavedRemarks(id, user?.id); message.success(res.data.message || "Approved successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (res.data.status === "success") { message.success(res.data.message || "Approved successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(res.data.message || "Action failed"); }
     } catch (err) { message.error(err.response?.data?.message || "Something went wrong"); }
     finally { throttle.current = false; setLoading(false); }
@@ -436,7 +432,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
 
       const res = await apiClient.post(endpoint, payload);
       if (res.data.status === "success") {
-        clearUnsavedRemarks(id, user?.id);
         message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -504,7 +499,6 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
       };
       const res = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
       if (res.data.status === "success" || res.status === 200 || res.status === 201) {
-        clearUnsavedRemarks(id, user?.id);
         message.success(res.data.message || "Saved successfully");
       } else {
         message.error(res.data.message || "Save failed");
@@ -594,6 +588,8 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   {/* <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Remarks" name="remarks"><TextArea placeholder="Remarks" disabled variant="filled" rows={3} /></Form.Item></Col> */}
                   <Col xs={24} md={12}><Form.Item label="Executive Documents" className={Styles.formLabel}><FileChipList files={executiveDocs} disabled onPreview={(i) => openPreview(executiveDocs, i)} user={user} isAdmin={isAdmin} /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Executive" name="name_of_executive"><Input placeholder="Sales Executive" disabled variant="filled" /></Form.Item></Col>
+                  {/* Sales HOD picked at Sales Input, read-only (not a form field, so Save / Approve send the same values as before) */}
+                  <Col xs={24} md={12}><Form.Item className={Styles.formLabel} label="Name of Sales HOD"><Input placeholder="Sales HOD" value={initialJob?.sales_hod || ""} disabled variant="filled" /></Form.Item></Col>
                 </Row>
                 <Row gutter={16} style={{ marginTop: 8 }}>
                   {/* Liner: shown only when HBL was ticked at creation */}
@@ -738,7 +734,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                         const canDelete = canDeleteRemark(r);
                         return (
                           <div key={i} style={{ position: 'relative', padding: '12px 32px 12px 12px', backgroundColor: '#f9f9f9', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8 }}>
-                            {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => changeRemarks(remarks.filter((_, j) => j !== i))} />}
+                            {canDelete && <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ position: "absolute", top: 6, right: 6 }} onClick={() => setRemarks((p) => p.filter((_, j) => j !== i))} />}
                             <p style={{ margin: 0, fontSize: 13, color: '#1f2937', whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{isObject ? r.text : r}</p>
                             {authorName && <Typography.Text style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginTop: 6, wordBreak: 'break-word' }}>— {authorName} {r.date ? `on ${dayjs(r.date).tz("Asia/Dubai").format("DD MMM YY HH:mm")}` : ""}</Typography.Text>}
                           </div>
@@ -748,7 +744,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                     </div>
                     <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
                     <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3 }} style={{ marginBottom: 12 }} />
-                    <Button type="primary" onClick={() => { if (newRemark.trim()) { changeRemarks([...remarks, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
+                    <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />}>Add Remark</Button>
                   </Col>
                   <Col xs={24} md={12}>
                     <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>

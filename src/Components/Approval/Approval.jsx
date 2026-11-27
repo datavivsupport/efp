@@ -1224,6 +1224,12 @@ const Approval = () => {
                         <Input placeholder="Sales Executive" disabled={true} />
                       </Form.Item>
                     </Col>
+                    {/* Sales HOD picked at Sales Input, read-only (not a form field, so Save / Approve send the same values as before) */}
+                    <Col xs={24} md={12}>
+                      <Form.Item className={Styles.formLabel} label="Name of Sales HOD">
+                        <Input placeholder="Sales HOD" value={jobData?.sales_hod || ""} disabled />
+                      </Form.Item>
+                    </Col>
                   </Row>
                   <Row gutter={16}>
                     {/* Liner: shown only when HBL was ticked at creation */}
