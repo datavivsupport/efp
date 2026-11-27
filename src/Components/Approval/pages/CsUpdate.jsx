@@ -48,7 +48,7 @@ import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
-import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds, saveUnsavedUploads } from "../utils/unsavedUploads";
+import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -675,12 +675,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: csViewOnly ? (jobData?.status || "draft") : "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
-      if (response.data.status === "success" || response.status === 200 || response.status === 201) {
-        // After Verify & Confirm the job is with CNF: what CS saves now stays deletable until Submit / Approve / Reject
-        const keepUploadsOpen = (isLiner || isForwarding) && !!jobData?.is_cs_updated && !/REJECTED/i.test(jobData?.status || "");
-        saveUnsavedUploads(id, user?.id, keepUploadsOpen);
-        message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500);
-      }
+      if (response.data.status === "success" || response.status === 200 || response.status === 201) { clearUnsavedUploads(id, user?.id); message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
     } catch (err) { message.error(err.response?.data?.message || "Internal server error"); }
     finally { actionThrottleRef.current = false; setLoading(false); }
