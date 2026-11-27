@@ -458,7 +458,7 @@ const SalesInput = () => {
  
   const isCsRejected =
     (isCrossTrade && instanceStatus === "CS-REJECTED") ||
-    (isLiner && (instanceStatus === "CS-REJECTED" || instanceStatus === "CNF-REJECTED"));
+    ((isLiner || isForwarding) && (instanceStatus === "CS-REJECTED" || instanceStatus === "CNF-REJECTED"));
   // Same ownership fields the Approval page checks before sending the user here, so the two
   // pages never disagree (that would bounce Sales Input -> "Open workflow page" -> back here).
   const canActOnRejection = isViewMode && isCsRejected && isSalesOwnerOfJob(
@@ -1091,7 +1091,7 @@ const SalesInput = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              {isLiner && isJobRejected({ status: instanceStatus }) && (
+              {(isLiner || isForwarding) && isJobRejected({ status: instanceStatus }) && (
                 <RejectionReasonBox
                   jobData={{ rejection_remarks: savedRejectionRemarks, approval_history: approvalHistory }}
                   style={{ marginTop: 16 }}
@@ -2024,8 +2024,8 @@ const SalesInput = () => {
             </div>
           </Card>
 
-          {/* Cross Trade and Liner: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
-          {(isCrossTrade || isLiner) && approvalHistory.length > 0 && (
+          {/* Cross Trade, Liner and Forwarding: APPROVAL STATUS & HISTORY, laid out like the Approval pages */}
+          {(isCrossTrade || isLiner || isForwarding) && approvalHistory.length > 0 && (
             <Card
               className={Styles.card}
               bordered
