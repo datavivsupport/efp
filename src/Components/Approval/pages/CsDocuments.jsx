@@ -824,7 +824,7 @@ const CsDocumentsPage = ({ jobData: initialJob, user }) => {
               <div style={{ display: open.export ? "block" : "none" }}>
                 <div style={{ marginBottom: 12 }}>
                   <Tag color="success" icon={<CheckCircleOutlined />}>Sales HOD Approved</Tag>
-                  {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginTop: 8 }} />}
+                  {(isLiner || isForwarding) && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginTop: 8 }} />}
                 </div>
                 <Row gutter={[16, 8]}>
                   <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>

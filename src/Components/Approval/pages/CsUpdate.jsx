@@ -728,7 +728,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
             }
           >
             <div style={{ display: open.export ? "block" : "none" }}>
-              {isLiner && isJobRejected(jobData) && <RejectionReasonBox jobData={jobData} style={{ marginBottom: 12 }} />}
+              {(isLiner || isForwarding) && isJobRejected(jobData) && <RejectionReasonBox jobData={jobData} style={{ marginBottom: 12 }} />}
               <Row gutter={16}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input readOnly variant="filled" disabled={isSalesSectionLocked} /></Form.Item></Col>

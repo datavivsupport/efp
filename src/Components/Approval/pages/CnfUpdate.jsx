@@ -794,7 +794,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             title={<CardHeader icon="basil:document-solid" title="EXPORT DETAILS" open={open.export} onToggle={() => toggle("export")} />}
           >
             <div style={{ display: open.export ? "block" : "none" }}>
-              {isLiner && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginBottom: 12 }} />}
+              {(isLiner || isForwarding) && isJobRejected(initialJob) && <RejectionReasonBox jobData={initialJob} style={{ marginBottom: 12 }} />}
               <Row gutter={[16, 8]}>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Number" name="export_number"><Input placeholder="Export Number" disabled variant="filled" /></Form.Item></Col>
                 <Col xs={24} md={6}><Form.Item className={Styles.formLabel} label="Export Created Date" name="export_created_date"><Input placeholder="Export Created Date" disabled variant="filled" /></Form.Item></Col>
@@ -1234,8 +1234,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             onChange={(e) => setRejectionRemarks(e.target.value)}
             style={{ borderRadius: 4 }}
           />
-          <p style={{ fontSize: 12, color: isStage3 ? "#666" : "#cf1322", marginTop: 8 }}>
-            {isStage3
+          <p style={{ fontSize: 12, color: isStage3 || isForwarding ? "#666" : "#cf1322", marginTop: 8 }}>
+            {isForwarding
+              ? "The job goes back to the Sales Executive to re-verify and resubmit."
+              : isStage3
               ? "The job returns to Stage 2 for review."
               : "The job is sent back to Stage 1 and a new request must be created. This cannot be undone."}
           </p>
