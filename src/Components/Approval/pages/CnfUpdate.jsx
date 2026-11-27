@@ -148,7 +148,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
         // Liner fields: keep it deletable across a page refresh until Save / Submit / Approve
-        if (savedDocIds) addUnsavedUpload(salesInputId, d.id);
+        if (savedDocIds) addUnsavedUpload(salesInputId, d.id, user?.id);
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -277,7 +277,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // Liner only: files already on the job are locked; anything uploaded in this visit stays deletable until Save/Submit/Approve (same as CsDocuments)
   // (files uploaded in this tab but not yet saved stay out of the set, so a page refresh doesn't lock them)
   const [savedDocIds] = useState(() => {
-    const unsaved = getUnsavedUploadIds(id);
+    const unsaved = getUnsavedUploadIds(id, user?.id);
     return new Set((initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null && !unsaved.has(String(docId))));
   });
 
@@ -609,7 +609,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       if (res.data.status === "success") {
         // The job has left CNF's desk: no more saving from this page.
         setHasApproved(true);
-        clearUnsavedUploads(id);
+        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || `${action} successfully`);
         setTimeout(() => navigate("/"), 1500);
       } else {
@@ -641,7 +641,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (res.data.status === "success") {
-        clearUnsavedUploads(id);
+        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -723,7 +723,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         }
       }
 
-      clearUnsavedUploads(id);
+      clearUnsavedUploads(id, user?.id);
       message.success(saveMessage);
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {
