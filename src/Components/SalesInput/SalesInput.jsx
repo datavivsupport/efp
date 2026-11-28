@@ -1743,6 +1743,7 @@ const SalesInput = () => {
                     >
                       <Select
                         placeholder="Select Sales HOD"
+                        allowClear
                         disabled={isReadOnly}
                         options={hodOptions}
                         showSearch
