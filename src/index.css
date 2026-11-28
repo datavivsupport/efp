@@ -190,6 +190,12 @@ textarea.ant-input-disabled,
   opacity: 1 !important;
 }
 
+/* HOD user selects (renderUserLabel): hide the selected label while the user types a search,
+   otherwise antd v6 keeps it visible underneath the typed text and they overlap */
+.ant-select-content-has-search-value .user-select-label {
+  visibility: hidden;
+}
+
 /* Allow vertical resize on all antd textareas even when autoSize is used */
 textarea.ant-input {
   resize: vertical !important;
