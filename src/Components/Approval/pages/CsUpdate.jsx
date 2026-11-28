@@ -48,7 +48,7 @@ import { buildCommonPayload } from "../utils/payloadBuilders";
 import { validateApprovalAction } from "../utils/approvalValidations";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
-import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
+import { savedDocIdSet, usesDraftUploads } from "../utils/draftDocs";
 import { getAdditionalDocs } from "../utils/additionalDocs";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import DocStatusTags from "../components/Common/DocStatusTags";
@@ -157,7 +157,6 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       try {
         if (response.data.status === "success") {
           const uploadedDoc = response.data.data;
-          addUnsavedUpload(salesInputId, uploadedDoc.id, user?.id); // stays deletable when reopened, until Save / Verify & Confirm
           setFiles((prev) => [...(prev || []), { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", created_at: uploadedDoc.created_at, is_cs_hod_approved: uploadedDoc.is_cs_hod_approved, uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
           uploadActivity?.onUploaded?.();
           message.success(response.data.message || `${label} uploaded successfully`);
@@ -452,15 +451,9 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
   const placementLocked = canEditPlacement ? false : isSalesSectionLocked;
   const isHalted = isCrossTrade && (jobData?.status === "STOPPED" || jobData?.is_blocked);
 
-  // Liner / Forwarding (and Cross Trade once CS has submitted): every file already on the job is locked -
-  // mandatory or not - except the ones this user uploaded and has not saved yet; they stay deletable until
-  // Save / Verify & Confirm, even when the job is reopened in another tab (see unsavedUploads.js)
-  const unsavedUploadIds = getUnsavedUploadIds(id, user?.id);
-  const lockedDocIds = new Set(
-    (isCrossTrade && normalizeBoolean(jobData?.is_cs_updated)) || isLiner || isForwarding
-      ? (jobData?.documents || []).map((d) => d?.id).filter((docId) => docId != null && !unsavedUploadIds.has(String(docId)))
-      : []
-  );
+  // Liner / Forwarding / Cross Trade: every saved file is locked - mandatory or not. Only this user's
+  // drafts (uploaded, not yet Saved / Verify & Confirm - backend is_saved false) keep their Delete icon.
+  const lockedDocIds = usesDraftUploads(jobData) ? savedDocIdSet(jobData?.documents) : new Set();
 
   const canApprove = computeCanApprove({
     hasAllowedRole, isAdmin: isAdminForCsUpdate, currentStage: "2",
@@ -622,7 +615,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       
       const endpoint = actionType === "Submit" ? `/liner/sales-input/${id}/submit/` : actionType === "Approved" ? `/liner/sales-input/${id}/approve/` : `/liner/sales-input/${id}/reject/`;
       const response = await apiClient.post(endpoint, payload);
-      if (response.data.status === "success") { clearUnsavedUploads(id, user?.id); message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success") { message.success(response.data.message || "Action Performed Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Action failed"); }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.errorFields?.[0]?.errors?.[0] || "Check required fields";
@@ -648,7 +641,6 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const response = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (response.data.status === "success") {
-        clearUnsavedUploads(id, user?.id);
         message.success(response.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -675,7 +667,7 @@ const CsUpdatePage = ({ jobData: initialJobData, user }) => {
       if (!(await confirmAction("save", setLoading))) return;
       const payload = { ...withCrossTradeCsHod(getCommonPayload(values), values), status: csViewOnly ? (jobData?.status || "draft") : "submitted" };
       const response = await apiClient.patch(`/liner/sales-input/${id}/`, payload);
-      if (response.data.status === "success" || response.status === 200 || response.status === 201) { clearUnsavedUploads(id, user?.id); message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
+      if (response.data.status === "success" || response.status === 200 || response.status === 201) { message.success(response.data.message || "Job Saved Successfully"); setTimeout(() => navigate("/"), 1500); }
       else { message.error(response.data.message || "Failed to save changes"); }
     } catch (err) { message.error(err.response?.data?.message || "Internal server error"); }
     finally { actionThrottleRef.current = false; setLoading(false); }

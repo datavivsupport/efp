@@ -22,7 +22,7 @@ import { isCnfSubmitted, isWorkflowCompleted, isJobRejected, isCrossTradeJob } f
 import { canCNFEditPlacement } from "../utils/sectionLocks";
 import { confirmAction, confirmLeave } from "../utils/confirmAction";
 import { isWithinUploadLimit } from "../utils/fileSizeLimit";
-import { addUnsavedUpload, clearUnsavedUploads, getUnsavedUploadIds } from "../utils/unsavedUploads";
+import { savedDocIdSet } from "../utils/draftDocs";
 import { buildCommonPayload, buildTransportationRows } from "../utils/payloadBuilders";
 import { createRemark, canDeleteRemark } from "../utils/remarksUtils";
 import { normalizeBoolean, yesWhereFilesExist } from "../utils/formUtils";
@@ -148,7 +148,6 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           uploaded_by_user_name: d.uploaded_by_user_name || "Me",
         } : f));
         // Liner fields: keep it deletable across a page refresh until Save / Submit / Approve
-        if (savedDocIds) addUnsavedUpload(salesInputId, d.id, user?.id);
         message.success(res.data.message || `${file.name} uploaded successfully`);
       } else {
         setFiles((prev) => prev.filter((f) => f._tempId !== tempId));
@@ -278,10 +277,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
   // user's last Save/Submit/Approve stays deletable until then (same as CsDocuments)
   // (files uploaded but not yet saved stay out of the set, so a page refresh doesn't lock them)
   const saveLockedDocs = isLiner || isForwarding;
-  const [savedDocIds] = useState(() => {
-    const unsaved = getUnsavedUploadIds(id, user?.id);
-    return new Set((initialJob?.documents || []).map((d) => d?.id).filter((docId) => docId != null && !unsaved.has(String(docId))));
-  });
+  // Saved files (backend is_saved); this user's own drafts are left out, so they stay deletable.
+  const [savedDocIds] = useState(() => savedDocIdSet(initialJob?.documents));
 
   // Placement Details is CNF's to edit for as long as the job is still sitting
   // with them — including at stage 2 before Sales HOD approves — right up to
@@ -611,7 +608,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       if (res.data.status === "success") {
         // The job has left CNF's desk: no more saving from this page.
         setHasApproved(true);
-        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || `${action} successfully`);
         setTimeout(() => navigate("/"), 1500);
       } else {
@@ -643,7 +639,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       const payload = { remarks: rejectionRemarks.trim() };
       const res = await apiClient.post(`/liner/sales-input/${id}/reject/`, payload);
       if (res.data.status === "success") {
-        clearUnsavedUploads(id, user?.id);
         message.success(res.data.message || "Job rejected successfully");
         setRejectionModalVisible(false);
         setTimeout(() => navigate("/"), 1500);
@@ -725,7 +720,6 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
         }
       }
 
-      clearUnsavedUploads(id, user?.id);
       message.success(saveMessage);
       setTimeout(() => navigate("/"), 1500);
     } catch (err) {

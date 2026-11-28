@@ -54,6 +54,7 @@ import apiClient from "../../../api/apiclient";
 import { uploadErrorMessage } from "../../../api/uploadError";
 import { deleteDocument } from "../../../utils/documentApi";
 import Styles from "../Approval.module.css";
+import { usesDraftUploads } from "../utils/draftDocs";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -78,7 +79,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── FileChipList ── */
-const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin }) => (
+const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, lockSaved = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -95,7 +96,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
             </div>
             <Space>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !(lockSaved && file.id && !file.pending && file.is_saved !== false) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {canEditFile ? (
@@ -110,7 +111,7 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
 );
 
 /* ── DocUploadField ── */
-const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin }) => {
+const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, category = "general", docType = "Other", disabled = false, restrictionMessage = null, isMasterMode = false, user, isAdmin, lockSaved = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -132,7 +133,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
       const response = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.status === "success") {
         const uploadedDoc = response.data.data;
-        setFiles((prev) => [...prev, { id: uploadedDoc.id, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
+        setFiles((prev) => [...prev, { id: uploadedDoc.id, is_saved: uploadedDoc.is_saved, name: uploadedDoc.file_name, url: uploadedDoc.file_url, file_name: uploadedDoc.file_name, file_url: uploadedDoc.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: uploadedDoc.uploaded_by_user_name || user?.get_full_name || user?.name || "Me" }]);
         message.success(response.data.message || `${file.name} uploaded successfully`);
       } else { message.error("Upload failed: " + response.data.message); }
     } catch (err) { message.error(uploadErrorMessage(err)); }
@@ -167,6 +168,7 @@ const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, s
           <FileChipList
             files={files}
             color={color}
+            lockSaved={lockSaved}
             onRemove={(i) => {
               const f = files[i];
               if (!f) return;
@@ -560,12 +562,12 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                       <Col xs={24} md={6}><Form.Item label="POD (Port of Discharge)" name="pod_remarks" className={Styles.formLabel}><Input placeholder="Free text POD" disabled={isSalesSectionLocked} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="FREIGHT MANIFEST" className={Styles.formLabel}><DocUploadField label="Freight Manifest" files={attachments.filter(d => d.doc_type === "FREIGHT MANIFEST")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="freight_manifest" docType="FREIGHT MANIFEST" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} lockSaved={usesDraftUploads(jobData)} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="LOAD LIST UPLOADING" className={Styles.formLabel}><DocUploadField label="Load List" files={attachments.filter(d => d.doc_type === "LOAD LIST UPLOADING")} setFiles={setAttachments} color="gold" onPreview={openPreview} salesInputId={id} category="load_list" docType="LOAD LIST UPLOADING" disabled={isSalesSectionLocked || isLiner} user={user} isAdmin={isAdmin} lockSaved={usesDraftUploads(jobData)} /></Form.Item></Col>
                     </Row>
                     <Row gutter={16}>
-                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
-                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="TDR/Sailing Report" className={Styles.formLabel}><DocUploadField label="Sailing Report" files={attachments.filter(d => d.doc_type === "TDR/SAILING REPORT")} setFiles={setAttachments} color="green" onPreview={openPreview} salesInputId={id} category="sailing_report" docType="TDR/SAILING REPORT" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} lockSaved={usesDraftUploads(jobData)} /></Form.Item></Col>
+                      <Col xs={24} md={12}><Form.Item label="OTHER DOCS" className={Styles.formLabel}><DocUploadField label="Other Docs" files={attachments.filter(d => d.doc_type === "OTHER DOCS")} setFiles={setAttachments} color="purple" onPreview={openPreview} salesInputId={id} category="others" docType="OTHER DOCS" disabled={isSalesSectionLocked} user={user} isAdmin={isAdmin} lockSaved={usesDraftUploads(jobData)} /></Form.Item></Col>
                     </Row>
                   </>
                 )}
@@ -699,7 +701,7 @@ const HodReviewPage = ({ jobData: initialJobData, user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ATTACHMENTS</Typography.Text>
-                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} />
+                  <DocUploadField label="Attachment" files={attachments.filter(d => d.doc_type === "Attachment")} setFiles={setAttachments} color="blue" onPreview={openPreview} salesInputId={id} category="attachments" docType="Attachment" user={user} isAdmin={isAdmin} disabled={isOthers} lockSaved={usesDraftUploads(jobData)} />
                   {/* OTHERS only: Sales Input saves its attachments as doc_type "Sales Executive" and the Executive Documents card is hidden for OTHERS; shown read-only so edits here can't drift from salesExecutiveFiles */}
                   {isOthers && salesExecutiveFiles.length > 0 && <FileChipList files={salesExecutiveFiles} disabled onPreview={(i) => openPreview(salesExecutiveFiles, i)} user={user} isAdmin={isAdmin} />}
                 </Col>

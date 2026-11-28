@@ -30,6 +30,7 @@ import { normalizeBoolean } from "../utils/formUtils";
 import EquipmentTypeSelect from "../../SalesInput/EquipmentType";
 import CategorySelect from "../../SalesInput/Category";
 import Styles from "../Approval.module.css";
+import { usesDraftUploads } from "../utils/draftDocs";
 
 const { TextArea } = Input;
 
@@ -62,7 +63,7 @@ const CardHeader = ({ icon, title, open, onToggle }) => (
 );
 
 /* ── File chip list for uploads ── */
-const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false }) => (
+const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemarkChange, disabled, user, isAdmin, additionalFiles = [], showStatus = false, lockSaved = false }) => (
   <div style={{ marginTop: 8 }}>
     {files.map((file, i) => {
       const isOwner = file.uploaded_by_user === user?.id || !file.id;
@@ -78,7 +79,7 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
             </div>
             <Space size={0} style={{ flexShrink: 0 }}>
               <ScrollSafeTooltip title="Preview"><Button icon={<EyeOutlined />} type="link" size="small" onClick={() => onPreview(i)} /></ScrollSafeTooltip>
-              {canEditFile && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
+              {canEditFile && !(lockSaved && file.id && !file.pending && file.is_saved !== false) && <ScrollSafeTooltip title="Delete"><Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={() => onRemove(i)} /></ScrollSafeTooltip>}
             </Space>
           </div>
           {(file.uploaded_by_user_name || isAdditional || showStatus) && (
@@ -101,7 +102,7 @@ const FileChipList = ({ files = [], color = "blue", onRemove, onPreview, onRemar
 );
 
 /* ── Upload field wrapper ── */
-const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false }) => {
+const DocUploadField = ({ label, files, setFiles, salesInputId, docType, category, onPreview, user, isAdmin, disabled = false, lockSaved = false }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const [uploading, setUploading] = useState(false);
@@ -121,7 +122,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
       const res = await apiClient.post(`/liner/sales-input/${salesInputId}/upload-document/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       if (res.data.status === "success") {
         const d = res.data.data;
-        setFiles((prev) => [...prev, { id: d.id, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
+        setFiles((prev) => [...prev, { id: d.id, is_saved: d.is_saved, name: d.file_name, file_name: d.file_name, url: d.file_url, file_url: d.file_url, doc_type: docType, remarks: "", uploaded_by_user: user?.id, uploaded_by_user_name: d.uploaded_by_user_name || user?.get_full_name || "Me" }]);
         message.success(res.data.message || `${file.name} uploaded`);
       } else { message.error(`Upload failed: ${res.data.message || `${file.name} was rejected by the server.`}`); }
     } catch (err) { message.error(uploadErrorMessage(err)); }
@@ -154,6 +155,7 @@ const DocUploadField = ({ label, files, setFiles, salesInputId, docType, categor
         {files.length > 0 && (
           <FileChipList
             files={files}
+            lockSaved={lockSaved}
             onRemove={async (i) => {
               const f = files[i];
               if (!f) return;
@@ -748,7 +750,7 @@ const CsHodApprovalPage = ({ jobData: initialJob, user }) => {
                   </Col>
                   <Col xs={24} md={12}>
                     <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
-                    <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} />
+                    <DocUploadField label="Attachment" files={attachments} setFiles={setAttachments} salesInputId={id} category="attachments" docType="Attachment" onPreview={openPreview} user={user} isAdmin={isAdmin} lockSaved={usesDraftUploads(initialJob)} />
                   </Col>
                 </Row>
               </div>
