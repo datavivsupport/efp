@@ -104,12 +104,15 @@ const FileChipList = ({ files, color = "blue", onRemove, onPreview, onRemarkChan
  
 // Liner / Forwarding job without Transportation: CNF has no role, so every upload slot on the page is closed
 const CnfNoRoleContext = createContext(false);
+// Liner / Forwarding, CNF user: while Save is disabled for the stage, every upload slot on the page is closed too
+const CnfUploadLockedContext = createContext(false);
 
 const DocUploadField = ({ label, files, setFiles, color = "purple", onPreview, salesInputId, docType, category, user, isAdmin, disabled: disabledProp = false, restrictionMessage = null, deleteLocked = false, savedDocIds }) => {
   const debounceTimerField = useRef(null);
   const pendingCountRef = useRef(0);
   const cnfNoRole = useContext(CnfNoRoleContext);
-  const disabled = disabledProp || cnfNoRole;
+  const cnfUploadLocked = useContext(CnfUploadLockedContext);
+  const disabled = disabledProp || cnfNoRole || cnfUploadLocked;
 
   const handleBeforeUpload = async (file) => {
     if (disabled) return false;
@@ -485,6 +488,10 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
       CNF_POST_CS_HOD_STAGES.includes(currentStage) ||
       !cnfHasSubmitted);
 
+  // Same condition as the Save button's stage lock (without the transient uploading/loading flags):
+  // when CNF cannot Save on a Liner / Forwarding job, it cannot upload, edit remarks or change the Required? switches either.
+  const cnfUploadLocked = (isForwarding || isLiner) && isCNF && !isAdmin && !(canSave || canEditPlacement);
+
   const uploadAllPending = async () => {
     const uploadOne = async (file) => {
       const formData = new FormData();
@@ -779,6 +786,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
     <div style={{ padding: "10px 20px 20px 20px", backgroundColor: "#eff8ff", minHeight: "100vh" }}>
       <Spin spinning={loading}>
         <CnfNoRoleContext.Provider value={cnfNoRole}>
+        <CnfUploadLockedContext.Provider value={cnfUploadLocked}>
         <Form form={form} layout="vertical">
           
           {/* ════════ EXPORT DETAILS (HEADER) ════════ */}
@@ -989,7 +997,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <DocSlot
                       label="Haulier Note"
                       rule={haulierNoteToggle ? "optional" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_haulier_note_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={haulierNoteFiles.length > 0} /> }}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_haulier_note_required" disabled={mandatoryDocsLocked || cnfNoRole || cnfUploadLocked} hasFiles={haulierNoteFiles.length > 0} /> }}
                       hint={!haulierNoteToggle ? "Not needed. Choose Yes to upload." : haulierNoteFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
                       <DocUploadField label="Haulier Note" files={haulierNoteFiles} setFiles={setHaulierNoteFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="Haulage Note" category="booking" user={user} isAdmin={isAdmin} deleteLocked savedDocIds={savedDocIds} disabled={!haulierNoteToggle} />
@@ -1005,7 +1013,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <DocSlot
                       label="Customer Load List"
                       rule={loadListToggle ? "optional" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={loadListFiles.length > 0} /> }}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="is_load_list_required" disabled={mandatoryDocsLocked || cnfNoRole || cnfUploadLocked} hasFiles={loadListFiles.length > 0} /> }}
                       hint={!loadListToggle ? "Not needed. Choose Yes to upload." : loadListFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
                       <DocUploadField label="Customer Load List" files={loadListFiles} setFiles={setLoadListFiles} color="gold" onPreview={openPreview} salesInputId={id} docType="Load List" category="booking" user={user} isAdmin={isAdmin} deleteLocked savedDocIds={savedDocIds} disabled={!loadListToggle} />
@@ -1021,7 +1029,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     <DocSlot
                       label="ED"
                       rule={edToggle ? "optional" : "notRequired"}
-                      toggle={{ label: "Required?", node: <RequirementSwitch name="ed_selection" disabled={mandatoryDocsLocked || cnfNoRole} hasFiles={edFiles.length > 0} /> }}
+                      toggle={{ label: "Required?", node: <RequirementSwitch name="ed_selection" disabled={mandatoryDocsLocked || cnfNoRole || cnfUploadLocked} hasFiles={edFiles.length > 0} /> }}
                       hint={!edToggle ? "Not needed. Choose Yes to upload." : edFiles.length ? "Delete the file first to choose No." : "Optional — you can submit without uploading."}
                     >
                       <DocUploadField label="ED" files={edFiles} setFiles={setEdFiles} color="geekblue" onPreview={openPreview} salesInputId={id} docType="ED" category="financial" user={user} isAdmin={isAdmin} deleteLocked savedDocIds={savedDocIds} disabled={!edToggle} />
@@ -1034,7 +1042,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                 </Col>
                 <Col xs={24}>
                   <Form.Item label="CNF Remarks" name="cnf_remarks" className={Styles.formLabel}>
-                    <TextArea placeholder="Enter CNF specific remarks here..." autoSize={{ minRows: 3 }} disabled={cnfNoRole} />
+                    <TextArea placeholder="Enter CNF specific remarks here..." autoSize={{ minRows: 3 }} disabled={cnfNoRole || cnfUploadLocked} />
                   </Form.Item>
                 </Col>
               </Row>
@@ -1068,8 +1076,8 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
                     {remarks.length === 0 && <Typography.Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>No general remarks yet.</Typography.Text>}
                   </div>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>ADD REMARK</Typography.Text>
-                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} disabled={cnfNoRole} />
-                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole}>Add Remark</Button>
+                  <TextArea value={newRemark} onChange={(e) => setNewRemark(e.target.value)} placeholder="Enter your remarks here…" autoSize={{ minRows: 3, maxRows: 8 }} style={{ marginBottom: 12 }} disabled={cnfNoRole || cnfUploadLocked} />
+                  <Button type="primary" onClick={() => { if (newRemark.trim()) { setRemarks(p => [...p, createRemark(newRemark, user)]); setNewRemark(""); } }} icon={<PlusOutlined />} disabled={cnfNoRole || cnfUploadLocked}>Add Remark</Button>
                 </Col>
                 <Col xs={24} md={12}>
                   <Typography.Text strong style={{ display: 'block', marginBottom: 8, fontSize: 13, color: '#4b5563' }}>GENERAL ATTACHMENTS</Typography.Text>
@@ -1189,6 +1197,7 @@ const CnfUpdatePage = ({ jobData: initialJob, user }) => {
             )}
           </div>
         </Form>
+        </CnfUploadLockedContext.Provider>
         </CnfNoRoleContext.Provider>
       </Spin>
 
